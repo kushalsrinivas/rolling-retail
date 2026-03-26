@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Todo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+}
+
+model BlockGroup {
+  geoid            String  @id
+  countyFips       String
+  countyName       String
+  tractCode        String
+  centroidLat      Float
+  centroidLng      Float
+  landAreaSqmi     Float?
+
+  totalPop         Int?
+  medianHhIncome   Int?
+  pctIncome75kPlus Float?
+  pctBachelorsPlus Float?
+  pctUnder35       Float?
+  avgHhSize        Float?
+  pctCarFree       Float?
+  pctEnglishOnly   Float?
+  pctWhiteNh       Float?
+  pctBlack         Float?
+  pctAsian         Float?
+  pctHispanic      Float?
+
+  wacTotalJobs      Int?
+  racTotalWorkers   Int?
+  netEmployInflow   Int?
+  daytimePopEst     Int?
+  pctRetailFoodJobs Float?
+  pctHighEarnJobs   Float?
+
+  maxAadt          Int?
+  roadTypeDominant String?
+
+  epaWalkability   Float?
+  intersectDensEpa Float?
+  transitAccess    Float?
+  employEntropy    Float?
+  jobsPerHousehold Float?
+  resDensity       Float?
+  empDensity       Float?
+
+  osmIntersectDens Float?
+  osmPoiCount      Int?
+  osmStreetDensity Float?
+
+  pctCommercial  Float?
+  pctResidential Float?
+
+  nearestParkAttend Int?
+  parksWithin1mi    Int?
+
+  daytimePopScore Float?
+  affluenceIndex  Float?
+  pedestrianScore Float?
+  commercialScore Float?
+  compositeScore  Float?
+
+  dataYear  Int
+  updatedAt DateTime @updatedAt
+
+  @@index([countyFips])
+  @@index([compositeScore(sort: Desc)])
+  @@index([countyFips, compositeScore(sort: Desc)])
+  @@index([centroidLat, centroidLng])
+}
+
+model Brand {
+  id              Int      @id @default(autoincrement())
+  name            String
+  targetAgeMin    Int?
+  targetAgeMax    Int?
+  targetIncomeMin Int?
+  targetIncomeMax Int?
+  pricePoint      String?
+
+  weightDaytime    Float @default(0.25)
+  weightPedestrian Float @default(0.25)
+  weightCommercial Float @default(0.20)
+  weightAffluence  Float @default(0.20)
+  weightParks      Float @default(0.10)
+
+  reports   Report[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Report {
+  id            Int      @id @default(autoincrement())
+  brand         Brand    @relation(fields: [brandId], references: [id])
+  brandId       Int
+  marketCounty  String
+  marketName    String
+  topLocationsN Int      @default(50)
+  topLocations  Json
+  summary       Json?
+  createdAt     DateTime @default(now())
+
+  @@index([brandId])
+}
