@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as ApiRodinSubmitRouteImport } from './routes/api/rodin/submit'
@@ -17,10 +18,18 @@ import { Route as ApiRodinStatusRouteImport } from './routes/api/rodin/status'
 import { Route as ApiRodinProxyDownloadRouteImport } from './routes/api/rodin/proxy-download'
 import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/download'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
+import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
+import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
 
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -58,10 +67,29 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
+  id: '/api/agent/session',
+  path: '/api/agent/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentImagesRoute = ApiAgentImagesRouteImport.update({
+  id: '/api/agent/images',
+  path: '/api/agent/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentChatRoute = ApiAgentChatRouteImport.update({
+  id: '/api/agent/chat',
+  path: '/api/agent/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
   '/studio': typeof StudioRoute
+  '/api/agent/chat': typeof ApiAgentChatRoute
+  '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -71,7 +99,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
   '/studio': typeof StudioRoute
+  '/api/agent/chat': typeof ApiAgentChatRoute
+  '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -82,7 +114,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chat': typeof ChatRoute
   '/studio': typeof StudioRoute
+  '/api/agent/chat': typeof ApiAgentChatRoute
+  '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -94,7 +130,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/chat'
     | '/studio'
+    | '/api/agent/chat'
+    | '/api/agent/images'
+    | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -104,7 +144,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/chat'
     | '/studio'
+    | '/api/agent/chat'
+    | '/api/agent/images'
+    | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -114,7 +158,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/chat'
     | '/studio'
+    | '/api/agent/chat'
+    | '/api/agent/images'
+    | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -125,7 +173,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChatRoute: typeof ChatRoute
   StudioRoute: typeof StudioRoute
+  ApiAgentChatRoute: typeof ApiAgentChatRoute
+  ApiAgentImagesRoute: typeof ApiAgentImagesRoute
+  ApiAgentSessionRoute: typeof ApiAgentSessionRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRodinDownloadRoute: typeof ApiRodinDownloadRoute
   ApiRodinProxyDownloadRoute: typeof ApiRodinProxyDownloadRoute
@@ -141,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -192,12 +251,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/session': {
+      id: '/api/agent/session'
+      path: '/api/agent/session'
+      fullPath: '/api/agent/session'
+      preLoaderRoute: typeof ApiAgentSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/images': {
+      id: '/api/agent/images'
+      path: '/api/agent/images'
+      fullPath: '/api/agent/images'
+      preLoaderRoute: typeof ApiAgentImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/chat': {
+      id: '/api/agent/chat'
+      path: '/api/agent/chat'
+      fullPath: '/api/agent/chat'
+      preLoaderRoute: typeof ApiAgentChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChatRoute: ChatRoute,
   StudioRoute: StudioRoute,
+  ApiAgentChatRoute: ApiAgentChatRoute,
+  ApiAgentImagesRoute: ApiAgentImagesRoute,
+  ApiAgentSessionRoute: ApiAgentSessionRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRodinDownloadRoute: ApiRodinDownloadRoute,
   ApiRodinProxyDownloadRoute: ApiRodinProxyDownloadRoute,

@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
 @plugin '@tailwindcss/typography';
-@import 'tw-animate-css';
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -59,7 +59,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -100,7 +100,9 @@
 
 /* ─── Base ─── */
 
-html, body, #app {
+html,
+body,
+#app {
   min-height: 100%;
 }
 
@@ -118,15 +120,29 @@ body {
   background: rgba(168, 85, 247, 0.25);
 }
 
-a { color: var(--purple); text-decoration: none; }
-a:hover { color: #c084fc; }
+a {
+  color: var(--purple);
+  text-decoration: none;
+}
+a:hover {
+  color: #c084fc;
+}
 
 /* ─── Scrollbar ─── */
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.3); }
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.3);
+}
 
 /* ─── Animations ─── */
 
@@ -135,8 +151,14 @@ a:hover { color: #c084fc; }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .fade-in {
@@ -144,8 +166,12 @@ a:hover { color: #c084fc; }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ─── Scroll-Reveal Sections ─── */
@@ -153,7 +179,9 @@ a:hover { color: #c084fc; }
 .reveal {
   opacity: 0;
   transform: translateY(50px);
-  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .reveal.visible {
@@ -164,7 +192,9 @@ a:hover { color: #c084fc; }
 .reveal-left {
   opacity: 0;
   transform: translateX(-40px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
 }
 .reveal-left.visible {
   opacity: 1;
@@ -174,7 +204,9 @@ a:hover { color: #c084fc; }
 .reveal-right {
   opacity: 0;
   transform: translateX(40px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
 }
 .reveal-right.visible {
   opacity: 1;
@@ -184,24 +216,40 @@ a:hover { color: #c084fc; }
 .reveal-scale {
   opacity: 0;
   transform: scale(0.92);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
 }
 .reveal-scale.visible {
   opacity: 1;
   transform: scale(1);
 }
 
-.stagger-1 { transition-delay: 100ms; }
-.stagger-2 { transition-delay: 200ms; }
-.stagger-3 { transition-delay: 300ms; }
-.stagger-4 { transition-delay: 400ms; }
-.stagger-5 { transition-delay: 500ms; }
+.stagger-1 {
+  transition-delay: 100ms;
+}
+.stagger-2 {
+  transition-delay: 200ms;
+}
+.stagger-3 {
+  transition-delay: 300ms;
+}
+.stagger-4 {
+  transition-delay: 400ms;
+}
+.stagger-5 {
+  transition-delay: 500ms;
+}
 
 /* ─── Rodin 3D Generator ─── */
 
 @keyframes progress-indeterminate {
-  0% { left: -40%; }
-  100% { left: 100%; }
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 /* ─── Full-screen sections ─── */
@@ -216,6 +264,353 @@ a:hover { color: #c084fc; }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* ─── Chat Interface ─── */
+
+.chat-layout {
+  cursor: default;
+}
+
+/* Message entry animation */
+.chat-message {
+  animation: chat-msg-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chat-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Latest message subtle highlight pulse */
+.chat-message--latest .relative {
+  animation: chat-msg-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Scrollable message list */
+.chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.12) transparent;
+}
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.12);
+  border-radius: 2px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.25);
+}
+
+/* Typing indicator dots */
+.typing-dot {
+  animation: typing-bounce 1.4s infinite ease-in-out;
+}
+.typing-dot--2 {
+  animation-delay: 0.2s;
+}
+.typing-dot--3 {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* Chat panel slide-in on mount */
+.chat-panel {
+  animation: chat-panel-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chat-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ─── Image Showcase ─── */
+
+.showcase-card {
+  animation: showcase-card-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes showcase-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.showcase-card-generating {
+  animation: showcase-gen-pulse 2s ease-in-out infinite both;
+}
+
+@keyframes showcase-gen-pulse {
+  0%,
+  100% {
+    border-color: rgba(163, 130, 255, 0.08);
+    background: #111113;
+  }
+  50% {
+    border-color: rgba(168, 85, 247, 0.2);
+    background: rgba(168, 85, 247, 0.03);
+  }
+}
+
+.showcase-empty-icon {
+  animation: showcase-empty-float 3s ease-in-out infinite;
+}
+
+@keyframes showcase-empty-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.showcase-grid {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.12) transparent;
+}
+.showcase-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.showcase-grid::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.12);
+  border-radius: 2px;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  animation: lightbox-in 200ms ease both;
+}
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lightbox-content {
+  animation: lightbox-scale-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes lightbox-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Brand Report Panel ─── */
+
+.brand-report {
+  animation: report-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes report-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.brand-report .report-section {
+  min-height: auto;
+  display: block;
+  align-items: unset;
+  justify-content: unset;
+  animation: report-section-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes report-section-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.report-section-header {
+  animation: report-header-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes report-header-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.metric-card {
+  animation: metric-card-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes metric-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.metric-bar {
+  animation: metric-bar-fill 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes metric-bar-fill {
+  from {
+    width: 0;
+  }
+}
+
+.metric-radar-path {
+  animation: metric-radar-draw 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 400ms;
+}
+
+@keyframes metric-radar-draw {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+    transform-origin: center;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: center;
+  }
+}
+
+/* Event cards */
+
+.event-card {
+  animation: event-card-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes event-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Timeline steps */
+
+.timeline-step {
+  animation: timeline-step-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes timeline-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* FAQ accordion answer */
+
+.faq-answer {
+  animation: faq-open 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes faq-open {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+  }
+}
+
+/* Testimonial cards */
+
+.testimonial-card {
+  animation: testimonial-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes testimonial-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Scrollbar */
+
+.brand-report::-webkit-scrollbar {
+  width: 4px;
+}
+.brand-report::-webkit-scrollbar-track {
+  background: transparent;
+}
+.brand-report::-webkit-scrollbar-thumb {
+  background: rgba(163, 130, 255, 0.15);
+  border-radius: 4px;
+}
+.brand-report::-webkit-scrollbar-thumb:hover {
+  background: rgba(163, 130, 255, 0.3);
 }
 
 /* ─── Base Layer ─── */
