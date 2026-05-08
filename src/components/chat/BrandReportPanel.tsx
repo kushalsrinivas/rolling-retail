@@ -22,7 +22,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { type ComponentType, useEffect, useState } from "react";
+import { type ComponentType, useEffect, useRef, useState } from "react";
 import type {
   DeploymentMetrics,
   EventRecommendation,
@@ -351,18 +351,154 @@ function TabBar({
 
 /* ─── Visuals Tab ─── */
 
-function ModelViewerSection() {
-  const [RodinViewer, setRodinViewer] = useState<ComponentType<{
-    brandName?: string;
+function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
+  const [ModelViewer, setModelViewer] = useState<ComponentType<{
+    modelUrl: string | null;
+    environment?: string;
   }> | null>(null);
+  const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [isGenerating3D, setIsGenerating3D] = useState(false);
+  const [status, setStatus] = useState<string>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const triggeredForRef = useRef<string | null>(null);
 
   useEffect(() => {
-    import("../rodin/RodinViewer").then((mod) => {
-      setRodinViewer(() => mod.default);
+    import("../rodin/ModelViewer").then((mod) => {
+      setModelViewer(() => mod.default);
     });
   }, []);
 
-  if (!RodinViewer) {
+  useEffect(() => {
+    if (images.length === 0 || isGenerating3D || modelUrl) return;
+
+    const imageKey = images
+      .map((img) => img.filename)
+      .sort()
+      .join(",");
+    if (triggeredForRef.current === imageKey) return;
+    triggeredForRef.current = imageKey;
+
+    generateModel(images);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images]);
+
+  async function generateModel(imgs: GeneratedImage[]) {
+    setIsGenerating3D(true);
+    setError(null);
+    setStatus("Fetching images...");
+
+    try {
+      const formData = new FormData();
+
+      const imgToUse = imgs.find((i) => i.label === "vehicle_wrap") || imgs[0];
+      const res = await fetch(imgToUse.url);
+      if (!res.ok) throw new Error("Failed to fetch generated image");
+      const blob = await res.blob();
+      formData.append("images", blob, imgToUse.filename);
+
+      formData.append("prompt", "A branded mobile retail food truck, 3D model");
+      formData.append("condition_mode", "concat");
+      formData.append("geometry_file_format", "glb");
+      formData.append("material", "PBR");
+      formData.append("quality", "medium");
+      formData.append("use_hyper", "false");
+      formData.append("tier", "Regular");
+      formData.append("TAPose", "false");
+      formData.append("mesh_mode", "Quad");
+      formData.append("mesh_simplify", "true");
+      formData.append("mesh_smooth", "true");
+
+      setStatus("Submitting to Rodin AI...");
+      const submitRes = await fetch("/api/rodin/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!submitRes.ok)
+        throw new Error(`Rodin submit failed: ${submitRes.status}`);
+      const submitData = await submitRes.json();
+
+      if (!submitData.jobs?.subscription_key || !submitData.uuid) {
+        throw new Error("Missing job data from Rodin");
+      }
+
+      setStatus("Generating 3D model...");
+      await pollForCompletion(
+        submitData.jobs.subscription_key,
+        submitData.uuid,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "3D generation failed");
+      setIsGenerating3D(false);
+      setStatus("idle");
+    }
+  }
+
+  async function pollForCompletion(subscriptionKey: string, taskUuid: string) {
+    try {
+      const statusRes = await fetch("/api/rodin/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription_key: subscriptionKey }),
+      });
+
+      if (!statusRes.ok) throw new Error("Status check failed");
+      const statusData = await statusRes.json();
+
+      if (!statusData.jobs || statusData.jobs.length === 0) {
+        throw new Error("No jobs in status response");
+      }
+
+      const allDone = statusData.jobs.every(
+        (j: { status: string }) => j.status === "Done",
+      );
+      const anyFailed = statusData.jobs.some(
+        (j: { status: string }) => j.status === "Failed",
+      );
+
+      if (anyFailed) throw new Error("3D generation failed");
+
+      if (allDone) {
+        setStatus("Downloading model...");
+        const dlRes = await fetch("/api/rodin/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_uuid: taskUuid }),
+        });
+
+        if (!dlRes.ok) throw new Error("Download request failed");
+        const dlData = await dlRes.json();
+
+        if (dlData.list && dlData.list.length > 0) {
+          const glbFile = dlData.list.find((f: { name: string }) =>
+            f.name.toLowerCase().endsWith(".glb"),
+          );
+          if (glbFile) {
+            const proxyUrl = `/api/rodin/proxy-download?url=${encodeURIComponent(glbFile.url)}`;
+            setModelUrl(proxyUrl);
+            setIsGenerating3D(false);
+            setStatus("done");
+            return;
+          }
+        }
+        throw new Error("No GLB file in results");
+      }
+
+      const inProgress = statusData.jobs.filter(
+        (j: { status: string }) => j.status !== "Done",
+      );
+      setStatus(
+        `Generating... (${statusData.jobs.length - inProgress.length}/${statusData.jobs.length} steps done)`,
+      );
+      setTimeout(() => pollForCompletion(subscriptionKey, taskUuid), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Polling failed");
+      setIsGenerating3D(false);
+      setStatus("idle");
+    }
+  }
+
+  if (!ModelViewer) {
     return (
       <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]">
         <div className="flex flex-col items-center gap-2.5">
@@ -370,16 +506,64 @@ function ModelViewerSection() {
             <div className="absolute inset-0 animate-spin rounded-full border-2 border-purple-500/20 border-t-purple-500" />
           </div>
           <span className="text-[11px] text-zinc-600">
-            Loading 3D studio...
+            Loading 3D viewer...
           </span>
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-red-500/20 bg-[#111113] px-4">
+        <Box className="h-6 w-6 text-red-400/60" />
+        <p className="text-center text-xs text-red-400/80">{error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            triggeredForRef.current = null;
+          }}
+          className="rounded-full bg-purple-500/10 px-3 py-1 text-[11px] font-medium text-purple-300 transition hover:bg-purple-500/20"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (isGenerating3D) {
+    return (
+      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]">
+        <div className="relative h-10 w-10">
+          <div className="absolute inset-0 animate-spin rounded-full border-2 border-purple-500/20 border-t-purple-500" />
+          <div
+            className="absolute inset-1.5 animate-spin rounded-full border border-purple-400/10 border-t-purple-400/40"
+            style={{ animationDuration: "1.5s", animationDirection: "reverse" }}
+          />
+        </div>
+        <span className="text-[11px] text-zinc-500">{status}</span>
+      </div>
+    );
+  }
+
+  if (modelUrl) {
+    return (
+      <div className="aspect-[4/3] overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]">
+        <ModelViewer modelUrl={modelUrl} environment="night" />
+      </div>
+    );
+  }
+
   return (
-    <div className="aspect-[4/3] overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]">
-      <RodinViewer />
+    <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]">
+      <Box className="h-7 w-7 text-purple-500/30" />
+      <div className="text-center">
+        <p className="text-xs text-zinc-500">3D Model Preview</p>
+        <p className="mt-1 max-w-[200px] text-[11px] text-zinc-600">
+          Will auto-generate once brand concepts are ready.
+        </p>
+      </div>
     </div>
   );
 }
@@ -488,7 +672,7 @@ function VisualsTab({
       <div className="mt-6">
         <SectionHeader icon={Box} title="3D Model" badge="Rodin AI" />
         <div className="mt-3">
-          <ModelViewerSection />
+          <ModelViewerSection images={images} />
         </div>
       </div>
     </div>
