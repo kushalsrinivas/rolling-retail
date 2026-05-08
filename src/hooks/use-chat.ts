@@ -304,32 +304,49 @@ function parseSSEEvents(raw: string): ParseResult {
 	}
 
 	// --- Deduplicate model text ---
-	// ADK resends prior model turns verbatim after each tool call round-trip.
-	// We only want the FINAL model turn text (the last uninterrupted sequence of
-	// model events that comes after the last function response).
+	// ADK replays the full conversation history in its SSE stream, meaning old
+	// model turns get re-sent alongside the new response. We only want text from
+	// the FINAL model reply (the last contiguous block of model events after the
+	// last user event of any kind).
 	//
-	// Find the index of the last "user" event that contains a functionResponse
-	// (= the last tool result). Everything after that is the final model reply.
-	let lastFnRespIdx = -1;
+	// Strategy: find the last "user" event (whether it's a function response or a
+	// replayed user message) and take model text only from events after it. This
+	// ensures we skip all replayed history.
+	let lastUserIdx = -1;
 	for (let i = 0; i < parsedEvents.length; i++) {
-		const ev = parsedEvents[i];
-		if (ev.role === "user") {
-			const hasFnResp = (ev.parts as Array<Record<string, unknown>>).some(
-				(p) => p.functionResponse || p.function_response,
-			);
-			if (hasFnResp) lastFnRespIdx = i;
-		}
+		if (parsedEvents[i].role === "user") lastUserIdx = i;
 	}
 
-	// If there were no tool calls at all, take text from all model events.
-	// Otherwise, take text only from model events AFTER the last function response.
-	const startIdx = lastFnRespIdx === -1 ? 0 : lastFnRespIdx + 1;
-	let fullText = "";
+	const startIdx = lastUserIdx === -1 ? 0 : lastUserIdx + 1;
+
+	// Collect text from model events after the last user event.
+	// ADK may send cumulative text (each event contains all prior text plus new)
+	// so we deduplicate: if a later text starts with an earlier text, it's
+	// cumulative and we only keep the longest version.
+	const textParts: string[] = [];
 	for (let i = startIdx; i < parsedEvents.length; i++) {
 		const ev = parsedEvents[i];
 		if (ev.role !== "model") continue;
 		for (const part of ev.parts as Array<Record<string, unknown>>) {
-			if (typeof part.text === "string") fullText += part.text;
+			if (typeof part.text === "string" && part.text.length > 0) {
+				textParts.push(part.text);
+			}
+		}
+	}
+
+	// Deduplicate cumulative streaming: if a later part starts with an earlier
+	// part, the earlier one is subsumed. Otherwise concatenate (incremental tokens).
+	let fullText = "";
+	for (let i = 0; i < textParts.length; i++) {
+		const current = textParts[i];
+		const next = textParts[i + 1];
+		if (next && next.startsWith(current)) {
+			continue; // skip — next part already contains this text
+		}
+		if (fullText && current.startsWith(fullText)) {
+			fullText = current; // cumulative: replace with longer version
+		} else {
+			fullText += current;
 		}
 	}
 

@@ -1,6 +1,7 @@
 import {
   ArrowUpRight,
   BarChart3,
+  Box,
   Calendar,
   Clock,
   DollarSign,
@@ -21,7 +22,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { type ComponentType, useEffect, useState } from "react";
 import type {
   DeploymentMetrics,
   EventRecommendation,
@@ -350,6 +351,39 @@ function TabBar({
 
 /* ─── Visuals Tab ─── */
 
+function ModelViewerSection() {
+  const [RodinViewer, setRodinViewer] = useState<ComponentType<{
+    brandName?: string;
+  }> | null>(null);
+
+  useEffect(() => {
+    import("../rodin/RodinViewer").then((mod) => {
+      setRodinViewer(() => mod.default);
+    });
+  }, []);
+
+  if (!RodinViewer) {
+    return (
+      <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]">
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="relative h-8 w-8">
+            <div className="absolute inset-0 animate-spin rounded-full border-2 border-purple-500/20 border-t-purple-500" />
+          </div>
+          <span className="text-[11px] text-zinc-600">
+            Loading 3D studio...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-[4/3] overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]">
+      <RodinViewer />
+    </div>
+  );
+}
+
 function VisualsTab({
   images,
   isGenerating,
@@ -448,6 +482,14 @@ function VisualsTab({
               </div>
             </div>
           ))}
+      </div>
+
+      {/* 3D Model Generation */}
+      <div className="mt-6">
+        <SectionHeader icon={Box} title="3D Model" badge="Rodin AI" />
+        <div className="mt-3">
+          <ModelViewerSection />
+        </div>
       </div>
     </div>
   );
