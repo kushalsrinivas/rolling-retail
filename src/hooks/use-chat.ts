@@ -477,7 +477,7 @@ export function useChat(): UseChatReturn {
 						const newImages: GeneratedImage[] = parsed.images.map((img) => ({
 							label: img.label,
 							filename: img.filename,
-							url: `/api/agent/images?file=${encodeURIComponent(img.filename)}`,
+							url: `/api/agent/images?file=${encodeURIComponent(img.filename)}&userId=${encodeURIComponent(userIdRef.current)}&sessionId=${encodeURIComponent(sessionIdRef.current)}`,
 							timestamp: now,
 						}));
 
@@ -523,7 +523,7 @@ export function useChat(): UseChatReturn {
 					const newImages: GeneratedImage[] = final.images.map((img) => ({
 						label: img.label,
 						filename: img.filename,
-						url: `/api/agent/images?file=${encodeURIComponent(img.filename)}`,
+						url: `/api/agent/images?file=${encodeURIComponent(img.filename)}&userId=${encodeURIComponent(userIdRef.current)}&sessionId=${encodeURIComponent(sessionIdRef.current)}`,
 						timestamp: now,
 					}));
 					setImages((prev) => {
