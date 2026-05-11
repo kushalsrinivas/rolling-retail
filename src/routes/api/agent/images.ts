@@ -9,6 +9,7 @@ function getImagesDir(): string {
 	const candidates = [
 		path.resolve(process.cwd(), "brand_outputs/images"),
 		path.resolve(process.cwd(), "../brand_outputs/images"),
+		path.resolve(process.cwd(), "../rolling-retail-adk/brand_outputs/images"),
 		path.resolve(process.cwd(), "../../brand_outputs/images"),
 	];
 

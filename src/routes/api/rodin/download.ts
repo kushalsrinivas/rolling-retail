@@ -24,7 +24,7 @@ export const Route = createFileRoute("/api/rodin/download")({
 					}
 
 					const response = await fetch(
-						"https://hyperhuman.deemos.com/api/v2/download",
+						"https://api.hyper3d.com/api/v2/download",
 						{
 							method: "POST",
 							headers: {

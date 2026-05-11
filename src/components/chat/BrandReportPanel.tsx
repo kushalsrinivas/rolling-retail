@@ -351,7 +351,13 @@ function TabBar({
 
 /* ─── Visuals Tab ─── */
 
-function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
+function ModelViewerSection({
+  images,
+  isGeneratingImages,
+}: {
+  images: GeneratedImage[];
+  isGeneratingImages: boolean;
+}) {
   const [ModelViewer, setModelViewer] = useState<ComponentType<{
     modelUrl: string | null;
     environment?: string;
@@ -369,7 +375,8 @@ function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
   }, []);
 
   useEffect(() => {
-    if (images.length === 0 || isGenerating3D || modelUrl) return;
+    if (isGeneratingImages || images.length === 0 || isGenerating3D || modelUrl)
+      return;
 
     const imageKey = images
       .map((img) => img.filename)
@@ -380,7 +387,7 @@ function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
 
     generateModel(images);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images]);
+  }, [images, isGeneratingImages]);
 
   async function generateModel(imgs: GeneratedImage[]) {
     setIsGenerating3D(true);
@@ -414,12 +421,21 @@ function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
         body: formData,
       });
 
-      if (!submitRes.ok)
-        throw new Error(`Rodin submit failed: ${submitRes.status}`);
+      if (!submitRes.ok) {
+        const errBody = await submitRes.text().catch(() => "");
+        throw new Error(
+          `Rodin submit failed (${submitRes.status}): ${errBody || "unknown error"}`,
+        );
+      }
       const submitData = await submitRes.json();
 
       if (!submitData.jobs?.subscription_key || !submitData.uuid) {
-        throw new Error("Missing job data from Rodin");
+        console.error("Unexpected Rodin response:", submitData);
+        throw new Error(
+          submitData.error ||
+            submitData.message ||
+            "Unexpected response from Rodin — check your API key",
+        );
       }
 
       setStatus("Generating 3D model...");
@@ -557,13 +573,29 @@ function ModelViewerSection({ images }: { images: GeneratedImage[] }) {
 
   return (
     <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]">
-      <Box className="h-7 w-7 text-purple-500/30" />
-      <div className="text-center">
-        <p className="text-xs text-zinc-500">3D Model Preview</p>
-        <p className="mt-1 max-w-[200px] text-[11px] text-zinc-600">
-          Will auto-generate once brand concepts are ready.
-        </p>
-      </div>
+      {isGeneratingImages ? (
+        <>
+          <div className="relative h-8 w-8">
+            <div className="absolute inset-0 animate-spin rounded-full border-2 border-purple-500/20 border-t-purple-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-zinc-500">Waiting for concepts...</p>
+            <p className="mt-1 max-w-[200px] text-[11px] text-zinc-600">
+              3D model will auto-generate once all brand images are ready.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <Box className="h-7 w-7 text-purple-500/30" />
+          <div className="text-center">
+            <p className="text-xs text-zinc-500">3D Model Preview</p>
+            <p className="mt-1 max-w-[200px] text-[11px] text-zinc-600">
+              Will auto-generate once brand concepts are ready.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -581,6 +613,39 @@ function VisualsTab({
   loadedSet: Set<string>;
   onLoad: (filename: string) => void;
 }) {
+  if (isGenerating && images.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-6 px-8">
+        <div className="relative flex h-20 w-20 items-center justify-center">
+          <div className="absolute inset-0 animate-spin rounded-full border-2 border-purple-500/20 border-t-purple-500" />
+          <div
+            className="absolute inset-2 animate-spin rounded-full border border-purple-400/10 border-t-purple-400/40"
+            style={{ animationDuration: "1.5s", animationDirection: "reverse" }}
+          />
+          <ImageIcon className="h-7 w-7 text-purple-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-purple-300">
+            Generating Brand Concepts
+          </p>
+          <p className="mt-1.5 max-w-[280px] text-xs leading-relaxed text-zinc-500">
+            Creating vehicle wrap, lifestyle, store interior, and deployment
+            scene visuals for your brand...
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500/60"
+              style={{ animationDelay: `${i * 200}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!isGenerating && images.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 px-8">
@@ -672,7 +737,10 @@ function VisualsTab({
       <div className="mt-6">
         <SectionHeader icon={Box} title="3D Model" badge="Rodin AI" />
         <div className="mt-3">
-          <ModelViewerSection images={images} />
+          <ModelViewerSection
+            images={images}
+            isGeneratingImages={isGenerating}
+          />
         </div>
       </div>
     </div>
@@ -1422,8 +1490,11 @@ export default function BrandReportPanel({
   const hasImages = images.length > 0 || isGenerating;
   const hasInsights = !!(metrics || events.length > 0 || analytics);
 
-  // Auto-switch to insights tab when insights arrive and user is still on visuals with no images
-  // (handled by the user; we just show dots)
+  useEffect(() => {
+    if (isGenerating) {
+      setActiveTab("visuals");
+    }
+  }, [isGenerating]);
 
   return (
     <div className="relative flex h-full w-full flex-col bg-[#09090b]">
