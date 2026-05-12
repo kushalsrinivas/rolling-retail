@@ -4,7 +4,7 @@ export const Route = createFileRoute("/api/rodin/submit")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
-				const API_KEY = "vibecoding";
+				const API_KEY = process.env.RODIN_API_KEY;
 				if (!API_KEY) {
 					return Response.json(
 						{ error: "RODIN_API_KEY not configured" },
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/rodin/submit")({
 					const formData = await request.formData();
 
 					const response = await fetch(
-						"https://hyperhuman.deemos.com/api/v2/rodin",
+						"https://api.hyper3d.com/api/v2/rodin",
 						{
 							method: "POST",
 							headers: { Authorization: `Bearer ${API_KEY}` },

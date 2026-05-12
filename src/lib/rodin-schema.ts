@@ -10,9 +10,11 @@ export const formSchema = z
 			.enum(["glb", "usdz", "fbx", "obj", "stl"])
 			.default("glb"),
 		use_hyper: z.boolean().default(false),
-		tier: z.enum(["Regular", "Sketch"]).default("Regular"),
+		tier: z.enum(["Regular", "Sketch", "Gen-2"]).default("Gen-2"),
 		TAPose: z.boolean().default(false),
 		material: z.enum(["PBR", "Shaded"]).default("PBR"),
+		mesh_mode: z.enum(["Quad", "Raw"]).default("Raw"),
+		quality_override: z.number().optional(),
 	})
 	.refine(
 		(data) => {
