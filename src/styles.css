@@ -120,11 +120,11 @@ body {
   background: rgba(168, 85, 247, 0.25);
 }
 
-a {
+a:not(.rr-landing a) {
   color: var(--purple);
   text-decoration: none;
 }
-a:hover {
+a:not(.rr-landing a):hover {
   color: #c084fc;
 }
 
@@ -133,24 +133,158 @@ a:hover {
  * element. It opts out of the app-wide purple rather than changing it, so the
  * designer at /chat keeps the styling it was built against.
  */
-.rr-landing a,
-.rr-landing a:hover {
-  color: inherit;
+/* ──────────────────────────────────────────────────────────────────────────
+ * Landing page motion.
+ *
+ * Everything eases out, nothing bounces, nothing loops in the reader's
+ * peripheral vision. Reveals fire once. The whole system collapses to "just
+ * show the content" under prefers-reduced-motion.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.rr-landing {
+  --rr-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/*
- * Tailwind v4 emits utilities inside a cascade layer, and the unlayered rule
- * above outranks every layered `text-*` regardless of specificity — so a link
- * styled as a solid button would lose its label colour. These two carry it.
- */
-.rr-landing .rr-cta,
-.rr-landing .rr-cta:hover {
-  color: #fafaf9;
+.rr-reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 0.75s var(--rr-ease),
+    transform 0.75s var(--rr-ease);
+  transition-delay: var(--rr-delay, 0ms);
+  will-change: opacity, transform;
 }
 
-.rr-landing .rr-link,
-.rr-landing .rr-link:hover {
-  color: #44403c;
+.rr-reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Steps slide in from the rule they hang off. */
+.rr-step {
+  opacity: 0;
+  transform: translate3d(-10px, 0, 0);
+  transition:
+    opacity 0.5s var(--rr-ease),
+    transform 0.5s var(--rr-ease);
+  transition-delay: var(--rr-delay, 0ms);
+}
+
+.rr-step[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Hero headline: each line lifts under its own mask. */
+.rr-line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.rr-line {
+  display: block;
+  transform: translate3d(0, 100%, 0);
+  transition: transform 0.9s var(--rr-ease);
+  transition-delay: var(--rr-delay, 0ms);
+}
+
+.rr-line[data-shown="true"] {
+  transform: none;
+}
+
+/* The ticker of things that roll. Paused on hover so it can be read. */
+.rr-marquee {
+  display: flex;
+  width: max-content;
+  animation: rr-marquee 46s linear infinite;
+}
+
+.rr-marquee-viewport:hover .rr-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes rr-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Hotspot detail opening under its trigger. */
+.rr-disclose {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.42s var(--rr-ease);
+}
+
+.rr-disclose[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.rr-disclose > * {
+  overflow: hidden;
+}
+
+/* Underline that draws in from the left. */
+.rr-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 0.4s var(--rr-ease);
+}
+
+.rr-underline:hover {
+  background-size: 100% 1px;
+}
+
+/* A quiet scroll cue under the hero. */
+.rr-scroll-cue span {
+  display: block;
+  width: 1px;
+  height: 100%;
+  background: currentColor;
+  transform-origin: top;
+  animation: rr-cue 2.4s var(--rr-ease) infinite;
+}
+
+@keyframes rr-cue {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  35% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: scaleY(1) translateY(100%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rr-reveal,
+  .rr-step,
+  .rr-line {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .rr-marquee,
+  .rr-scroll-cue span {
+    animation: none;
+  }
+
+  .rr-disclose {
+    transition: none;
+  }
 }
 
 /* ─── Scrollbar ─── */
