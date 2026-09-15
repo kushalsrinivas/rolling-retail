@@ -19,6 +19,11 @@ export interface TruckSession {
 	brain: ProjectBrain | null;
 	/** Visual rounds consumed (manual + auto). Gates auto-generation. */
 	visualRounds: number;
+	/**
+	 * The most recent photo the buyer uploaded, kept so every later round keeps
+	 * the same styling direction instead of only the turn it arrived on.
+	 */
+	inspirationImage: string | null;
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -40,6 +45,7 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			spec: null,
 			brain: null,
 			visualRounds: 0,
+			inspirationImage: null,
 		};
 		sessions.set(id, s);
 	}

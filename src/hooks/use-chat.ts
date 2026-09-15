@@ -207,9 +207,12 @@ export function useChat() {
 		(incoming: Array<{ label: string; filename: string; url: string }>) => {
 			const now = new Date();
 			setImages((prev) => {
-				const existing = new Set(prev.map((p) => p.label));
+				// Dedupe on the render itself, not its label. Every round emits the
+				// same nine labels, so keying on label meant a second round — a
+				// regeneration the buyer just paid a credit for — added nothing.
+				const existing = new Set(prev.map((p) => p.url));
 				const fresh = incoming
-					.filter((i) => !existing.has(i.label))
+					.filter((i) => !existing.has(i.url))
 					.map((i) => ({
 						label: i.label,
 						filename: i.filename,

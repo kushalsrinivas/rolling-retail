@@ -74,6 +74,11 @@ export const Route = createFileRoute("/api/agent/chat")({
 
 				const session = getOrCreateSession(body.sessionId);
 
+				// Keep the latest inspiration photo on the session. It used to reach
+				// only the LLM turn it arrived on, so "make it look like this" never
+				// influenced the renders at all.
+				if (image) session.inspirationImage = image;
+
 				// ── Project Brain: fold this turn's dump into structured memory ──
 				// History goes in so a short "yes" after a **Brand** proposal sticks.
 				const historyTexts = session.history.map((h) => h.content);
@@ -164,6 +169,8 @@ export const Route = createFileRoute("/api/agent/chat")({
 								const run = await runStarterConcepts(
 									session.creditsUsed,
 									{
+										vehicleId: effectiveVehicleId,
+										inspirationImage: session.inspirationImage,
 										brand:
 											(brain.brandName ?? body.context?.brandName?.trim()) ||
 											"New Brand",

@@ -64,6 +64,8 @@ export const Route = createFileRoute("/api/agent/images")({
 								: "hatch-serve";
 
 					const run = await runStarterConcepts(session.creditsUsed, {
+						vehicleId: vehicle?.id ?? null,
+						inspirationImage: session.inspirationImage,
 						brand,
 						vehicleLabel,
 						vehicleBody: vehicle?.body ?? "square",

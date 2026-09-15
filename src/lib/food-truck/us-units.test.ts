@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	footprintFt,
-	getVehicle,
-	toFt,
-	toSqft,
-	VEHICLES,
-} from "./constants";
+import { footprintFt, getVehicle, toFt, toSqft, VEHICLES } from "./constants";
 import { updateBrain } from "./brain";
 import { estimateFor } from "./tools";
 
@@ -54,7 +48,13 @@ describe("estimateFor — US pricing", () => {
 	});
 
 	it("adds signage and menu-board cost", () => {
-		const e = estimateFor("square-4m", "standard", ["hatch blade"], true, false);
+		const e = estimateFor(
+			"square-4m",
+			"standard",
+			["hatch blade"],
+			true,
+			false,
+		);
 		expect(e.signageLow).toBe(300 + 1200);
 		expect(e.signageHigh).toBe(800 + 3000);
 	});
@@ -71,7 +71,9 @@ describe("vehicle extraction from US phrasing", () => {
 
 	it("resolves feet to the matching square trailer", () => {
 		expect(vehicleFor("I want a 10 ft trailer")).toBe("square-3m");
-		expect(vehicleFor("looking at a 13ft concession trailer")).toBe("square-4m");
+		expect(vehicleFor("looking at a 13ft concession trailer")).toBe(
+			"square-4m",
+		);
 		expect(vehicleFor("a 16 foot trailer please")).toBe("square-5m");
 	});
 

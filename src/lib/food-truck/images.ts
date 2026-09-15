@@ -1,3 +1,6 @@
+import { geometryFor } from "./constants";
+import { factoryReference } from "./references";
+
 /**
  * Truck concept image generation.
  * Primary: Gemini image model ("nano banana" family) via REST.
@@ -34,14 +37,33 @@ function escapeXml(s: string) {
 	return s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-export async function generateTruckImage(args: {
+export interface TruckImageArgs {
 	brand: string;
 	vehicleLabel: string;
 	label: string;
 	prompt: string;
-	/** Data-URL reference renders already generated this round (hero first). */
-	referenceUrls?: string[];
-}): Promise<{ url: string; model: string }> {
+	/**
+	 * A real photo of the factory's trailer. This is geometry truth — the model
+	 * may restyle it but may not redesign the shell.
+	 */
+	bodyReference?: string | null;
+	/**
+	 * The hero render from this round. Carries the livery so the remaining
+	 * views agree on wrap, logo placement and signage.
+	 */
+	liveryReference?: string | null;
+	/**
+	 * A photo the buyer uploaded. Styling direction only — never a body to copy,
+	 * because it is usually somebody else's truck.
+	 */
+	inspirationReference?: string | null;
+	/** Fixed geometry of this body, from VEHICLE_GEOMETRY. */
+	geometry?: string | null;
+}
+
+export async function generateTruckImage(
+	args: TruckImageArgs,
+): Promise<{ url: string; model: string }> {
 	const key = geminiKey();
 	const model = process.env.IMAGE_MODEL || "gemini-3.1-flash-image";
 	if (!key) {
@@ -50,21 +72,57 @@ export async function generateTruckImage(args: {
 			model: "placeholder (no key)",
 		};
 	}
-	// ponytail: only real renders chain as references — SVG placeholders
-	// would poison the model's sense of the trailer, so they are skipped.
-	const refs = (args.referenceUrls ?? []).filter((u) =>
-		u.startsWith("data:image/"),
-	);
+	// Only real photographs chain as references — an SVG placeholder would
+	// poison the model's sense of the trailer, so they are skipped.
+	const isPhoto = (u: string | null | undefined): u is string =>
+		typeof u === "string" && u.startsWith("data:image/");
+
+	// Order matters: the model weights earlier images more heavily, and body
+	// geometry has to outrank livery, which has to outrank someone else's truck.
+	const slots: Array<{ url: string; role: string }> = [];
+	if (isPhoto(args.bodyReference))
+		slots.push({ url: args.bodyReference, role: "body" });
+	if (isPhoto(args.liveryReference))
+		slots.push({ url: args.liveryReference, role: "livery" });
+	if (isPhoto(args.inspirationReference))
+		slots.push({ url: args.inspirationReference, role: "inspiration" });
+
 	const refParts: Array<{ inlineData: { mimeType: string; data: string } }> =
 		[];
-	for (const u of refs.slice(0, 2)) {
-		const m = u.match(/^data:(image\/[^;,]+)(?:;charset=[^;,]+)?;base64,(.*)$/s);
-		if (m?.[2]) refParts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+	const roles: string[] = [];
+	for (const slot of slots.slice(0, 3)) {
+		const m = slot.url.match(
+			/^data:(image\/[^;,]+)(?:;charset=[^;,]+)?;base64,(.*)$/s,
+		);
+		if (m?.[2]) {
+			refParts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+			roles.push(slot.role);
+		}
 	}
+
+	const locks: string[] = [];
+	if (roles.includes("body")) {
+		locks.push(
+			`BODY LOCK: reference image ${roles.indexOf("body") + 1} is a photograph of the actual trailer this concept is built on. Reproduce its shell exactly — silhouette, proportions, panel lines, door and hatch positions, window and vent placement, wheel and axle position. The shell has: ${args.geometry ?? "the body shown in the photograph"}. You may change ONLY cosmetics: paint, wrap graphics, signage, lighting, counter finishes and the equipment visible inside. Do NOT move, add or remove a door, hatch, window or vent. Do NOT change the body shape or length.`,
+		);
+	} else if (args.geometry) {
+		locks.push(
+			`BODY LOCK: the trailer has ${args.geometry}. Keep every one of those features in this view, in the same place. Do not invent additional doors, hatches or windows.`,
+		);
+	}
+	if (roles.includes("livery")) {
+		locks.push(
+			`LIVERY LOCK: reference image ${roles.indexOf("livery") + 1} is the same trailer already rendered for this brand. Copy its wrap artwork, brand colors, logo placement and signage exactly. Only the camera angle and time of day change between views.`,
+		);
+	}
+	if (roles.includes("inspiration")) {
+		locks.push(
+			`STYLE REFERENCE ONLY: reference image ${roles.indexOf("inspiration") + 1} is a photo the buyer shared for mood. Borrow its palette, typography feel and finish. Do NOT copy its body shape — the trailer must stay the one described above.`,
+		);
+	}
+
 	const text =
-		refParts.length > 0
-			? `${args.prompt} CONSISTENCY LOCK: the attached reference image IS this exact trailer — copy its body shape, proportions, wrap livery, brand colors, logo placement and signage exactly. Only the camera angle and time of day change. Do not redesign anything.`
-			: args.prompt;
+		locks.length > 0 ? `${args.prompt} ${locks.join(" ")}` : args.prompt;
 	try {
 		const res = await fetch(
 			`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
@@ -299,6 +357,10 @@ export interface StarterConceptArgs {
 	equipment?: readonly string[];
 	serveMode?: ServeMode;
 	brainNote?: string;
+	/** Resolves the factory catalog photo; falls back to the body folder. */
+	vehicleId?: string | null;
+	/** A photo the buyer uploaded, used for styling direction only. */
+	inspirationImage?: string | null;
 }
 
 /**
@@ -351,9 +413,16 @@ export async function runStarterConcepts(
 		brainNote,
 	});
 
+	// The factory's own photo of this body, and the written description of its
+	// fixed geometry. Together these anchor the whole round to a trailer that
+	// exists, instead of one the model invents afresh for every view.
+	const bodyReference = await factoryReference(args.vehicleId, vehicleBody);
+	const geometry = geometryFor(vehicleBody);
+
 	const images: StarterConcept[] = [];
-	// ponytail: hero first, then everything else chains off it as a visual
-	// reference — this is what stops the body/livery drifting view to view.
+	// Hero first, then everything else chains off it as a livery reference —
+	// this is what stops the wrap drifting view to view. The hero itself is
+	// anchored to the factory photo, so the shell does not drift either.
 	const hero = prompts.find((p) => p.label === "exterior_hero");
 	const rest = prompts.filter((p) => p.label !== "exterior_hero");
 	let heroUrl = "";
@@ -363,6 +432,9 @@ export async function runStarterConcepts(
 			vehicleLabel,
 			label: hero.label,
 			prompt: hero.prompt,
+			bodyReference,
+			inspirationReference: args.inspirationImage ?? null,
+			geometry,
 		});
 		images.push({
 			label: hero.label,
@@ -373,8 +445,9 @@ export async function runStarterConcepts(
 		onBatch?.(images.slice());
 		if (!r.model.startsWith("placeholder")) heroUrl = r.url;
 	}
-	const refs = heroUrl ? [heroUrl] : undefined;
 	// Batch of 3 concurrent keeps us under rate limits while cutting total time.
+	// The inspiration photo is deliberately dropped here: the hero already
+	// absorbed it, and re-sending it invites the model to copy that truck's body.
 	for (let i = 0; i < rest.length; i += 3) {
 		const batch = rest.slice(i, i + 3);
 		const results = await Promise.all(
@@ -384,7 +457,9 @@ export async function runStarterConcepts(
 					vehicleLabel,
 					label: p.label,
 					prompt: p.prompt,
-					referenceUrls: refs,
+					bodyReference,
+					liveryReference: heroUrl || null,
+					geometry,
 				}),
 			),
 		);

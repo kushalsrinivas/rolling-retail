@@ -223,6 +223,38 @@ export function footprintFt(v: {
 
 export const FREE_VISUAL_CREDITS = 5;
 
+/**
+ * The fixed geometry of each body, written out for the image model.
+ *
+ * Generations drift because a text brief alone never pins the shell down: one
+ * view grows a hatch the next view has never heard of. Pairing a real catalog
+ * photo with this description — and an instruction that only cosmetics may
+ * change — is what keeps all nine views describing the same trailer, and what
+ * keeps the render something the factory can actually build.
+ */
+export const VEHICLE_GEOMETRY: Record<"airstream" | "square", string> = {
+	airstream:
+		"riveted polished aluminium monocoque with a continuous rounded belt line, " +
+		"curved nose and tail end caps, no square corners anywhere on the shell; " +
+		"A-frame tongue and coupler at the front; single entry door on the curbside " +
+		"(passenger side) toward the rear, hinged on its forward edge; one serving " +
+		"hatch cut into the curbside ahead of the door, hinged along its top edge and " +
+		"propped open upward as an awning; two roof vents and a rooftop HVAC unit; " +
+		"single axle with a rounded wheel arch each side; stabilizer jacks at all four corners",
+	square:
+		"flat vertical side walls meeting a flat roof at square corners with a small " +
+		"radius, bonded sheet skin over a welded frame; A-frame tongue and coupler at " +
+		"the front; a rear door on the back wall, hinged on its curbside edge; single " +
+		"entry door on the curbside toward the rear; one serving hatch cut into the " +
+		"curbside ahead of the door, hinged along its top edge and propped open upward " +
+		"as an awning; roof vents and a rooftop HVAC unit; single axle with a square " +
+		"fender each side; stabilizer jacks at all four corners",
+};
+
+export function geometryFor(body: "airstream" | "square") {
+	return VEHICLE_GEOMETRY[body];
+}
+
 export function getVehicle(id: string | null | undefined) {
 	return VEHICLES.find((v) => v.id === id) ?? null;
 }
