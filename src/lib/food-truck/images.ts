@@ -179,6 +179,8 @@ export interface ConceptPromptArgs {
 	equipment: readonly string[];
 	serveMode: ServeMode;
 	brainNote?: string;
+	/** False when the buyer has not named the business, so nothing is lettered. */
+	hasBrand?: boolean;
 }
 
 /** Turn raw equipment ids (e.g. "griddle-chargrill") into readable phrases. */
@@ -262,7 +264,7 @@ function servePhrase(mode: ServeMode): string {
 }
 
 /**
- * Build a complete 9-view concept set from the project brain. Every view is
+ * Build a complete concept set from the project brain. Every view is
  * detailed and consistent so the buyer sees the full truck inside and out.
  */
 export function conceptPrompts(args: ConceptPromptArgs): Array<{
@@ -294,12 +296,30 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	const serve = servePhrase(serveMode);
 	const icon = iconFor(businessType);
 
-	const ctx = `Photorealistic concept render for "${brand}" — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. Photorealistic, architectural visualization quality, high detail, 35mm lens. The only text allowed is the brand name "${brand}" — no other words, no gibberish.`;
+	const hasBrand = Boolean(args.hasBrand ?? true);
+	// Signage phrasing, so an unnamed business gets blank panels rather than a
+	// placeholder painted down the side of the trailer. Six views letter the
+	// truck independently of the instruction in ctx.
+	const roofSign = hasBrand
+		? `illuminated roof blade sign reading "${brand}"`
+		: "illuminated roof blade sign left blank, no lettering";
+	const wordmark = hasBrand
+		? `complete wrap livery with the "${brand}" wordmark`
+		: "complete wrap livery with the signage panel left blank and unlettered";
+	const counterBadge = hasBrand
+		? `An illuminated "${brand}" badge mounted on the counter front.`
+		: "An illuminated blank badge panel on the counter front, awaiting branding.";
+
+	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
+		hasBrand
+			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
+			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
+	}`;
 
 	return [
 		{
 			label: "exterior_hero",
-			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle at golden hour. Full wrap livery visible, service hatch open showing a warm glimpse of the cooking line and stainless counter inside, illuminated roof blade sign reading "${brand}", a few stylish customers waiting at the counter. Urban street-food setting, shallow depth of field.`,
+			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle at golden hour. Full wrap livery visible, service hatch open showing a warm glimpse of the cooking line and stainless counter inside, ${roofSign}, a few stylish customers waiting at the counter. Urban street-food setting, shallow depth of field.`,
 		},
 		{
 			label: "exterior_rear",
@@ -307,7 +327,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "side_elevation",
-			prompt: `${ctx} SIDE ELEVATION: flat orthographic side view, no perspective, like an architectural elevation drawing. Full side profile of the trailer, complete wrap livery with the "${brand}" wordmark, the service hatch shown open with its accent-colored frame, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, technical illustration style, sharp edges, no shadows, no people.`,
+			prompt: `${ctx} SIDE ELEVATION: flat orthographic side view, no perspective, like an architectural elevation drawing. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, technical illustration style, sharp edges, no shadows, no people.`,
 		},
 		{
 			label: "interior_layout",
@@ -315,7 +335,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "front_elevation",
-			prompt: `${ctx} FRONT ELEVATION: dead-on straight view from outside the open service hatch at eye level. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: POS, hot station, make-rail, drinks station. An illuminated "${brand}" badge mounted on the counter front. Symmetrical, dead-on composition.`,
+			prompt: `${ctx} FRONT ELEVATION: dead-on straight view from outside the open service hatch at eye level. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: POS, hot station, make-rail, drinks station. ${counterBadge} Symmetrical, dead-on composition.`,
 		},
 		{
 			label: "assembly_theater",
@@ -327,11 +347,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "roof_plan",
-			prompt: `${ctx} ROOF PLAN + FLOOR LAYOUT — TECHNICAL TOP-DOWN ARCHITECTURAL DRAWING: perfectly vertical bird's-eye orthographic plan of the whole ${lengthM}m × ${widthM}m unit on a clean white sheet with a thin dimension outline showing overall length and width. Roof layer: commercial rooftop HVAC unit centred over the hot station, illuminated double-sided roof blade sign reading "${brand}" mounted fore-aft, two mushroom vents over the drinks end, shore-power camlock hatch marked at the rear corner, stabilizer jacks at all four corners. Ghosted beneath the roof outline, the interior floor layout in lighter linework: linear galley left to right — POS zone, hot station footprint (${equip}), make-rail rectangle, hand-basin square at line entry, drinks end-cap rectangle — with a hatched 800mm clear aisle, door swing arcs, and tiny zone labels. Flat vector-technical style, subtle drop shadows only, sharp 90-degree geometry, no perspective, no people, no sky.`,
+			prompt: `${ctx} ROOF PLAN + FLOOR LAYOUT — TECHNICAL TOP-DOWN ARCHITECTURAL DRAWING: perfectly vertical bird's-eye orthographic plan of the whole ${lengthM}m × ${widthM}m unit on a clean white sheet with a thin dimension outline showing overall length and width. Roof layer: commercial rooftop HVAC unit centred over the hot station, ${roofSign} mounted fore-aft, two mushroom vents over the drinks end, shore-power camlock hatch marked at the rear corner, stabilizer jacks at all four corners. Ghosted beneath the roof outline, the interior floor layout in lighter linework: linear galley left to right — POS zone, hot station footprint (${equip}), make-rail rectangle, hand-basin square at line entry, drinks end-cap rectangle — with a hatched 800mm clear aisle, door swing arcs, and tiny zone labels. Flat vector-technical style, subtle drop shadows only, sharp 90-degree geometry, no perspective, no people, no sky.`,
 		},
 		{
 			label: "brand_mark",
-			prompt: `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: bold geometric sans-serif wordmark "${brand}" in ${colors} on a matte black background, with a small minimalist ${icon} icon above the wordmark in an accent color, and a thin accent-colored underline below. Minimal, premium, street-food-meets-design-studio aesthetic. Flat vector style, high contrast, crisp edges. No extra text.`,
+			prompt: hasBrand
+				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: bold geometric sans-serif wordmark "${brand}" in ${colors} on a matte black background, with a small minimalist ${icon} icon above the wordmark in an accent color, and a thin accent-colored underline below. Minimal, premium, street-food-meets-design-studio aesthetic. Flat vector style, high contrast, crisp edges. No extra text.`
+				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a minimalist ${icon} icon mark centred above them in an accent colour, and a blank rectangular panel where a wordmark would sit. Matte black background. Minimal, premium, street-food-meets-design-studio aesthetic. Flat vector style, crisp edges. Absolutely no text or lettering anywhere.`,
 		},
 	];
 }
@@ -381,7 +403,8 @@ export async function runStarterConcepts(
 	creditsUsed: number;
 	brainNoteUsed: string;
 }> {
-	const brand = (args.brand || "BIB Truck").trim() || "BIB Truck";
+	const hasBrand = Boolean(args.brand?.trim());
+	const brand = args.brand?.trim() || "the business";
 	const vehicleLabel = args.vehicleLabel || "Square Trailer 4m";
 	const vehicleBody: VehicleBody = args.vehicleBody ?? "square";
 	const lengthM = args.lengthM ?? 4;
@@ -411,6 +434,7 @@ export async function runStarterConcepts(
 		equipment,
 		serveMode,
 		brainNote,
+		hasBrand,
 	});
 
 	// The factory's own photo of this body, and the written description of its

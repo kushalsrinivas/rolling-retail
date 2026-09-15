@@ -5,6 +5,7 @@ import { useMediaQuery } from "#/hooks/use-media-query";
 import { cn } from "#/lib/utils";
 import BrandReportPanel from "./BrandReportPanel";
 import ChatPanel from "./ChatPanel";
+import IntakeFlow from "./IntakeFlow";
 
 const MIN_PERCENT = 25;
 const MAX_PERCENT = 75;
@@ -16,6 +17,7 @@ export default function ChatLayout() {
 	const [splitPercent, setSplitPercent] = useState(DEFAULT_PERCENT);
 	const [isDragging, setIsDragging] = useState(false);
 	const [pane, setPane] = useState<MobilePane>("design");
+	const [intakeDone, setIntakeDone] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chat = useChat();
 
@@ -52,6 +54,10 @@ export default function ChatLayout() {
 		window.addEventListener("touchend", onUp);
 	}, []);
 
+	// The intake stands in front of the chat until the buyer has said something
+	// — a blank prompt box is the point most people bounce at.
+	const showIntake = !intakeDone && chat.messages.length <= 1;
+
 	const buildPanel = (
 		<BrandReportPanel
 			images={chat.images}
@@ -69,6 +75,26 @@ export default function ChatLayout() {
 			onRefreshLeads={() => chat.refreshLeads()}
 		/>
 	);
+
+	if (showIntake) {
+		return (
+			<div className="chat-layout h-dvh w-full overflow-hidden bg-[#09090b]">
+				<IntakeFlow
+					onComplete={(brief, answers, image) => {
+						setIntakeDone(true);
+						// Seed the pickers so the panel and the renders agree with the
+						// brief before the first reply lands.
+						if (answers.brandName) chat.setBrandName(answers.brandName);
+						if (answers.vehicleId) chat.setVehicleId(answers.vehicleId);
+						if (answers.businessType)
+							chat.setBusinessType(answers.businessType);
+						chat.sendMessage(brief, image ? { image } : undefined);
+					}}
+					onSkip={() => setIntakeDone(true)}
+				/>
+			</div>
+		);
+	}
 
 	if (!isDesktop) {
 		const conceptCount = chat.images.length;

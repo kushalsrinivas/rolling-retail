@@ -7,7 +7,6 @@ import {
 	updateBrain,
 } from "#/lib/food-truck/brain";
 import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
-import { layoutFor } from "#/lib/food-truck/tools";
 import {
 	getFoodTruckAgent,
 	hasLlmKey,
@@ -16,6 +15,7 @@ import {
 } from "#/lib/food-truck/graph";
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import { creditsLeft, getOrCreateSession } from "#/lib/food-truck/session";
+import { layoutFor } from "#/lib/food-truck/tools";
 
 interface ChatBody {
 	sessionId?: string;
@@ -172,8 +172,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 										vehicleId: effectiveVehicleId,
 										inspirationImage: session.inspirationImage,
 										brand:
-											(brain.brandName ?? body.context?.brandName?.trim()) ||
-											"New Brand",
+											brain.brandName ?? body.context?.brandName?.trim() ?? "",
 										vehicleLabel,
 										vehicleBody: vehicle?.body ?? "square",
 										lengthM: vehicle?.lengthM ?? 4,

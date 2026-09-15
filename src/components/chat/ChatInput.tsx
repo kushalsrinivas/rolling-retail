@@ -2,6 +2,7 @@ import { ArrowUp, ImagePlus, Paperclip, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
+import { fileToDataUrl } from "#/lib/image-file";
 import { cn } from "#/lib/utils";
 
 interface ChatInputProps {
@@ -11,33 +12,6 @@ interface ChatInputProps {
 }
 
 /** Downscale to a vision-friendly JPEG data URL (keeps uploads small). */
-function fileToDataUrl(file: File): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onerror = () => reject(new Error("Could not read that file."));
-		reader.onload = () => {
-			const img = new Image();
-			img.onerror = () =>
-				reject(new Error("That file is not a readable image."));
-			img.onload = () => {
-				const maxDim = 1536;
-				const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-				const canvas = document.createElement("canvas");
-				canvas.width = Math.round(img.width * scale);
-				canvas.height = Math.round(img.height * scale);
-				const ctx = canvas.getContext("2d");
-				if (!ctx) {
-					reject(new Error("Could not process that image."));
-					return;
-				}
-				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-				resolve(canvas.toDataURL("image/jpeg", 0.82));
-			};
-			img.src = String(reader.result);
-		};
-		reader.readAsDataURL(file);
-	});
-}
 
 export default function ChatInput({
 	onSend,
@@ -121,8 +95,8 @@ export default function ChatInput({
 							</button>
 						</div>
 						<span className="text-[11px] text-zinc-500">
-							Inspiration image attached — the designer will reference it;
-							your concept remains original.
+							Inspiration image attached — the designer will reference it; your
+							concept remains original.
 						</span>
 					</div>
 				)}

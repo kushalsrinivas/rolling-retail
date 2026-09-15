@@ -95,7 +95,7 @@ export default function TruckConfigurator({
 	// the roof and the wheels.
 	const radius =
 		Math.sqrt(dims.lengthM ** 2 + dims.widthM ** 2 + dims.heightM ** 2) / 2;
-	const distance = (radius / Math.tan((FOV_DEG * Math.PI) / 360)) * 1.18;
+	const distance = (radius / Math.tan((FOV_DEG * Math.PI) / 360)) * 0.92;
 	// A three-quarter view — front corner, slightly above eye level.
 	const camera: [number, number, number] = [
 		distance * 0.62,

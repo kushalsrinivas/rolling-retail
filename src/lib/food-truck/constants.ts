@@ -221,6 +221,25 @@ export function footprintFt(v: {
 	return `${toFt(v.lengthM)} × ${toFt(v.widthM)} × ${toFt(v.heightM)} ft`;
 }
 
+/**
+ * The views every round produces, in order. Exported so the UI's copy and the
+ * API's label list are driven from the pipeline instead of restating it — the
+ * panel was still promising "3 starter concepts" long after it became nine.
+ */
+export const CONCEPT_VIEWS = [
+	"exterior_hero",
+	"exterior_rear",
+	"side_elevation",
+	"interior_layout",
+	"front_elevation",
+	"assembly_theater",
+	"night_exterior",
+	"roof_plan",
+	"brand_mark",
+] as const;
+
+export const CONCEPT_VIEW_COUNT = CONCEPT_VIEWS.length;
+
 export const FREE_VISUAL_CREDITS = 5;
 
 /**

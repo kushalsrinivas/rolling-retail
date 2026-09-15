@@ -1,19 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
+import {
+	CONCEPT_VIEWS,
+	getBusiness,
+	getVehicle,
+} from "#/lib/food-truck/constants";
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import { creditsLeft, getOrCreateSession } from "#/lib/food-truck/session";
 
-const LABELS = [
-	"exterior_hero",
-	"exterior_rear",
-	"side_elevation",
-	"interior_layout",
-	"front_elevation",
-	"assembly_theater",
-	"night_exterior",
-	"roof_plan",
-	"brand_mark",
-] as const;
+const LABELS = CONCEPT_VIEWS;
 
 export const Route = createFileRoute("/api/agent/images")({
 	server: {

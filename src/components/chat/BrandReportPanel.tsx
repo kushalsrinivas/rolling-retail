@@ -26,6 +26,7 @@ import type {
 	TruckSpec,
 } from "#/hooks/use-chat";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
+import { CONCEPT_VIEW_COUNT } from "#/lib/food-truck/constants";
 import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
 
@@ -267,7 +268,7 @@ export default function BrandReportPanel({
 							isGenerating
 								? "Generating…"
 								: images.length
-									? `${images.length} concepts`
+									? `${images.length} concept${images.length === 1 ? "" : "s"}`
 									: undefined
 						}
 					/>
@@ -278,7 +279,7 @@ export default function BrandReportPanel({
 							</div>
 							<div>
 								<p className="text-sm font-medium text-zinc-300">
-									No concepts yet — start with 3
+									No concepts yet — start with {CONCEPT_VIEW_COUNT}
 								</p>
 								<p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-zinc-500">
 									One body, three consistent angles (exterior / hatch-open /
@@ -290,7 +291,7 @@ export default function BrandReportPanel({
 								onClick={onGenerateConcepts}
 								className="rounded-full bg-purple-600 px-4 py-2 text-xs font-medium text-white hover:bg-purple-500"
 							>
-								Generate 3 starter concepts
+								Generate {CONCEPT_VIEW_COUNT} starter concepts
 							</button>
 							<p className="flex items-center gap-1 text-[10px] text-zinc-600">
 								<Lock className="h-3 w-3" /> 5 free visuals · then top-up or
