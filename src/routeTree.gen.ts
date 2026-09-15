@@ -19,6 +19,7 @@ import { Route as ApiRodinProxyDownloadRouteImport } from './routes/api/rodin/pr
 import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/download'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
+import { Route as ApiAgentLeadsRouteImport } from './routes/api/agent/leads'
 import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
 import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
 
@@ -72,6 +73,11 @@ const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
   path: '/api/agent/session',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentLeadsRoute = ApiAgentLeadsRouteImport.update({
+  id: '/api/agent/leads',
+  path: '/api/agent/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentImagesRoute = ApiAgentImagesRouteImport.update({
   id: '/api/agent/images',
   path: '/api/agent/images',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
+  '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
+    | '/api/agent/leads'
     | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
+    | '/api/agent/leads'
     | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
+    | '/api/agent/leads'
     | '/api/agent/session'
     | '/api/auth/$'
     | '/api/rodin/download'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiAgentImagesRoute: typeof ApiAgentImagesRoute
+  ApiAgentLeadsRoute: typeof ApiAgentLeadsRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRodinDownloadRoute: typeof ApiRodinDownloadRoute
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/leads': {
+      id: '/api/agent/leads'
+      path: '/api/agent/leads'
+      fullPath: '/api/agent/leads'
+      preLoaderRoute: typeof ApiAgentLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/images': {
       id: '/api/agent/images'
       path: '/api/agent/images'
@@ -281,6 +301,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiAgentImagesRoute: ApiAgentImagesRoute,
+  ApiAgentLeadsRoute: ApiAgentLeadsRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRodinDownloadRoute: ApiRodinDownloadRoute,

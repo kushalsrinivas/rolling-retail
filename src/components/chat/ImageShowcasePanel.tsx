@@ -12,6 +12,19 @@ import { cn } from "#/lib/utils";
 import MetricsDashboard from "./MetricsDashboard";
 
 const LABEL_MAP: Record<string, string> = {
+  exterior_hero: "Exterior Hero",
+  exterior_rear: "Exterior Rear",
+  side_elevation: "Side Elevation",
+  interior_layout: "Interior Layout",
+  front_elevation: "Front Elevation",
+  assembly_theater: "Assembly Theater",
+  night_exterior: "Night Exterior",
+  roof_plan: "Roof Plan",
+  brand_mark: "Brand Mark",
+  // legacy labels (older sessions)
+  exterior: "Exterior",
+  hatch_open: "Hatch Open",
+  interior: "Interior",
   vehicle_wrap: "Vehicle Wrap Concept",
   brand_lifestyle: "Brand Lifestyle",
   store_interior: "Store Interior",
@@ -162,7 +175,7 @@ export default function ImageShowcasePanel({
               ))}
 
               {isGenerating &&
-                Array.from({ length: Math.max(0, 4 - images.length) }).map(
+                Array.from({ length: Math.max(0, 9 - images.length) }).map(
                   (_, i) => (
                     <div
                       key={`gen-${i}`}
