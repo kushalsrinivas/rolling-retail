@@ -42,23 +42,25 @@ export interface ProjectBrain {
 	updatedAt: number;
 }
 
-const BUSINESS_KEYWORDS: Record<Exclude<BusinessTypeId, "combined">, string[]> =
-	{
-		fried: [
-			"fryer",
-			"fried",
-			"fish and chips",
-			"fish & chips",
-			"chips",
-			"scampi",
-			"fried chicken",
-			"fries",
-			"loaded fries",
-			"wings",
-			"fritters",
-			"tempura",
-			"nuggets",
-		],
+const BUSINESS_KEYWORDS: Record<
+	Exclude<BusinessTypeId, "combined">,
+	string[]
+> = {
+	fried: [
+		"fryer",
+		"fried",
+		"fish and chips",
+		"fish & chips",
+		"chips",
+		"scampi",
+		"fried chicken",
+		"fries",
+		"loaded fries",
+		"wings",
+		"fritters",
+		"tempura",
+		"nuggets",
+	],
 	grill: [
 		"burger",
 		"chicken burger",
@@ -76,62 +78,62 @@ const BUSINESS_KEYWORDS: Record<Exclude<BusinessTypeId, "combined">, string[]> =
 		"sandwich",
 		"meat",
 	],
-		pizza: [
-			"pizza",
-			"pizzas",
-			"neapolitan",
-			"sourdough pizza",
-			"italian",
-			"pasta",
-			"calzone",
-			"focaccia",
-			"deck oven",
-			"pizza oven",
-		],
-		asian: [
-			"noodles",
-			"ramen",
-			"bao",
-			"curry",
-			"thai",
-			"chinese",
-			"indian",
-			"japanese",
-			"korean",
-			"vietnamese",
-			"wok",
-			"tacos",
-			"taco",
-			"mexican",
-			"rice",
-			"dumplings",
-			"gyoza",
-			"sushi",
-			"katsu",
-		],
-		breakfast: [
-			"breakfast",
-			"brunch",
-			"bacon roll",
-			"bacon butty",
-			"full english",
-			"eggs",
-			"pancakes",
-			"porridge",
-			"pastries",
-			"croissant",
-			"sausage roll",
-		],
-		coffee: [
-			"coffee",
-			"espresso",
-			"flat white",
-			"latte",
-			"cappuccino",
-			"barista",
-			"speciality coffee",
-			"specialty coffee",
-		],
+	pizza: [
+		"pizza",
+		"pizzas",
+		"neapolitan",
+		"sourdough pizza",
+		"italian",
+		"pasta",
+		"calzone",
+		"focaccia",
+		"deck oven",
+		"pizza oven",
+	],
+	asian: [
+		"noodles",
+		"ramen",
+		"bao",
+		"curry",
+		"thai",
+		"chinese",
+		"indian",
+		"japanese",
+		"korean",
+		"vietnamese",
+		"wok",
+		"tacos",
+		"taco",
+		"mexican",
+		"rice",
+		"dumplings",
+		"gyoza",
+		"sushi",
+		"katsu",
+	],
+	breakfast: [
+		"breakfast",
+		"brunch",
+		"bacon roll",
+		"bacon butty",
+		"full english",
+		"eggs",
+		"pancakes",
+		"porridge",
+		"pastries",
+		"croissant",
+		"sausage roll",
+	],
+	coffee: [
+		"coffee",
+		"espresso",
+		"flat white",
+		"latte",
+		"cappuccino",
+		"barista",
+		"speciality coffee",
+		"specialty coffee",
+	],
 	"cold-drinks": [
 		"boba",
 		"bubble tea",
@@ -148,64 +150,64 @@ const BUSINESS_KEYWORDS: Record<Exclude<BusinessTypeId, "combined">, string[]> =
 		"cold drinks",
 		"cold drink",
 	],
-		bakery: [
-			"bakery",
-			"patisserie",
-			"cakes",
-			"cupcakes",
-			"brownies",
-			"cookies",
-			"doughnuts",
-			"donuts",
-			"dessert",
-			"desserts",
-			"sweet treats",
-			"churros",
-			"waffles",
-			"crepes",
-		],
-		"ice-cream": [
-			"ice cream",
-			"gelato",
-			"soft scoop",
-			"sundae",
-			"sorbet",
-			"frozen yoghurt",
-			"frozen yogurt",
-			"mr whippy",
-		],
-		bar: [
-			"bar",
-			"cocktail",
-			"cocktails",
-			"beer",
-			"craft beer",
-			"wine",
-			"prosecco",
-			"gin",
-			"mobile bar",
-			"draught",
-			"draft",
-			"pour",
-		],
-		retail: [
-			"merch",
-			"merchandise",
-			"clothing",
-			"apparel",
-			"t-shirt",
-			"tshirt",
-			"retail",
-			"boutique",
-			"gifts",
-			"souvenir",
-			"streetwear",
-			"fashion",
-			"florist",
-			"flowers",
-			"books",
-		],
-	};
+	bakery: [
+		"bakery",
+		"patisserie",
+		"cakes",
+		"cupcakes",
+		"brownies",
+		"cookies",
+		"doughnuts",
+		"donuts",
+		"dessert",
+		"desserts",
+		"sweet treats",
+		"churros",
+		"waffles",
+		"crepes",
+	],
+	"ice-cream": [
+		"ice cream",
+		"gelato",
+		"soft scoop",
+		"sundae",
+		"sorbet",
+		"frozen yoghurt",
+		"frozen yogurt",
+		"mr whippy",
+	],
+	bar: [
+		"bar",
+		"cocktail",
+		"cocktails",
+		"beer",
+		"craft beer",
+		"wine",
+		"prosecco",
+		"gin",
+		"mobile bar",
+		"draught",
+		"draft",
+		"pour",
+	],
+	retail: [
+		"merch",
+		"merchandise",
+		"clothing",
+		"apparel",
+		"t-shirt",
+		"tshirt",
+		"retail",
+		"boutique",
+		"gifts",
+		"souvenir",
+		"streetwear",
+		"fashion",
+		"florist",
+		"flowers",
+		"books",
+	],
+};
 
 const VEHICLE_WORDS = [
 	"airstream",
@@ -222,6 +224,9 @@ const VEHICLE_WORDS = [
 	"5 m",
 	"meter",
 	"metre",
+	"ft",
+	"foot",
+	"feet",
 	"body",
 	"footprint",
 ];
@@ -460,9 +465,7 @@ export function extractAffirmedBrand(
 	const assistants = history.filter(Boolean).slice(-3).reverse();
 	for (const msg of assistants) {
 		// 1. "running with **BIB Truck**" — highest confidence.
-		const runningBold = msg.match(
-			/running with\s+\*\*([^*]{2,40})\*\*/i,
-		);
+		const runningBold = msg.match(/running with\s+\*\*([^*]{2,40})\*\*/i);
 		if (runningBold?.[1]) {
 			const name = runningBold[1].trim();
 			if (
@@ -503,12 +506,26 @@ export function extractAffirmedBrand(
 	return null;
 }
 
+/**
+ * US buyers read the labels in feet, so "16 ft trailer" has to resolve to the
+ * same body as the metric id. Bands are generous because people round.
+ */
+function squareIdFromFeet(feet: number): string | null {
+	if (feet < 8 || feet > 20) return null;
+	if (feet <= 11) return "square-3m";
+	if (feet <= 14) return "square-4m";
+	return "square-5m";
+}
+
 function extractVehicle(lower: string): string | null {
+	const feetMatch = lower.match(/\b(\d{1,2})\s?(?:ft|foot|feet|')\b/);
+	const feet = feetMatch ? Number(feetMatch[1]) : null;
 	const isAirstream = lower.includes("airstream");
 	const isSquare =
 		lower.includes("square") ||
 		/\b[345]\s?m\b/.test(lower) ||
-		/\b[345]\s?(meter|metre)/.test(lower);
+		/\b[345]\s?(meter|metre)/.test(lower) ||
+		(feet !== null && squareIdFromFeet(feet) !== null);
 	const sizeM = lower.match(/\b([345])\s?m\b/)?.[1];
 	if (isAirstream && !isSquare) {
 		if (/small|compact|mini/.test(lower)) return "airstream-s";
@@ -518,6 +535,8 @@ function extractVehicle(lower: string): string | null {
 	if (isSquare && !isAirstream) {
 		if (sizeM === "3") return "square-3m";
 		if (sizeM === "5") return "square-5m";
+		if (sizeM === "4") return "square-4m";
+		if (feet !== null) return squareIdFromFeet(feet) ?? "square-4m";
 		return "square-4m";
 	}
 	return null;

@@ -45,6 +45,7 @@ export interface TruckLayout {
 export interface TruckEstimate {
 	vehicleLabel: string;
 	wrapSqm: number;
+	wrapSqft: number;
 	wrapTier: string;
 	wrapLow: number;
 	wrapHigh: number;
@@ -151,7 +152,7 @@ function generateId() {
 }
 
 const WELCOME =
-	"Welcome to the Factory Designer. Please share your brand, menu, colours, service style and any inspiration — I will organise it into a factory-buildable layout and prepare visual concepts once I have enough detail. What are you building?";
+	"Welcome to the Factory Designer. Please share your brand, menu, colors, service style and any inspiration — I will organize it into a factory-buildable layout and prepare visual concepts once I have enough detail. What are you building?";
 
 export function useChat() {
 	const [messages, setMessages] = useState<ChatMessage[]>([
@@ -433,7 +434,7 @@ export function useChat() {
 						sessionId,
 						brand: brandName.trim() || "New Brand",
 						vehicleId,
-						colors: opts?.colors || "bold brand colours",
+						colors: opts?.colors || "bold brand colors",
 						vibe: opts?.vibe || businessType,
 					}),
 				});

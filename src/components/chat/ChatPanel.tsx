@@ -186,7 +186,7 @@ export default function ChatPanel({ chat }: ChatPanelProps) {
 				<ChatInput
 					onSend={sendMessage}
 					disabled={isStreaming || isConnecting}
-					placeholder="Describe your brand, menu, colours, service style and inspiration…"
+					placeholder="Describe your brand, menu, colors, service style and inspiration…"
 				/>
 			</div>
 		</div>

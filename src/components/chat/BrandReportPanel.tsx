@@ -192,7 +192,7 @@ export default function BrandReportPanel({
 		layout ? `Layout: ${layout.layoutName} (${layout.serveMode})` : "Layout: —",
 		layout ? `Equipment: ${layout.equipment.join(", ")}` : null,
 		estimate
-			? `Wrap: ~${estimate.wrapSqm} sqm ${estimate.wrapTier} ≈ $${estimate.wrapLow.toLocaleString()}–$${estimate.wrapHigh.toLocaleString()}`
+			? `Wrap: ~${estimate.wrapSqft} sq ft ${estimate.wrapTier} ≈ $${estimate.wrapLow.toLocaleString()}–$${estimate.wrapHigh.toLocaleString()}`
 			: null,
 		spec ? `Contact: ${spec.buyerContact}` : null,
 		"Source: web designer session (LangGraph) — full chat log attached in factory pipeline.",
@@ -420,7 +420,7 @@ export default function BrandReportPanel({
 								Your build sheet appears here
 							</p>
 							<p className="max-w-[280px] text-xs leading-relaxed text-zinc-500">
-								Layout zones, equipment, wrap sqm + ranges, BOM and the private
+								Layout zones, equipment, wrap area + ranges, BOM and the private
 								investor spec — built live as you chat.
 							</p>
 							<button
@@ -496,7 +496,7 @@ export default function BrandReportPanel({
 										<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
 											<p className="text-[10px] text-zinc-500">Wrap area</p>
 											<p className="text-lg font-bold text-purple-300">
-												~{estimate.wrapSqm} sqm
+												~{estimate.wrapSqft} sq ft
 											</p>
 											<p className="text-[10px] text-zinc-600">
 												{estimate.wrapTier} · {estimate.vehicleLabel}

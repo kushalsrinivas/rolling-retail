@@ -2,9 +2,12 @@ import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
 import {
 	BUSINESS_TYPES,
+	footprintFt,
 	getBusiness,
 	getVehicle,
 	LEGACY_BUSINESS_ALIASES,
+	toFt,
+	toSqft,
 	VEHICLES,
 } from "./constants";
 
@@ -21,6 +24,7 @@ export interface LayoutResult {
 export interface EstimateResult {
 	vehicleLabel: string;
 	wrapSqm: number;
+	wrapSqft: number;
 	wrapTier: string;
 	wrapLow: number;
 	wrapHigh: number;
@@ -55,7 +59,8 @@ function hotStationFor(businessType: string): {
 	switch (businessType) {
 		case "fried":
 			return {
-				station: "Fryer bank under extraction (left), dump and heat lamp (right)",
+				station:
+					"Fryer bank under extraction (left), dump and heat lamp (right)",
 				equipment: ["fryer", "extraction-hood", "fire-suppression"],
 			};
 		case "grill":
@@ -131,7 +136,7 @@ function serveryFor(businessType: string): {
 				power:
 					"Espresso and refrigeration need mains hook-up with generator provision. Battery alone will not carry peak service.",
 				compliance: [
-					"Hand basin and enclosed water tanks are required for council sign-off in most UK boroughs.",
+					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
 		case "bakery":
@@ -155,7 +160,7 @@ function serveryFor(businessType: string): {
 				power:
 					"Chilled display and lighting suit mains hook-up with battery support for short off-grid pitches.",
 				compliance: [
-					"Hand basin and enclosed water tanks are required for council sign-off in most UK boroughs.",
+					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
 		case "ice-cream":
@@ -177,7 +182,7 @@ function serveryFor(businessType: string): {
 				power:
 					"Freezers need continuous power. Specify mains hook-up with generator provision for all-day trading.",
 				compliance: [
-					"Hand basin and enclosed water tanks are required for council sign-off in most UK boroughs.",
+					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
 		case "bar":
@@ -202,7 +207,7 @@ function serveryFor(businessType: string): {
 					"Refrigeration and glass wash need mains hook-up with generator provision for evening service.",
 				compliance: [
 					"Alcohol service usually needs a Temporary Event Notice or premises licence — confirm with the council early.",
-					"Hand basin and enclosed water tanks are required for council sign-off in most UK boroughs.",
+					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
 		default:
@@ -226,7 +231,7 @@ function serveryFor(businessType: string): {
 				power:
 					"Ice and refrigeration need mains hook-up with generator provision. Battery alone will not carry a full trading day.",
 				compliance: [
-					"Hand basin and enclosed water tanks are required for council sign-off in most UK boroughs.",
+					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
 	}
@@ -253,7 +258,9 @@ export function layoutFor(
 				"Entry and queue outside with A-board menu",
 				"Display wall with lockable overnight storage",
 				"Till counter near the door for throughput",
-				long ? "Rear stockroom (around 20% of the unit)" : "Under-counter stock",
+				long
+					? "Rear stockroom (around 20% of the unit)"
+					: "Under-counter stock",
 			],
 			equipment: [
 				"display-wall",
@@ -289,13 +296,15 @@ export function layoutFor(
 			complianceNotes: servery.compliance,
 			why: [
 				"Cold chain directly under the hatch means fewer steps per order.",
-				"An organised menu board above the hatch supports average order value.",
+				"An organized menu board above the hatch supports average order value.",
 			],
 		};
 	}
 
 	// Hot-food family: fried, grill, pizza, asian, breakfast, combined
-	const hot = hotStationFor(HOT_TYPES.has(normalised) ? normalised : "combined");
+	const hot = hotStationFor(
+		HOT_TYPES.has(normalised) ? normalised : "combined",
+	);
 	return {
 		layoutName: long ? "Full hot line with drinks station" : "Compact hot line",
 		serveMode: walkIn ? "hybrid" : "hatch-serve",
@@ -329,7 +338,7 @@ export function layoutFor(
 	};
 }
 
-function estimateFor(
+export function estimateFor(
 	vehicleId: string,
 	wrapTier: string,
 	signage: string[],
@@ -338,25 +347,27 @@ function estimateFor(
 ): EstimateResult {
 	const vehicle = getVehicle(vehicleId);
 	const wrapSqm = vehicle?.wrapSqm ?? 30;
+	const wrapSqft = toSqft(wrapSqm);
 	const premium =
 		wrapTier.toLowerCase().includes("3m") ||
 		wrapTier.toLowerCase().includes("premium");
-	// Factory planning numbers (wrap film + labor), intentionally ranges not quotes.
-	const perSqmLow = premium ? 95 : 55;
-	const perSqmHigh = premium ? 140 : 85;
-	const wrapLow = Math.round(wrapSqm * perSqmLow);
-	const wrapHigh = Math.round(wrapSqm * perSqmHigh);
-	const signageLow =
-		signage.length * 250 + (menuBoard ? 900 : 0) + (hvac ? 0 : 0);
-	const signageHigh = signage.length * 600 + (menuBoard ? 2200 : 0);
+	// US factory planning numbers in USD per square foot, installed (film +
+	// labor), intentionally ranges not quotes. Premium covers 3M cast film with
+	// overlaminate, which is what an Airstream's compound curves actually need.
+	const perSqftLow = premium ? 18 : 12;
+	const perSqftHigh = premium ? 28 : 18;
+	const wrapLow = Math.round(wrapSqft * perSqftLow);
+	const wrapHigh = Math.round(wrapSqft * perSqftHigh);
+	const signageLow = signage.length * 300 + (menuBoard ? 1200 : 0);
+	const signageHigh = signage.length * 800 + (menuBoard ? 3000 : 0);
 	const bom: EstimateResult["bom"] = [
 		{
 			item: vehicle?.label ?? "Trailer",
-			detail: `${vehicle?.lengthM ?? 4}m box · factory base build`,
+			detail: `${toFt(vehicle?.lengthM ?? 4)} ft box · factory base build`,
 		},
 		{
 			item: `Wrap film (${premium ? "3M premium" : "standard"})`,
-			detail: `~${wrapSqm} sqm incl. waste + seams`,
+			detail: `~${wrapSqft} sq ft incl. waste + seams`,
 		},
 		...signage.map((s) => ({ item: "Signage", detail: s })),
 		...(menuBoard
@@ -384,12 +395,14 @@ function estimateFor(
 	return {
 		vehicleLabel: vehicle?.label ?? vehicleId,
 		wrapSqm,
+		wrapSqft,
 		wrapTier: premium ? "3M premium" : "standard",
 		wrapLow,
 		wrapHigh,
 		signageLow,
 		signageHigh,
-		leadTimeWeeks: "6–10 weeks after visual sign-off (wrap and build scheduling)",
+		leadTimeWeeks:
+			"6–10 weeks after visual sign-off (wrap and build scheduling)",
 		bom,
 	};
 }
@@ -455,7 +468,7 @@ export function createFoodTruckTools() {
 	const buildSpecSheet = new DynamicStructuredTool({
 		name: "build_spec_sheet",
 		description:
-			"Build the buyer-facing spec sheet (investor one-pager + factory handover). Call at review time when brand, business, vehicle, equipment and colours are settled.",
+			"Build the buyer-facing spec sheet (investor one-pager + factory handover). Call at review time when brand, business, vehicle, equipment and colors are settled.",
 		schema: z.object({
 			brandName: z.string(),
 			businessType: z.string(),
@@ -481,12 +494,11 @@ export function createFoodTruckTools() {
 				brandName,
 				business: business?.label ?? businessType,
 				vehicle: vehicle?.label ?? vehicleId,
-				footprintM: vehicle
-					? `${vehicle.lengthM} × ${vehicle.widthM} × ${vehicle.heightM}h`
-					: "tbd",
+				footprintM: vehicle ? footprintFt(vehicle) : "tbd",
 				equipment,
 				brandColors,
-				buyerContact: contact || "Not captured yet — the factory should follow up",
+				buyerContact:
+					contact || "Not captured yet — the factory should follow up",
 				privacy:
 					"Each buyer design is private to that buyer. The factory will not reproduce it for competitors without consent.",
 				nextSteps: [

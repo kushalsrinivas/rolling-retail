@@ -2,7 +2,7 @@
  * Food Truck Factory — designer domain constants.
  *
  * Scope is intentionally constrained to what the factory can actually build:
- * Airstreams + square trailers for the UK market. Keeping this list tight is
+ * Airstreams + square trailers for the US market. Keeping this list tight is
  * what prevents inconsistent renders and impossible body-shape changes
  * downstream.
  */
@@ -40,7 +40,7 @@ export const VEHICLES = [
 	},
 	{
 		id: "square-3m",
-		label: "Square Trailer · 3m",
+		label: "Square Trailer · 10 ft",
 		body: "square" as const,
 		lengthM: 3,
 		widthM: 2,
@@ -50,7 +50,7 @@ export const VEHICLES = [
 	},
 	{
 		id: "square-4m",
-		label: "Square Trailer · 4m",
+		label: "Square Trailer · 13 ft",
 		body: "square" as const,
 		lengthM: 4,
 		widthM: 2.1,
@@ -60,7 +60,7 @@ export const VEHICLES = [
 	},
 	{
 		id: "square-5m",
-		label: "Square Trailer · 5m",
+		label: "Square Trailer · 16 ft",
 		body: "square" as const,
 		lengthM: 5,
 		widthM: 2.2,
@@ -137,7 +137,7 @@ export const BUSINESS_TYPES = [
 		id: "cold-drinks",
 		label: "Bubble Tea, Juices & Cold Drinks",
 		needs: ["ice", "refrigeration", "prep-counter", "hand-basin", "till"],
-		note: "Cold storage, ice and organised prep underpin the menu.",
+		note: "Cold storage, ice and organized prep underpin the menu.",
 	},
 	{
 		id: "bakery",
@@ -167,7 +167,7 @@ export const BUSINESS_TYPES = [
 		id: "retail",
 		label: "Retail Boutique & Merchandise",
 		needs: ["display-wall", "till", "secure-storage"],
-		note: "Walk-in display and considered till flow maximise conversion.",
+		note: "Walk-in display and considered till flow maximizes conversion.",
 	},
 	{
 		id: "combined",
@@ -199,6 +199,27 @@ export const GUIDED_STEPS = [
 	{ id: "wrap", label: "Wrap & signage" },
 	{ id: "review", label: "Review & spec" },
 ] as const;
+
+/**
+ * Dimensions are stored metric (the factory's own drawings are metric) but
+ * FTF sells into the US, so everything buyer-facing renders in feet.
+ */
+export function toFt(metres: number) {
+	return Math.round(metres * 3.28084 * 10) / 10;
+}
+
+export function toSqft(sqm: number) {
+	return Math.round(sqm * 10.7639);
+}
+
+/** Buyer-facing footprint string, e.g. `20 × 7.2 × 8.9 ft`. */
+export function footprintFt(v: {
+	lengthM: number;
+	widthM: number;
+	heightM: number;
+}) {
+	return `${toFt(v.lengthM)} × ${toFt(v.widthM)} × ${toFt(v.heightM)} ft`;
+}
 
 export const FREE_VISUAL_CREDITS = 5;
 

@@ -63,7 +63,7 @@ export async function generateTruckImage(args: {
 	}
 	const text =
 		refParts.length > 0
-			? `${args.prompt} CONSISTENCY LOCK: the attached reference image IS this exact trailer — copy its body shape, proportions, wrap livery, brand colours, logo placement and signage exactly. Only the camera angle and time of day change. Do not redesign anything.`
+			? `${args.prompt} CONSISTENCY LOCK: the attached reference image IS this exact trailer — copy its body shape, proportions, wrap livery, brand colors, logo placement and signage exactly. Only the camera angle and time of day change. Do not redesign anything.`
 			: args.prompt;
 	try {
 		const res = await fetch(

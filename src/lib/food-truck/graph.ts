@@ -18,7 +18,7 @@ WHO YOU SERVE (two sides):
 
 HARD CONSTRAINTS (never violate):
 - Only design within: Airstreams (S/M/L) and Square Trailers (3m/4m/5m). Steer anything else back. Never invent dimensions.
-- UK market, English. Use UK spelling and professional plain English. Costs in GBP.
+- US market, American English. Use US spelling and professional plain English. Costs in USD.
 - Costs are RANGES, never quotes. Wrap and signage maths always via estimate_build.
 - Visuals: max 5 complimentary rounds per buyer. Count down naturally ("3 of 5 remaining"). Beyond that: top-up or sales — never generate silently over budget.
 - ${TOOL_LIST_HINT}
@@ -32,7 +32,7 @@ HOW YOU WORK (every turn, silently):
 RESPONSE RULES:
 - Short and decisive. A few tight paragraphs maximum. No essays, no recaps of everything said so far.
 - ALWAYS format in markdown so key points stand out: **bold** for equipment, costs and decisions; bullet lists (-) for zones/equipment/options; numbered lists (1.) for flow/sequence; ## subheadings only for longer build summaries. Never paste a wall of plain text.
-- Costs in GBP (£) only — never $ — and always as RANGES.
+- Costs in USD ($) only — never £ — and always as RANGES.
 - NEVER end with a list of questions. At most ONE question per turn, and only when the missing answer would materially change the direction (walk-in vs hatch, fryer vs griddle vs oven). Otherwise decide and move.
 - NEVER paste raw tool JSON. Summarise in words; the build panel shows the structure.
 - When the system note says concepts are auto-generating, say so in ONE line and keep designing — do not ask permission.
@@ -48,9 +48,9 @@ TOOL DISCIPLINE:
 - recommend_layout as soon as businessType is known — vehicle defaults to the buyer's shortlisted body and walk-in defaults to hatch unless they said walk-in. Present the layout with ONE line on why it converts. Never describe a layout in chat without calling it (the build panel must move).
 - estimate_build when wrap tier, signage, menu board or HVAC come up.
 - build_spec_sheet at review time, then capture contact details and call save_lead.
-- Blank canvas ("just show me ideas"): select combined with a square 4m or Airstream mid, let the system generate starters, ask the buyer to favourite a direction, then develop from there.
+- Blank canvas ("just show me ideas"): select combined with a square 4m or Airstream mid, let the system generate starters, ask the buyer to favorite a direction, then develop from there.
 
-STYLE: warm, assured, professional. UK English throughout. No AI-process narration, no jargon, no disclaimers.`;
+STYLE: warm, assured, professional. US English throughout. No AI-process narration, no jargon, no disclaimers.`;
 
 function apiKey() {
 	return (
@@ -102,7 +102,7 @@ export function offlineReply(
 	const t = userText.toLowerCase();
 	const last = history.join("\n").toLowerCase();
 	if (opts?.hasPhoto) {
-		return "Thank you — I can see the direction (body shape, colours, signage style). Your design remains private to you. I will translate the palette and character into a factory-buildable version on an Airstream or Square Trailer. What will the unit serve, and will customers walk inside or order at the hatch?";
+		return "Thank you — I can see the direction (body shape, colors, signage style). Your design remains private to you. I will translate the palette and character into a factory-buildable version on an Airstream or Square Trailer. What will the unit serve, and will customers walk inside or order at the hatch?";
 	}
 	const known =
 		/fried|fish|chips|grill|burger|bbq|pizza|asian|noodle|curry|bao|breakfast|brunch|coffee|espresso|boba|bubble|juice|bakery|patisserie|dessert|ice cream|gelato|cocktail|beer|bar|retail|boutique|merch|combined/.test(
@@ -118,7 +118,7 @@ export function offlineReply(
 		!known
 	) {
 		if (!known) {
-			return "Understood — please summarise the offer in one line (for example, smash burgers with lemonade) and confirm whether customers walk inside or order at the hatch. I will then recommend a factory-buildable layout with the appropriate equipment and we can begin visuals.";
+			return "Understood — please summarize the offer in one line (for example, smash burgers with lemonade) and confirm whether customers walk inside or order at the hatch. I will then recommend a factory-buildable layout with the appropriate equipment and we can begin visuals.";
 		}
 		return "Thank you — for that menu I would recommend a hatch-serve line with a dedicated drinks station, hand basin at the line entry and a menu board above the hatch. Which body would you like to see it on — Airstream Mid or Square 4m?";
 	}
@@ -126,7 +126,7 @@ export function offlineReply(
 		return "As a planning guide until sales confirms a quotation: wrap is priced by area (3M premium is approximately 1.6× standard), plus signage per item and the menu board as a line item. Confirm the vehicle and wrap tier and I will prepare ranges, a bill of materials and lead time.";
 	}
 	if (/spec|investor|export|franchise/.test(t)) {
-		return "I will prepare your specification summary: brand, vehicle footprint, equipment, colours, wrap area and lead time. It remains private to you. Please share your name and contact details and I will save the factory handover.";
+		return "I will prepare your specification summary: brand, vehicle footprint, equipment, colors, wrap area and lead time. It remains private to you. Please share your name and contact details and I will save the factory handover.";
 	}
 	return "Understood — to keep visuals consistent I design only on the factory's six bodies (Airstreams and Square 3/4/5m). What will the unit serve, and will customers walk inside or order at the hatch?";
 }
