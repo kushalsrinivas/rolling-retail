@@ -27,6 +27,7 @@ import type {
 } from "#/hooks/use-chat";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
 import { cn } from "#/lib/utils";
+import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
 
 const LABEL_MAP: Record<string, string> = {
 	exterior: "Exterior hero",
@@ -162,6 +163,10 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 }
 
 /** three.js is heavy and client-only; keep it out of the panel's first paint. */
+/** What the factory wants stamped on anything a buyer takes away. */
+const WATERMARK_TEXT =
+	import.meta.env.VITE_WATERMARK_TEXT || "Food Truck Factory";
+
 const TruckConfigurator = lazy(
 	() => import("#/components/truck/TruckConfigurator"),
 );
@@ -185,6 +190,7 @@ export default function BrandReportPanel({
 	const [lightbox, setLightbox] = useState<number | null>(null);
 	const [loaded, setLoaded] = useState<Set<string>>(new Set());
 	const [copied, setCopied] = useState(false);
+	const [saving, setSaving] = useState(false);
 
 	// Factory pipeline is live data — refresh whenever the build tab opens.
 	useEffect(() => {
@@ -715,6 +721,32 @@ export default function BrandReportPanel({
 							className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white/70 hover:bg-zinc-700 hover:text-white"
 						>
 							<X className="h-4 w-4" />
+						</button>
+						{/* Concepts leave with the factory's mark on them. */}
+						<button
+							type="button"
+							disabled={saving}
+							onClick={async () => {
+								const img = images[lightbox];
+								setSaving(true);
+								try {
+									const marked = await watermarkImage(img.url, {
+										text: WATERMARK_TEXT,
+										subtext: img.label.replace(/_/g, " "),
+										tile: true,
+									});
+									downloadDataUrl(
+										marked,
+										`${spec?.brandName?.replace(/\s+/g, "-").toLowerCase() ?? "concept"}-${img.label}.png`,
+									);
+								} finally {
+									setSaving(false);
+								}
+							}}
+							className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3.5 py-2 text-xs font-medium text-white/85 backdrop-blur transition hover:bg-black/85 disabled:opacity-60"
+						>
+							<Download className="h-3.5 w-3.5" />
+							{saving ? "Preparing…" : "Download"}
 						</button>
 					</div>
 				</div>
