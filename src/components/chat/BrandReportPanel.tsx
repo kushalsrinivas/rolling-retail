@@ -17,7 +17,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type {
 	GeneratedImage,
 	PipelineLead,
@@ -160,6 +160,11 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 		</div>
 	);
 }
+
+/** three.js is heavy and client-only; keep it out of the panel's first paint. */
+const TruckConfigurator = lazy(
+	() => import("#/components/truck/TruckConfigurator"),
+);
 
 export default function BrandReportPanel({
 	images,
@@ -395,16 +400,33 @@ export default function BrandReportPanel({
 									<MessageCircle className="h-3 w-3" /> Refine in chat
 								</button>
 							</div>
-							{/* 3D handoff note (Rodin stays as the 3D step) */}
-							<div className="mt-6">
-								<SectionHeader icon={Box} title="3D Model" badge="Rodin AI" />
-								<p className="mt-2 text-xs leading-relaxed text-zinc-500">
-									Once a concept direction is picked, generate the interactive
-									3D on the Studio tab — then come back here for the 4 export
-									views (exterior · hatch-open · interior · top) buyers forward
-									to investors.
-								</p>
-							</div>
+							{/* The trailer itself — built from the factory's dimensions,
+							    so it cannot disagree with the spec above. */}
+							{layout && (
+								<div className="mt-6">
+									<SectionHeader
+										icon={Box}
+										title="Your trailer"
+										badge="live model"
+									/>
+									<p className="mt-2 mb-3 text-xs leading-relaxed text-zinc-500">
+										Built from the factory's own dimensions and your equipment
+										list — change the layout and the power draw, the aisle and
+										every render angle follow.
+									</p>
+									<Suspense
+										fallback={
+											<div className="h-[280px] w-full animate-pulse rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#0b0b10] sm:h-[340px]" />
+										}
+									>
+										<TruckConfigurator
+											vehicleId={brain?.vehicleId ?? null}
+											equipmentIds={layout.equipment}
+											wrapColors={brain?.colors ?? null}
+										/>
+									</Suspense>
+								</div>
+							)}
 						</>
 					)}
 				</div>
