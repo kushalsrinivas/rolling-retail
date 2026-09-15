@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -16,6 +16,7 @@ let sandbox: string;
 
 beforeEach(async () => {
 	sandbox = await mkdtemp(path.join(tmpdir(), "refs-"));
+	delete process.env.REFERENCES_DIR;
 	cwd = process.cwd();
 	process.chdir(sandbox);
 	clearReferenceCache();
@@ -27,7 +28,7 @@ afterEach(() => {
 });
 
 async function putReference(dir: string, name: string, body: Buffer = PNG) {
-	const full = path.join(sandbox, "public", "references", dir);
+	const full = path.join(sandbox, "references", dir);
 	await mkdir(full, { recursive: true });
 	await writeFile(path.join(full, name), body);
 }
@@ -70,6 +71,20 @@ describe("factoryReference", () => {
 		// Traversal must not resolve; it falls through to the body folder only.
 		const ref = await factoryReference("../../../etc", "square");
 		expect(ref).toMatch(/^data:image\/png;base64,/);
+	});
+});
+
+describe("REFERENCES_DIR override", () => {
+	it("reads from the directory it names", async () => {
+		const elsewhere = await mkdtemp(path.join(tmpdir(), "refs-alt-"));
+		await mkdir(path.join(elsewhere, "square"), { recursive: true });
+		await writeFile(path.join(elsewhere, "square", "a.png"), PNG);
+		process.env.REFERENCES_DIR = elsewhere;
+		clearReferenceCache();
+		expect(await factoryReference("square-4m", "square")).toMatch(
+			/^data:image\/png;base64,/,
+		);
+		delete process.env.REFERENCES_DIR;
 	});
 });
 

@@ -5,9 +5,15 @@
  * has actually built, so the model is restyling a known shell rather than
  * inventing one. Drop files in and they are picked up:
  *
- *   public/references/<vehicleId>/*.{jpg,jpeg,png,webp}
- *   public/references/<body>/*            (airstream | square — used as a
+ *   references/<vehicleId>/*.{jpg,jpeg,png,webp}
+ *   references/<body>/*                   (airstream | square — used as a
  *                                          fallback for any size of that body)
+ *
+ * The directory sits outside public/ on purpose. These are the factory's own
+ * photos and, on a gated customer preview, static assets are served before the
+ * password gate — anything under public/ stays fetchable by URL. Nothing here
+ * is served; the files are read from disk and sent straight to the image model.
+ * REFERENCES_DIR overrides the location.
  *
  * Nothing here is required. With no photos on disk the pipeline behaves
  * exactly as it did before, just without the consistency lock.
@@ -15,9 +21,14 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-/** Resolved per call — process.cwd() at module load is wrong under test and
- * unreliable on a serverless cold start. */
-const root = () => path.join(process.cwd(), "public", "references");
+/**
+ * Resolved per call — process.cwd() at module load is wrong under test and
+ * unreliable on a serverless cold start.
+ */
+const root = () =>
+	process.env.REFERENCES_DIR
+		? path.resolve(process.env.REFERENCES_DIR)
+		: path.join(process.cwd(), "references");
 const EXT: Record<string, string> = {
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",
@@ -79,7 +90,7 @@ export async function factoryReference(
 	cache.set(key, found);
 	if (!found) {
 		console.info(
-			`[food-truck] no factory reference for ${vehicleId ?? body} — add one at public/references/${vehicleId ?? body}/`,
+			`[food-truck] no factory reference for ${vehicleId ?? body} — add one at references/${vehicleId ?? body}/`,
 		);
 	}
 	return found;

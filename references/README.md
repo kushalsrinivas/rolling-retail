@@ -7,10 +7,19 @@ and the render is something the factory can actually build.
 ## Where files go
 
 ```
-public/references/<vehicleId>/   airstream-s, airstream-m, airstream-l,
-                                 square-3m, square-4m, square-5m
-public/references/<body>/        airstream, square  — fallback for any size
+references/<vehicleId>/   airstream-s, airstream-m, airstream-l,
+                          square-3m, square-4m, square-5m
+references/<body>/        airstream, square  — fallback for any size
 ```
+
+This folder is deliberately **not** under `public/`. Static assets are served
+before the password gate, so anything in `public/` on a private customer
+preview is still fetchable by URL. These files are read from disk on the
+server and sent straight to the image model; they are never served.
+
+Set `REFERENCES_DIR` to keep them somewhere else — on a host where the app
+filesystem is read-only or the bundle excludes them, point it at a mounted
+volume.
 
 The first image in the folder (alphabetical) is used. `.jpg`, `.jpeg`, `.png`
 and `.webp` are read; anything over 4MB is skipped, so downscale before
