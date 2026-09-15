@@ -128,6 +128,31 @@ a:hover {
   color: #c084fc;
 }
 
+/*
+ * The homepage is light and typographic and sets its own link colours per
+ * element. It opts out of the app-wide purple rather than changing it, so the
+ * designer at /chat keeps the styling it was built against.
+ */
+.rr-landing a,
+.rr-landing a:hover {
+  color: inherit;
+}
+
+/*
+ * Tailwind v4 emits utilities inside a cascade layer, and the unlayered rule
+ * above outranks every layered `text-*` regardless of specificity — so a link
+ * styled as a solid button would lose its label colour. These two carry it.
+ */
+.rr-landing .rr-cta,
+.rr-landing .rr-cta:hover {
+  color: #fafaf9;
+}
+
+.rr-landing .rr-link,
+.rr-landing .rr-link:hover {
+  color: #44403c;
+}
+
 /* ─── Scrollbar ─── */
 
 ::-webkit-scrollbar {

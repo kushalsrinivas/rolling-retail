@@ -310,6 +310,45 @@ const SPECS: EquipmentSpec[] = [
 	// ── Names layoutFor emits for the base build. These are part of what the
 	// factory fits as standard, so they belong in the power budget and the
 	// model even though nobody picks them off a menu. ──
+	// ── Non-food fit-outs. Rolling Retail is not only food trucks, and the
+	// landing page showcase needs a bookshop and a merch build to say so. ──
+	{
+		id: "bookshelf",
+		label: "Bookshelf wall",
+		zone: "storage",
+		widthM: 1.4,
+		depthM: 0.32,
+		heightM: 1.9,
+		watts: 0,
+	},
+	{
+		id: "reading-bench",
+		label: "Reading bench",
+		zone: "service",
+		widthM: 1.2,
+		depthM: 0.45,
+		heightM: 0.45,
+		watts: 0,
+	},
+	{
+		id: "merch-rail",
+		label: "Merchandise rail",
+		zone: "service",
+		widthM: 1.2,
+		depthM: 0.5,
+		heightM: 1.7,
+		watts: 0,
+	},
+	{
+		id: "fitting-nook",
+		label: "Fitting nook",
+		zone: "service",
+		widthM: 0.9,
+		depthM: 0.9,
+		heightM: 1.95,
+		watts: 0,
+	},
+
 	{
 		id: "fire-suppression",
 		label: "Ansul fire suppression",

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ReportRouteImport } from './routes/report'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
@@ -26,6 +27,11 @@ import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -92,6 +98,7 @@ const ApiAgentChatRoute = ApiAgentChatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/chat'
+    | '/report'
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/chat'
+    | '/report'
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/chat'
+    | '/report'
     | '/studio'
     | '/api/agent/chat'
     | '/api/agent/images'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
+  ReportRoute: typeof ReportRoute
   StudioRoute: typeof StudioRoute
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiAgentImagesRoute: typeof ApiAgentImagesRoute
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
+  ReportRoute: ReportRoute,
   StudioRoute: StudioRoute,
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiAgentImagesRoute: ApiAgentImagesRoute,

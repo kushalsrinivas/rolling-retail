@@ -28,7 +28,7 @@ export interface TruckDimensions {
 	body: VehicleBody;
 }
 
-/** Zone colours double as the legend in the panel. */
+/** Zone colours double as the legend in the designer's panel. */
 export const ZONE_COLOR: Record<EquipmentZone, string> = {
 	hot: "#f97316",
 	cold: "#38bdf8",
@@ -37,6 +37,23 @@ export const ZONE_COLOR: Record<EquipmentZone, string> = {
 	sink: "#4ade80",
 	storage: "#94a3b8",
 };
+
+/**
+ * How a fit-out is actually finished: brushed stainless on the wet and hot
+ * runs, warm ply on the customer-facing joinery. The zone palette above is a
+ * diagram — useful while you are designing, but on the marketing page it reads
+ * as a debug view rather than a vehicle, so the showcase asks for this one.
+ */
+export const MATERIAL_COLOR: Record<EquipmentZone, string> = {
+	hot: "#8f9296",
+	cold: "#a9adb1",
+	service: "#b08d5f",
+	prep: "#9a9ea2",
+	sink: "#c3c7ca",
+	storage: "#7d6a53",
+};
+
+export type TruckPalette = "zones" | "materials";
 
 const SHELL = {
 	airstream: { color: "#d8dade", metalness: 0.85, roughness: 0.25 },
@@ -183,13 +200,17 @@ function EquipmentBlocks({
 	floorY,
 	selectedId,
 	onSelect,
+	palette,
 }: {
 	layout: GalleyLayout;
 	dims: TruckDimensions;
 	floorY: number;
 	selectedId?: string | null;
 	onSelect?: (id: string | null) => void;
+	palette: TruckPalette;
 }) {
+	const colorFor = (zone: EquipmentZone) =>
+		palette === "materials" ? MATERIAL_COLOR[zone] : ZONE_COLOR[zone];
 	const { lengthM, widthM } = dims;
 	const runStart = -lengthM / 2 + layout.marginM;
 
@@ -226,12 +247,12 @@ function EquipmentBlocks({
 					>
 						<boxGeometry args={[w, h, d]} />
 						<meshStandardMaterial
-							color={ZONE_COLOR[spec.zone]}
-							roughness={0.45}
-							metalness={0.15}
+							color={colorFor(spec.zone)}
+							roughness={palette === "materials" ? 0.32 : 0.45}
+							metalness={palette === "materials" ? 0.55 : 0.15}
 							transparent
 							opacity={selected ? 1 : 0.92}
-							emissive={ZONE_COLOR[spec.zone]}
+							emissive={colorFor(spec.zone)}
 							emissiveIntensity={selected ? 0.35 : 0}
 						/>
 						<Edges threshold={15} color={selected ? "#ffffff" : "#00000033"} />
@@ -251,6 +272,8 @@ export interface TruckModelProps {
 	onSelectEquipment?: (id: string | null) => void;
 	/** The buyer's brand colour words, resolved to a real finish. */
 	wrapColors?: string[] | null;
+	/** "zones" colour-codes by function (the designer); "materials" reads as a finished build. */
+	palette?: TruckPalette;
 }
 
 export default function TruckModel({
@@ -260,6 +283,7 @@ export default function TruckModel({
 	selectedEquipment,
 	onSelectEquipment,
 	wrapColors,
+	palette = "zones",
 }: TruckModelProps) {
 	const { lengthM, widthM, heightM, body } = dims;
 	const layout = useMemo(
@@ -341,6 +365,7 @@ export default function TruckModel({
 				floorY={FLOOR_Y}
 				selectedId={selectedEquipment}
 				onSelect={onSelectEquipment}
+				palette={palette}
 			/>
 		</group>
 	);
