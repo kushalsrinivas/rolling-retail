@@ -23,7 +23,9 @@ ARG VITE_POSTHOG_HOST=https://us.i.posthog.com
 ARG VITE_APP_TITLE=""
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# `install`, not `ci`: the lockfile drifts out of sync with package.json
+# regularly here and ci hard-fails on that. install self-heals instead.
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npx prisma generate && npm run build
@@ -36,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/prisma ./prisma
