@@ -172,6 +172,8 @@ const TruckConfigurator = lazy(
 	() => import("#/components/truck/TruckConfigurator"),
 );
 
+const ConceptToModel = lazy(() => import("#/components/truck/ConceptToModel"));
+
 export default function BrandReportPanel({
 	images,
 	brain,
@@ -430,6 +432,24 @@ export default function BrandReportPanel({
 											vehicleId={brain?.vehicleId ?? null}
 											equipmentIds={layout.equipment}
 											wrapColors={brain?.colors ?? null}
+										/>
+									</Suspense>
+
+									{/* The paid half: one chosen render becomes a real mesh. */}
+									<Suspense fallback={null}>
+										<ConceptToModel
+											concepts={images.map((i) => ({
+												label: i.label,
+												url: i.url,
+											}))}
+											prompt={[
+												spec?.brandName,
+												layout.layoutName,
+												spec?.vehicle,
+												"food trailer, exterior",
+											]
+												.filter(Boolean)
+												.join(" — ")}
 										/>
 									</Suspense>
 								</div>
