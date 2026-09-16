@@ -11,12 +11,16 @@ import { createFileRoute } from "@tanstack/react-router";
  */
 const DEFAULT_HOSTS = ["hyper3d.com", "deemos.com", "rodin.ai"];
 
-function allowedHosts() {
-	const extra = (process.env.RODIN_DOWNLOAD_HOSTS ?? "")
+/** Hosts the operator added explicitly, which may also be served over http. */
+function operatorHosts() {
+	return (process.env.RODIN_DOWNLOAD_HOSTS ?? "")
 		.split(",")
 		.map((h) => h.trim().toLowerCase())
 		.filter(Boolean);
-	return [...DEFAULT_HOSTS, ...extra];
+}
+
+function allowedHosts() {
+	return [...DEFAULT_HOSTS, ...operatorHosts()];
 }
 
 function isAllowed(raw: string) {
@@ -26,11 +30,21 @@ function isAllowed(raw: string) {
 	} catch {
 		return false;
 	}
-	if (parsed.protocol !== "https:") return false;
 	const host = parsed.hostname.toLowerCase();
-	// Exact match or a subdomain of an allowed apex — never a suffix match,
-	// which "evil-hyper3d.com" would pass.
-	return allowedHosts().some((h) => host === h || host.endsWith(`.${h}`));
+	const matches = (list: string[]) =>
+		// Exact match or a subdomain of an allowed apex — never a suffix match,
+		// which "evil-hyper3d.com" would pass.
+		list.some((h) => host === h || host.endsWith(`.${h}`));
+
+	if (parsed.protocol === "https:") return matches(allowedHosts());
+
+	// Plain http is only ever allowed to a host the operator named themselves in
+	// RODIN_DOWNLOAD_HOSTS — for a local stub, or a self-hosted generator on the
+	// internal network. The default allowlist stays https-only, so nothing can
+	// be talked into fetching http://169.254.169.254 or a neighbouring service.
+	if (parsed.protocol === "http:") return matches(operatorHosts());
+
+	return false;
 }
 
 export const Route = createFileRoute("/api/rodin/proxy-download")({

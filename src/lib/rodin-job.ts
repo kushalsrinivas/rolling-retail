@@ -31,6 +31,21 @@ const POLL_MS = 3_000;
 
 export class RodinError extends Error {}
 
+/** Rodin's codes are not for buyers to read. */
+export function explainRodinError(code: string): string {
+	switch (code) {
+		case "API_INSUFFICIENT_FUNDS":
+			return "The 3D generation account is out of credits. Top it up at hyper3d.com and try again.";
+		case "API_UNAUTHORIZED":
+		case "API_INVALID_KEY":
+			return "The 3D generation key was rejected. Check RODIN_API_KEY.";
+		case "API_RATE_LIMITED":
+			return "Too many models at once. Give it a minute and try again.";
+		default:
+			return `The modeller refused the job (${code}).`;
+	}
+}
+
 function dataUrlToBlob(dataUrl: string): Blob {
 	const match = dataUrl.match(/^data:([^;,]+)(?:;base64)?,(.*)$/s);
 	if (!match) throw new RodinError("That concept is not a readable image.");
@@ -102,8 +117,17 @@ export async function generateModelFromConcept({
 
 	const submitted = (await submitRes.json()) as {
 		uuid?: string;
+		error?: string;
 		jobs?: { subscription_key?: string };
 	};
+
+	// Rodin reports refusals in the body with HTTP 200, so a green status code
+	// means nothing on its own — without this the run fails several steps later
+	// with a message that does not say what went wrong.
+	if (submitted.error && submitted.error !== "OK") {
+		throw new RodinError(explainRodinError(submitted.error));
+	}
+
 	const subscriptionKey = submitted.jobs?.subscription_key;
 	const taskUuid = submitted.uuid;
 	if (!subscriptionKey || !taskUuid) {

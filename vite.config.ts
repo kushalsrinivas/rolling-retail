@@ -22,7 +22,7 @@ const config = defineConfig({
 		tsconfigPaths({ projects: ["./tsconfig.json"] }),
 		tailwindcss(),
 		tanstackStart(),
-		nitro({ config: { preset } }),
+		nitro({ preset }),
 		viteReact(),
 	],
 });

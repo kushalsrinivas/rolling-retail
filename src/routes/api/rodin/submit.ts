@@ -1,5 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+/**
+ * Rodin's API base. Configurable so the flow can be exercised against a local
+ * stub without spending credits, and so a self-hosted endpoint is possible —
+ * the meeting raised keeping generation in-house for data-sensitivity reasons.
+ */
+function rodinBase() {
+	return (process.env.RODIN_API_BASE ?? "https://api.hyper3d.com").replace(
+		/\/$/,
+		"",
+	);
+}
+
 export const Route = createFileRoute("/api/rodin/submit")({
 	server: {
 		handlers: {
@@ -15,14 +27,11 @@ export const Route = createFileRoute("/api/rodin/submit")({
 				try {
 					const formData = await request.formData();
 
-					const response = await fetch(
-						"https://api.hyper3d.com/api/v2/rodin",
-						{
-							method: "POST",
-							headers: { Authorization: `Bearer ${API_KEY}` },
-							body: formData,
-						},
-					);
+					const response = await fetch(`${rodinBase()}/api/v2/rodin`, {
+						method: "POST",
+						headers: { Authorization: `Bearer ${API_KEY}` },
+						body: formData,
+					});
 
 					if (!response.ok) {
 						const errorText = await response.text();

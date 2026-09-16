@@ -102,6 +102,27 @@ describe("generateModelFromConcept", () => {
 		);
 	});
 
+	it("explains an out-of-credits refusal, which arrives as HTTP 200", async () => {
+		// Rodin reports this in the body with a green status code.
+		vi.stubGlobal(
+			"fetch",
+			mockApi({ "/submit": () => ({ error: "API_INSUFFICIENT_FUNDS" }) }),
+		);
+		await expect(generateModelFromConcept(args)).rejects.toThrow(
+			/out of credits/,
+		);
+	});
+
+	it("explains a rejected key", async () => {
+		vi.stubGlobal(
+			"fetch",
+			mockApi({ "/submit": () => ({ error: "API_UNAUTHORIZED" }) }),
+		);
+		await expect(generateModelFromConcept(args)).rejects.toThrow(
+			/key was rejected/,
+		);
+	});
+
 	it("stops when the modeller never returns a job to follow", async () => {
 		vi.stubGlobal("fetch", mockApi({ "/submit": () => ({ uuid: "t" }) }));
 		await expect(generateModelFromConcept(args)).rejects.toThrow(
