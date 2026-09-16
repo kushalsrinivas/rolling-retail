@@ -22,7 +22,15 @@ const config = defineConfig({
 		tsconfigPaths({ projects: ["./tsconfig.json"] }),
 		tailwindcss(),
 		tanstackStart(),
-		nitro({ preset }),
+		nitro({
+			preset,
+			// The proxy streams ~10MB models from TOS through a serverless
+			// function. From the default region that pipe crosses the world
+			// and dies mid-stream, and the viewer then parses a truncated
+			// GLB ("Invalid typed array length"). Keep the function near the
+			// users and give the stream room to finish.
+			vercel: { functions: { regions: ["bom1"], maxDuration: 60 } },
+		}),
 		viteReact(),
 	],
 });

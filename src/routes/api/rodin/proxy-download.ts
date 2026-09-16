@@ -66,7 +66,13 @@ export const Route = createFileRoute("/api/rodin/proxy-download")({
 						);
 					}
 
-					const upstream = await fetch(fileUrl, { redirect: "follow" });
+					const upstream = await fetch(fileUrl, {
+						redirect: "follow",
+						// A hung upstream must fail, not hang: without this the
+						// function idles until the platform kills it mid-stream
+						// and the viewer receives a truncated GLB.
+						signal: AbortSignal.timeout(55_000),
+					});
 
 					// A redirect could have landed somewhere else entirely, so the
 					// host is checked again rather than trusted from before the hop.
@@ -116,9 +122,15 @@ export const Route = createFileRoute("/api/rodin/proxy-download")({
 					});
 				} catch (error) {
 					console.error("Error in proxy download route:", error);
+					const timedOut =
+						error instanceof Error && error.name === "TimeoutError";
 					return Response.json(
-						{ error: "Failed to proxy download" },
-						{ status: 500 },
+						{
+							error: timedOut
+								? "Upstream timed out"
+								: "Failed to proxy download",
+						},
+						{ status: timedOut ? 504 : 500 },
 					);
 				}
 			},
