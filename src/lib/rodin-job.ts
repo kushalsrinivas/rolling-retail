@@ -101,7 +101,7 @@ export async function generateModelFromConcept({
 	form.append("condition_mode", "concat");
 	form.append("geometry_file_format", "glb");
 	form.append("material", "PBR");
-	form.append("quality", "medium");
+	form.append("quality", import.meta.env.VITE_RODIN_QUALITY || "medium");
 	form.append("tier", "Regular");
 	form.append("mesh_mode", "Raw");
 	form.append("use_hyper", "false");

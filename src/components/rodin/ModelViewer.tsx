@@ -38,9 +38,21 @@ class ViewerErrorBoundary extends Component<
 
 	render() {
 		if (this.state.hasError) {
+			// The usual cause is the model failing to download, so say that and
+			// offer another go rather than a dead end that hides the reason.
 			return (
-				<div className="flex h-full w-full items-center justify-center bg-black">
-					<p className="text-xs text-zinc-600">3D viewer unavailable</p>
+				<div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black px-6 text-center">
+					<p className="text-xs text-zinc-400">Could not load the 3D model</p>
+					<p className="max-w-xs text-[11px] leading-relaxed text-zinc-600">
+						{this.state.error || "The file may still be downloading."}
+					</p>
+					<button
+						type="button"
+						onClick={() => this.setState({ hasError: false, error: "" })}
+						className="mt-1 rounded-full border border-zinc-700 px-3 py-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-200"
+					>
+						Try again
+					</button>
 				</div>
 			);
 		}
