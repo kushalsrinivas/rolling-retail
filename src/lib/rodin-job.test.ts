@@ -113,6 +113,36 @@ describe("generateModelFromConcept", () => {
 		);
 	});
 
+	it("explains an account with no plan", async () => {
+		vi.stubGlobal(
+			"fetch",
+			mockApi({
+				"/submit": () => ({
+					error: "API_NO_ACTIVE_SUBSCRIPTION",
+					message: "No active subscription on your account.",
+				}),
+			}),
+		);
+		await expect(generateModelFromConcept(args)).rejects.toThrow(
+			/no active plan/,
+		);
+	});
+
+	it("prefers Rodin's own message for a code we do not know", async () => {
+		vi.stubGlobal(
+			"fetch",
+			mockApi({
+				"/submit": () => ({
+					error: "API_SOMETHING_NEW",
+					message: "Region unavailable.",
+				}),
+			}),
+		);
+		await expect(generateModelFromConcept(args)).rejects.toThrow(
+			/Region unavailable/,
+		);
+	});
+
 	it("explains a rejected key", async () => {
 		vi.stubGlobal(
 			"fetch",

@@ -32,17 +32,23 @@ const POLL_MS = 3_000;
 export class RodinError extends Error {}
 
 /** Rodin's codes are not for buyers to read. */
-export function explainRodinError(code: string): string {
+export function explainRodinError(code: string, message?: string): string {
 	switch (code) {
 		case "API_INSUFFICIENT_FUNDS":
 			return "The 3D generation account is out of credits. Top it up at hyper3d.com and try again.";
+		case "API_NO_ACTIVE_SUBSCRIPTION":
+			return "The 3D generation account has no active plan. Subscribe at hyper3d.com and try again.";
 		case "API_UNAUTHORIZED":
 		case "API_INVALID_KEY":
 			return "The 3D generation key was rejected. Check RODIN_API_KEY.";
 		case "API_RATE_LIMITED":
 			return "Too many models at once. Give it a minute and try again.";
 		default:
-			return `The modeller refused the job (${code}).`;
+			// Rodin usually sends a readable message next to the code; it beats
+			// showing a buyer an identifier we have never seen before.
+			return message
+				? `3D generation is unavailable: ${message}`
+				: `The modeller refused the job (${code}).`;
 	}
 }
 
@@ -118,6 +124,7 @@ export async function generateModelFromConcept({
 	const submitted = (await submitRes.json()) as {
 		uuid?: string;
 		error?: string;
+		message?: string;
 		jobs?: { subscription_key?: string };
 	};
 
@@ -125,7 +132,7 @@ export async function generateModelFromConcept({
 	// means nothing on its own — without this the run fails several steps later
 	// with a message that does not say what went wrong.
 	if (submitted.error && submitted.error !== "OK") {
-		throw new RodinError(explainRodinError(submitted.error));
+		throw new RodinError(explainRodinError(submitted.error, submitted.message));
 	}
 
 	const subscriptionKey = submitted.jobs?.subscription_key;
