@@ -13,6 +13,10 @@ ENV NITRO_PRESET=node-server
 # Dummy URL so `vite build` (which imports src/db.ts) never fails when no DB
 # is wired up at build time. The real value comes from runtime env.
 ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/rolling_retail
+# prisma.config.ts reads DIRECT_URL via env() and refuses to load without it,
+# even for `generate`. Dummy for build; runtime entrypoint defaults it from
+# DATABASE_URL when only one is set.
+ARG DIRECT_URL=postgresql://postgres:postgres@localhost:5432/rolling_retail
 # Public bundle vars are baked in at build time — pass them as build args
 # (Dokploy: build args / env at build) to change them; server secrets below
 # are runtime-only and set where you run the container.
