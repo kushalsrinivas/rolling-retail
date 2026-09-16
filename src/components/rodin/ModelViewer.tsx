@@ -68,7 +68,7 @@ export default function ModelViewer({
 	environment?: EnvironmentPreset;
 }) {
 	return (
-		<ViewerErrorBoundary>
+		<ViewerErrorBoundary key={modelUrl ?? "empty"}>
 			<div className="h-full w-full bg-black bg-[radial-gradient(ellipse_at_center,rgba(50,50,50,0.3)_0%,transparent_70%)]">
 				<Canvas
 					camera={{ position: [0, 0, 5], fov: 50 }}
