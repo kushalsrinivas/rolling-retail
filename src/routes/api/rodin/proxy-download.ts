@@ -66,27 +66,57 @@ export const Route = createFileRoute("/api/rodin/proxy-download")({
 						);
 					}
 
-					const response = await fetch(fileUrl, { redirect: "error" });
-					if (!response.ok) {
+					// Pass the viewer's Range through. A GLB is tens of megabytes and
+					// the CDN supports ranges, so the loader can take it in pieces
+					// instead of one response that has to survive end to end.
+					const range = request.headers.get("range");
+					const upstream = await fetch(fileUrl, {
+						redirect: "follow",
+						headers: range ? { Range: range } : undefined,
+					});
+
+					// A redirect could have landed somewhere else entirely, so the
+					// host is checked again rather than trusted from before the hop.
+					if (upstream.url && !isAllowed(upstream.url)) {
 						return Response.json(
-							{ error: `Failed to fetch file: ${response.status}` },
-							{ status: response.status },
+							{ error: "Host not allowed" },
+							{ status: 403 },
 						);
 					}
 
-					const fileContent = await response.arrayBuffer();
-					const contentType =
-						response.headers.get("content-type") || "application/octet-stream";
+					if (!upstream.ok || !upstream.body) {
+						return Response.json(
+							{ error: `Failed to fetch file: ${upstream.status}` },
+							{ status: upstream.status },
+						);
+					}
+
 					const filename =
 						new URL(fileUrl).pathname.split("/").pop()?.replace(/"/g, "") ||
 						"model.glb";
 
-					return new Response(fileContent, {
-						headers: {
-							"Content-Type": contentType,
-							"Content-Disposition": `attachment; filename="${filename}"`,
-							"Cache-Control": "no-cache",
-						},
+					const headers = new Headers({
+						"Content-Type":
+							upstream.headers.get("content-type") ||
+							"application/octet-stream",
+						// inline, not attachment: the viewer loads this, it is not a save.
+						"Content-Disposition": `inline; filename="${filename}"`,
+						"Cache-Control": "private, max-age=3600",
+					});
+					for (const h of [
+						"content-length",
+						"content-range",
+						"accept-ranges",
+					]) {
+						const v = upstream.headers.get(h);
+						if (v) headers.set(h, v);
+					}
+
+					// Streamed rather than buffered: holding a 14MB model in memory to
+					// hand it on is what made this fall over in a serverless function.
+					return new Response(upstream.body, {
+						status: upstream.status,
+						headers,
 					});
 				} catch (error) {
 					console.error("Error in proxy download route:", error);
