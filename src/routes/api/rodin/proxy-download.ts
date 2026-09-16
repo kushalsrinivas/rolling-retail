@@ -66,14 +66,7 @@ export const Route = createFileRoute("/api/rodin/proxy-download")({
 						);
 					}
 
-					// Pass the viewer's Range through. A GLB is tens of megabytes and
-					// the CDN supports ranges, so the loader can take it in pieces
-					// instead of one response that has to survive end to end.
-					const range = request.headers.get("range");
-					const upstream = await fetch(fileUrl, {
-						redirect: "follow",
-						headers: range ? { Range: range } : undefined,
-					});
+					const upstream = await fetch(fileUrl, { redirect: "follow" });
 
 					// A redirect could have landed somewhere else entirely, so the
 					// host is checked again rather than trusted from before the hop.
@@ -101,16 +94,19 @@ export const Route = createFileRoute("/api/rodin/proxy-download")({
 							"application/octet-stream",
 						// inline, not attachment: the viewer loads this, it is not a save.
 						"Content-Disposition": `inline; filename="${filename}"`,
-						"Cache-Control": "private, max-age=3600",
+						// Never cached. A stream cut short — the viewer unmounting
+						// mid-download, a navigation — can leave a partial body in the
+						// HTTP cache, and every later load then replays that truncated
+						// copy as if it were the whole model. That is what made this work
+						// once and fail every time after, while the raw CDN link, which
+						// does not go through here, stayed fine.
+						"Cache-Control": "no-store",
 					});
-					for (const h of [
-						"content-length",
-						"content-range",
-						"accept-ranges",
-					]) {
-						const v = upstream.headers.get(h);
-						if (v) headers.set(h, v);
-					}
+					// Range support is deliberately not advertised: a cached 206 read
+					// back as a complete response is the same truncation by another
+					// route, and the loader does not need it.
+					const len = upstream.headers.get("content-length");
+					if (len) headers.set("content-length", len);
 
 					// Streamed rather than buffered: holding a 14MB model in memory to
 					// hand it on is what made this fall over in a serverless function.
