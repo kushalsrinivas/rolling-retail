@@ -4,6 +4,7 @@ import {
 	pickApprovedReferences,
 	pickMasterReference,
 	type SalesVideoKind,
+	TOUR_PARTS,
 } from "#/lib/food-truck/sales";
 
 export type MessageRole = "user" | "assistant";
@@ -33,6 +34,8 @@ export interface GeneratedVideo {
 	status: "pending" | "ready" | "error";
 	url?: string | null;
 	error?: string | null;
+	part?: number;
+	seriesId?: string;
 }
 
 export interface PipelineLead {
@@ -524,7 +527,8 @@ export function useChat() {
 
 	// ── Sales video: master + starred stills in, Omni Flash video out ──
 	// Client sends the reference bytes (server keeps no image store); the
-	// route polls the provider, we poll the route.
+	// route polls the provider, we poll the route. Tours chain TOUR_PARTS
+	// 10s segments via previous_interaction_id into ~30s.
 	const generateVideo = useCallback(
 		async (kind: SalesVideoKind = "hero-orbit") => {
 			if (isGeneratingVideo) return;
@@ -543,47 +547,61 @@ export function useChat() {
 			setIsGeneratingVideo(true);
 			try {
 				const sessionId = await ensureSession();
-				const started = await fetch("/api/agent/video", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						sessionId,
-						kind,
-						brand: brandName.trim() || undefined,
-						vibe: businessType,
-						references: refs,
-					}),
-				});
-				const startData = (await started.json().catch(() => ({}))) as {
-					video?: GeneratedVideo;
-					error?: string;
-				};
-				if (!started.ok || !startData.video) {
-					throw new Error(
-						startData.error || `Video start failed (${started.status})`,
-					);
-				}
-				const job = startData.video;
-				setVideos((prev) => [
-					{ ...job, kind },
-					...prev.filter((v) => v.id !== job.id),
-				]);
-				if (job.status !== "pending") return;
-				// Poll the route (which polls Omni) until ready/error.
-				for (let i = 0; i < 30; i++) {
-					await new Promise((r) => setTimeout(r, 4000));
-					const poll = await fetch(
-						`/api/agent/video?sessionId=${encodeURIComponent(sessionId)}&videoId=${encodeURIComponent(job.id)}`,
-					);
-					const pollData = (await poll.json().catch(() => ({}))) as {
+				const startPart = async (
+					extendJobId?: string,
+				): Promise<GeneratedVideo> => {
+					const started = await fetch("/api/agent/video", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							sessionId,
+							kind,
+							brand: brandName.trim() || undefined,
+							vibe: businessType,
+							references: refs,
+							extendJobId,
+						}),
+					});
+					const startData = (await started.json().catch(() => ({}))) as {
 						video?: GeneratedVideo;
+						error?: string;
 					};
-					if (!poll.ok || !pollData.video) break;
-					const current = pollData.video;
-					setVideos((prev) =>
-						prev.map((v) => (v.id === current.id ? current : v)),
-					);
-					if (current.status !== "pending") break;
+					if (!started.ok || !startData.video) {
+						throw new Error(
+							startData.error || `Video start failed (${started.status})`,
+						);
+					}
+					return startData.video;
+				};
+				const pollPart = async (job: GeneratedVideo) => {
+					let current = job;
+					for (let i = 0; i < 30 && current.status === "pending"; i++) {
+						await new Promise((r) => setTimeout(r, 4000));
+						const poll = await fetch(
+							`/api/agent/video?sessionId=${encodeURIComponent(sessionId)}&videoId=${encodeURIComponent(job.id)}`,
+						);
+						const pollData = (await poll.json().catch(() => ({}))) as {
+							video?: GeneratedVideo;
+						};
+						if (!poll.ok || !pollData.video) break;
+						current = pollData.video;
+						setVideos((prev) =>
+							prev.map((v) => (v.id === current.id ? current : v)),
+						);
+					}
+					return current;
+				};
+				const parts = kind === "tour" ? TOUR_PARTS : 1;
+				let previousId: string | undefined;
+				for (let part = 1; part <= parts; part++) {
+					const job = await startPart(previousId);
+					setVideos((prev) => [
+						{ ...job, kind },
+						...prev.filter((v) => v.id !== job.id),
+					]);
+					const final = await pollPart(job);
+					if (final.status !== "ready") break;
+					previousId = final.id;
 				}
 			} catch (err) {
 				setError(

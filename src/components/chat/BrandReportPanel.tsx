@@ -105,6 +105,68 @@ function downloadJson(filename: string, data: unknown) {
 	URL.revokeObjectURL(url);
 }
 
+/** Chained tour parts played as one ~30s walkthrough. */
+function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
+	const ready = parts
+		.filter((p) => p.status === "ready" && p.url)
+		.sort((a, b) => (a.part ?? 1) - (b.part ?? 1));
+	const pending = parts.some((p) => p.status === "pending");
+	const failed = parts.find((p) => p.status === "error");
+	const [idx, setIdx] = useState(0);
+	const clip = ready[Math.min(idx, ready.length - 1)];
+	if (!clip) {
+		if (failed && !pending) {
+			return (
+				<p className="px-3 py-2.5 text-xs text-red-400">
+					Tour failed{failed.error ? ` — ${failed.error}` : ""}. Stills are
+					unaffected; try again.
+				</p>
+			);
+		}
+		return (
+			<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
+				<Loader2 className="h-3.5 w-3.5 animate-spin" />
+				Filming part {parts.length + 1} of 3 — the full tour takes a few
+				minutes.
+			</p>
+		);
+	}
+	return (
+		<>
+			{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
+			<video
+				key={clip.id}
+				src={clip.url ?? undefined}
+				controls
+				playsInline
+				autoPlay
+				className="aspect-video w-full bg-black"
+				onEnded={() => {
+					if (idx < ready.length - 1) setIdx(idx + 1);
+				}}
+			/>
+			<div className="flex items-center justify-between gap-2 px-3 py-2">
+				<span className="text-xs text-zinc-400">
+					Full tour · part {clip.part ?? 1} of {ready.length}
+					{pending ? " · filming next…" : " · ~30s"}
+				</span>
+				<div className="flex gap-2">
+					{ready.map((p) => (
+						<a
+							key={p.id}
+							href={p.url ?? undefined}
+							download={`tour-part-${p.part ?? 1}.mp4`}
+							className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+						>
+							<Download className="h-3 w-3" /> Pt{p.part ?? 1}
+						</a>
+					))}
+				</div>
+			</div>
+		</>
+	);
+}
+
 /** Project Brain — what the designer has understood so far. */
 function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 	if (!brain || brain.signals === 0) {
@@ -459,48 +521,78 @@ export default function BrandReportPanel({
 										</button>
 									))}
 								</div>
-								{videos.map((v) => (
-									<div
-										key={v.id}
-										className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
-									>
-										{v.status === "ready" && v.url ? (
+								{videos.length > 0 &&
+									(() => {
+										const groups = new Map<string, GeneratedVideo[]>();
+										const singles: GeneratedVideo[] = [];
+										for (const v of videos) {
+											if (v.kind === "tour") {
+												const key = v.seriesId || v.id;
+												const g = groups.get(key) ?? [];
+												g.push(v);
+												groups.set(key, g);
+											} else {
+												singles.push(v);
+											}
+										}
+										return (
 											<>
-												{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
-												<video
-													src={v.url}
-													controls
-													playsInline
-													className="aspect-video w-full bg-black"
-												/>
-												<div className="flex items-center justify-between px-3 py-2">
-													<span className="text-xs text-zinc-400">
-														{SALES_VIDEO_PRESETS.find((p) => p.kind === v.kind)
-															?.label ?? v.kind}
-													</span>
-													<a
-														href={v.url}
-														download={`${v.kind}.mp4`}
-														className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+												{[...groups.values()].map((parts) => (
+													<div
+														key={parts[0].seriesId || parts[0].id}
+														className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
 													>
-														<Download className="h-3 w-3" /> Deck-ready MP4
-													</a>
-												</div>
+														<TourSeries parts={parts} />
+													</div>
+												))}
+												{singles.map((v) => (
+													<div
+														key={v.id}
+														className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
+													>
+														{v.status === "ready" && v.url ? (
+															<>
+																{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
+																<video
+																	src={v.url}
+																	controls
+																	playsInline
+																	className="aspect-video w-full bg-black"
+																/>
+																<div className="flex items-center justify-between px-3 py-2">
+																	<span className="text-xs text-zinc-400">
+																		{SALES_VIDEO_PRESETS.find(
+																			(p) => p.kind === v.kind,
+																		)?.label ?? v.kind}
+																	</span>
+																	<a
+																		href={v.url}
+																		download={`${v.kind}.mp4`}
+																		className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+																	>
+																		<Download className="h-3 w-3" /> Deck-ready
+																		MP4
+																	</a>
+																</div>
+															</>
+														) : v.status === "error" ? (
+															<p className="px-3 py-2.5 text-xs text-red-400">
+																Video failed
+																{v.error ? ` — ${v.error}` : ""}. Stills are
+																unaffected; try again.
+															</p>
+														) : (
+															<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
+																<Loader2 className="h-3.5 w-3.5 animate-spin" />
+																Filming the approved stills — this takes a
+																minute or two.
+															</p>
+														)}
+													</div>
+												))}
 											</>
-										) : v.status === "error" ? (
-											<p className="px-3 py-2.5 text-xs text-red-400">
-												Video failed{v.error ? ` — ${v.error}` : ""}. Stills are
-												unaffected; try again.
-											</p>
-										) : (
-											<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
-												<Loader2 className="h-3.5 w-3.5 animate-spin" />
-												Filming the approved stills — this takes a minute or
-												two.
-											</p>
-										)}
-									</div>
-								))}
+										);
+									})()}
 							</div>
 							{/* The trailer itself — built from the factory's dimensions,
 							    so it cannot disagree with the spec above. */}

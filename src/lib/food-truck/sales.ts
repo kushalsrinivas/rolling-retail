@@ -98,8 +98,8 @@ export const SALES_VIDEO_PRESETS: SalesVideoPreset[] = [
 	},
 	{
 		kind: "tour",
-		label: "Full tour · 10s",
-		blurb: "Guided walkthrough of every feature",
+		label: "Full tour · 30s",
+		blurb: "Three chained 10s parts, every feature",
 	},
 ];
 
@@ -131,4 +131,24 @@ export function buildSalesVideoPrompt(
 		return `10-second guided tour video of the ${product}, like someone showing a buyer around. Open wide on the branded exterior, move to the open service hatch, glide along the serve line past each station — hot line, make-rail, drinks end-cap, signage and lighting — and finish back on the hero angle. Steady, deliberate camera; every feature gets its moment. ${lock}`;
 	}
 	return `10-second cinematic product video of the ${product}. Slowly orbit around the product at golden hour while maintaining its exact appearance from the references. ${lock}`;
+}
+
+/** Omni caps one generation at 10s — the 30s tour is 3 chained parts. */
+export const TOUR_PARTS = 3;
+
+/**
+ * Continuation beats for tour parts 2+. Each extends the previous part, so
+ * together they play as one 30s walkthrough.
+ */
+export function tourContinuationPrompt(
+	part: number,
+	ctx: SalesVideoContext,
+): string {
+	const product = `${ctx.brand || "the business"} food truck (${ctx.vehicleLabel}, ${ctx.colors}, ${ctx.vibe})`;
+	const lock =
+		"Match the reference images exactly — same geometry, materials, colors, proportions, branding and realism. Do not redesign the product; film it as shown.";
+	if (part >= TOUR_PARTS) {
+		return `Extend this video to finish the tour of the ${product}: pull back through the service hatch to the wide branded hero angle, signage glowing, a finished item handed across the counter. Steady, deliberate camera. ${lock}`;
+	}
+	return `Extend this video to continue the tour inside the ${product}: glide along the serve line past each station — hot line, make-rail, drinks end-cap, signage and lighting — giving every feature its moment. Steady, deliberate camera. ${lock}`;
 }

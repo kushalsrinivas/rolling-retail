@@ -3,9 +3,14 @@ import {
 	buildSalesVideoPrompt,
 	SALES_VIDEO_PRESETS,
 	type SalesVideoKind,
+	tourContinuationPrompt,
 } from "#/lib/food-truck/sales";
 import { getOrCreateSession, type VideoJob } from "#/lib/food-truck/session";
-import { pollSalesVideo, startSalesVideo } from "#/lib/food-truck/video";
+import {
+	extendSalesVideo,
+	pollSalesVideo,
+	startSalesVideo,
+} from "#/lib/food-truck/video";
 
 const KINDS = new Set(SALES_VIDEO_PRESETS.map((p) => p.kind));
 
@@ -26,6 +31,8 @@ export const Route = createFileRoute("/api/agent/video")({
 					colors?: string;
 					vibe?: string;
 					references?: string[];
+					/** Ready video job id to continue from (tour chaining). */
+					extendJobId?: string;
 				};
 				try {
 					body = (await request.json()) as typeof body;
@@ -42,7 +49,7 @@ export const Route = createFileRoute("/api/agent/video")({
 								typeof r === "string" && r.startsWith("data:image/"),
 						)
 					: [];
-				if (refs.length === 0) {
+				if (refs.length === 0 && !body.extendJobId) {
 					return Response.json(
 						{
 							error: "Generate concepts first — video needs an approved still.",
@@ -70,7 +77,26 @@ export const Route = createFileRoute("/api/agent/video")({
 						brain?.vibeWords.slice(0, 2).join(", ") ||
 						"bold street-food",
 				};
-				const prompt = buildSalesVideoPrompt(kind, ctx);
+				// ── Extension: continue a ready part (no stills needed) ──
+				const base = body.extendJobId
+					? session.videos.find((v) => v.id === body.extendJobId)
+					: undefined;
+				if (body.extendJobId && (!base || !base.operationId)) {
+					return Response.json(
+						{ error: "Video to extend not found." },
+						{ status: 404 },
+					);
+				}
+				if (base && base.status !== "ready") {
+					return Response.json(
+						{ error: "Previous part is not ready yet." },
+						{ status: 409 },
+					);
+				}
+				const part = base ? base.part + 1 : 1;
+				const prompt = base
+					? tourContinuationPrompt(part, ctx)
+					: buildSalesVideoPrompt(kind, ctx);
 				const job: VideoJob = {
 					id: newId(),
 					kind,
@@ -81,13 +107,21 @@ export const Route = createFileRoute("/api/agent/video")({
 					error: null,
 					createdAt: Date.now(),
 					updatedAt: Date.now(),
+					part,
+					seriesId: base?.seriesId ?? "",
 				};
+				job.seriesId = base?.seriesId || job.id;
 				try {
-					const started = await startSalesVideo({
-						kind,
-						ctx,
-						references: refs.slice(0, 3),
-					});
+					const started = base?.operationId
+						? await extendSalesVideo({
+								previousInteractionId: base.operationId,
+								prompt,
+							})
+						: await startSalesVideo({
+								kind,
+								ctx,
+								references: refs.slice(0, 3),
+							});
 					job.operationId = started.operationId;
 					if (started.readyUrl) {
 						job.status = "ready";
@@ -102,7 +136,7 @@ export const Route = createFileRoute("/api/agent/video")({
 					session.videos = session.videos.slice(0, 10);
 					const status = msg.includes("GOOGLE_API_KEY")
 						? 503
-						: msg.startsWith("video start 4")
+						: /video (start|extend) 4\d\d/.test(msg)
 							? 502
 							: 500;
 					return Response.json({ error: msg, video: job }, { status });

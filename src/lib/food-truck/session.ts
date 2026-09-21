@@ -13,6 +13,10 @@ export interface VideoJob {
 	error: string | null;
 	createdAt: number;
 	updatedAt: number;
+	/** Tour chaining: 1-based part within a series (default 1). */
+	part: number;
+	/** Links chained parts; single clips point at themselves. */
+	seriesId: string;
 }
 
 export interface ChatTurn {

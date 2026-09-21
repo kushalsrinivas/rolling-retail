@@ -7,6 +7,8 @@ import {
 	pickMasterReference,
 	SALES_VIDEO_PRESETS,
 	salesSlideFor,
+	TOUR_PARTS,
+	tourContinuationPrompt,
 } from "./sales";
 
 const PHOTO = (s: string) => `data:image/png;base64,${s}`;
@@ -68,5 +70,22 @@ describe("sales asset pipeline", () => {
 			expect(p).toContain("BIB Burgers");
 			expect(p).toMatch(/exact/i);
 		}
+	});
+
+	it("chains a 30s tour from 10s parts with distinct beats", () => {
+		expect(TOUR_PARTS).toBe(3);
+		const ctx = {
+			brand: "BIB Burgers",
+			vehicleLabel: "Airstream Mid",
+			colors: "matte black, orange",
+			vibe: "bold",
+		};
+		const beats = [2, 3].map((part) => tourContinuationPrompt(part, ctx));
+		expect(new Set(beats).size).toBe(2);
+		for (const b of beats) {
+			expect(b).toContain("BIB Burgers");
+			expect(b).toMatch(/extend this video/i);
+		}
+		expect(beats[1]).toMatch(/finish/i);
 	});
 });
