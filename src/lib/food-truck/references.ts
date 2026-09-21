@@ -89,8 +89,11 @@ export async function factoryReference(
 
 	cache.set(key, found);
 	if (!found) {
-		console.info(
-			`[food-truck] no factory reference for ${vehicleId ?? body} — add one at references/${vehicleId ?? body}/`,
+		// Optional lock: the pipeline runs without it, just with less
+		// view-to-view consistency. Debug, not info — missing catalog photos
+		// are the normal state on a fresh deploy, not an error.
+		console.debug(
+			`[food-truck] no factory reference for ${vehicleId ?? body} (optional) — add one at references/${vehicleId ?? body}/`,
 		);
 	}
 	return found;

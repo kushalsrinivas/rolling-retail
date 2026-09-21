@@ -395,8 +395,8 @@ export interface StarterConceptArgs {
  * One shared visual round used by BOTH the manual button and the automatic
  * threshold path. Consumes exactly 1 credit and bumps visualRounds so the
  * auto path only ever fires once per session. Generates a complete 9-view
- * concept set in parallel batches of 3 (rate-limit safe, ~3x faster than
- * sequential).
+ * concept set with the hero first (the livery lock) then the rest in one
+ * parallel wave, so the round fits inside the serverless timeout.
  */
 export async function runStarterConcepts(
 	creditsUsed: number,
@@ -487,37 +487,36 @@ export async function runStarterConcepts(
 		onBatch?.(images.slice());
 		if (!r.model.startsWith("placeholder")) heroUrl = r.url;
 	}
-	// Batch of 3 concurrent keeps us under rate limits while cutting total time.
-	// The inspiration photo is deliberately dropped here: the hero already
-	// absorbed it, and re-sending it invites the model to copy that truck's body.
+	// One parallel wave for the rest. The inspiration photo is deliberately
+	// dropped here: the hero already absorbed it, and re-sending it invites
+	// the model to copy that truck's body.
 	// Livery falls back to the cross-round master when the fresh hero failed.
+	// ponytail: one wave, not batches of 3 — 4 sequential Gemini round-trips
+	// blew the 60s Vercel wall and truncated rounds to 4/9 images.
 	const roundLivery = heroUrl || masterPhoto;
-	for (let i = 0; i < rest.length; i += 3) {
-		const batch = rest.slice(i, i + 3);
-		const results = await Promise.all(
-			batch.map((p) =>
-				generateTruckImage({
-					brand,
-					vehicleLabel,
-					label: p.label,
-					prompt: p.prompt,
-					bodyReference,
-					liveryReference: roundLivery || null,
-					geometry,
-				}),
-			),
-		);
-		const done: StarterConcept[] = [];
-		for (let j = 0; j < batch.length; j++) {
-			done.push({
-				label: batch[j].label,
-				url: results[j].url,
-				model: results[j].model,
-				filename: `${batch[j].label}.png`,
-			});
-		}
-		images.push(...done);
-		onBatch?.(done);
+	const results = await Promise.all(
+		rest.map((p) =>
+			generateTruckImage({
+				brand,
+				vehicleLabel,
+				label: p.label,
+				prompt: p.prompt,
+				bodyReference,
+				liveryReference: roundLivery || null,
+				geometry,
+			}),
+		),
+	);
+	const done: StarterConcept[] = [];
+	for (let j = 0; j < rest.length; j++) {
+		done.push({
+			label: rest[j].label,
+			url: results[j].url,
+			model: results[j].model,
+			filename: `${rest[j].label}.png`,
+		});
 	}
+	images.push(...done);
+	onBatch?.(done);
 	return { images, creditsUsed: creditsUsed + 1, brainNoteUsed: brainNote };
 }

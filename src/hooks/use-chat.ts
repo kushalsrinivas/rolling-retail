@@ -36,6 +36,8 @@ export interface GeneratedVideo {
 	error?: string | null;
 	part?: number;
 	seriesId?: string;
+	/** Provider interaction id — re-sent so tour chaining + polling survive fresh serverless instances. */
+	operationId?: string | null;
 }
 
 export interface PipelineLead {
@@ -549,6 +551,8 @@ export function useChat() {
 				const sessionId = await ensureSession();
 				const startPart = async (
 					extendJobId?: string,
+					prev?: GeneratedVideo | null,
+					part?: number,
 				): Promise<GeneratedVideo> => {
 					const started = await fetch("/api/agent/video", {
 						method: "POST",
@@ -568,6 +572,11 @@ export function useChat() {
 							serveMode: layout?.serveMode,
 							references: refs,
 							extendJobId,
+							// Stateless chaining: the next request may land on a fresh
+							// serverless instance with no memory of the earlier part.
+							previousOperationId: prev?.operationId ?? undefined,
+							seriesId: prev?.seriesId ?? undefined,
+							part,
 						}),
 					});
 					const startData = (await started.json().catch(() => ({}))) as {
@@ -583,11 +592,16 @@ export function useChat() {
 				};
 				const pollPart = async (job: GeneratedVideo) => {
 					let current = job;
-					for (let i = 0; i < 30 && current.status === "pending"; i++) {
+					// Omni 10s renders take minutes, not seconds — 30×4s stranded
+					// every tour at part 1. 90×4s ≈ 6 min per part.
+					for (let i = 0; i < 90 && current.status === "pending"; i++) {
 						await new Promise((r) => setTimeout(r, 4000));
-						const poll = await fetch(
-							`/api/agent/video?sessionId=${encodeURIComponent(sessionId)}&videoId=${encodeURIComponent(job.id)}`,
-						);
+						const params = new URLSearchParams({
+							sessionId,
+							videoId: job.id,
+						});
+						if (job.operationId) params.set("operationId", job.operationId);
+						const poll = await fetch(`/api/agent/video?${params.toString()}`);
 						const pollData = (await poll.json().catch(() => ({}))) as {
 							video?: GeneratedVideo;
 						};
@@ -600,16 +614,27 @@ export function useChat() {
 					return current;
 				};
 				const parts = kind === "tour" ? TOUR_PARTS : 1;
-				let previousId: string | undefined;
+				let previous: GeneratedVideo | null = null;
 				for (let part = 1; part <= parts; part++) {
-					const job = await startPart(previousId);
+					const job = await startPart(
+						previous?.id,
+						previous,
+						kind === "tour" ? part : undefined,
+					);
 					setVideos((prev) => [
 						{ ...job, kind },
 						...prev.filter((v) => v.id !== job.id),
 					]);
 					const final = await pollPart(job);
-					if (final.status !== "ready") break;
-					previousId = final.id;
+					if (final.status !== "ready") {
+						if (kind === "tour" && part < parts) {
+							setError(
+								`Part ${part + 1} wasn't ready in time — part ${final.part ?? part} is playable below; run the tour again to continue it.`,
+							);
+						}
+						break;
+					}
+					previous = final;
 				}
 			} catch (err) {
 				setError(

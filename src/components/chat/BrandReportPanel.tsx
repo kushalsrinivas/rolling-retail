@@ -33,6 +33,7 @@ import {
 	SALES_VIDEO_PRESETS,
 	type SalesVideoKind,
 	salesSlideFor,
+	TOUR_PARTS,
 } from "#/lib/food-truck/sales";
 import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
@@ -227,7 +228,8 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 		return (
 			<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
 				<Loader2 className="h-3.5 w-3.5 animate-spin" />
-				Filming part {parts.length} of 3 — the full tour takes a few minutes.
+				Filming part {Math.min(parts.length, TOUR_PARTS)} of {TOUR_PARTS} — the
+				full tour takes a few minutes.
 			</p>
 		);
 	}
@@ -247,8 +249,12 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 			/>
 			<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
 				<span className="text-[11px] text-[var(--ftf-ink-2)]">
-					Full tour · part {clip.part ?? 1} of {ready.length}
-					{pending ? " · filming next…" : " · ~30s"}
+					Full tour · part {clip.part ?? 1} of {TOUR_PARTS}
+					{pending
+						? " · filming next…"
+						: ready.length < TOUR_PARTS
+							? " · filming…"
+							: " · ~30s"}
 				</span>
 				<div className="flex gap-2">
 					{ready.map((p) => (

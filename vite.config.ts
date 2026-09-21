@@ -29,7 +29,7 @@ const config = defineConfig({
 			// and dies mid-stream, and the viewer then parses a truncated
 			// GLB ("Invalid typed array length"). Keep the function near the
 			// users and give the stream room to finish.
-			vercel: { functions: { regions: ["bom1"], maxDuration: 60 } },
+			vercel: { functions: { regions: ["bom1"], maxDuration: 300 } },
 		}),
 		viteReact(),
 	],

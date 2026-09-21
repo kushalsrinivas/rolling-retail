@@ -46,6 +46,15 @@ export const Route = createFileRoute("/api/agent/video")({
 					references?: string[];
 					/** Ready video job id to continue from (tour chaining). */
 					extendJobId?: string;
+					/**
+					 * Stateless chaining fallback: the previous part's provider
+					 * interaction id + series/part, so tours keep chaining when the
+					 * next request lands on a fresh serverless instance whose
+					 * in-memory session has no record of the earlier part.
+					 */
+					previousOperationId?: string;
+					seriesId?: string;
+					part?: number;
 				};
 				try {
 					body = (await request.json()) as typeof body;
@@ -127,10 +136,17 @@ export const Route = createFileRoute("/api/agent/video")({
 					),
 				};
 				// ── Extension: continue a ready part (no stills needed) ──
+				// Session lookup first; stateless fallback (previousOperationId +
+				// seriesId/part) for serverless instances with no session memory.
 				const base = body.extendJobId
 					? session.videos.find((v) => v.id === body.extendJobId)
 					: undefined;
-				if (body.extendJobId && (!base || !base.operationId)) {
+				const previousOperationId =
+					base?.operationId ?? body.previousOperationId ?? null;
+				const wantsExtend = Boolean(
+					body.extendJobId || body.previousOperationId,
+				);
+				if (wantsExtend && !previousOperationId) {
 					return Response.json(
 						{ error: "Video to extend not found." },
 						{ status: 404 },
@@ -142,7 +158,13 @@ export const Route = createFileRoute("/api/agent/video")({
 						{ status: 409 },
 					);
 				}
-				const part = base ? base.part + 1 : 1;
+				const part = wantsExtend
+					? base
+						? base.part + 1
+						: typeof body.part === "number" && body.part >= 2 && body.part <= 3
+							? body.part
+							: 2
+					: 1;
 				const prompt = base
 					? tourContinuationPrompt(part, ctx)
 					: buildSalesVideoPrompt(kind, ctx);
@@ -159,11 +181,11 @@ export const Route = createFileRoute("/api/agent/video")({
 					part,
 					seriesId: base?.seriesId ?? "",
 				};
-				job.seriesId = base?.seriesId || job.id;
+				job.seriesId = base?.seriesId || body.seriesId || job.id;
 				try {
-					const started = base?.operationId
+					const started = previousOperationId
 						? await extendSalesVideo({
-								previousInteractionId: base.operationId,
+								previousInteractionId: previousOperationId,
 								prompt,
 							})
 						: await startSalesVideo({
@@ -197,14 +219,42 @@ export const Route = createFileRoute("/api/agent/video")({
 			// ── Poll: ?sessionId=&videoId= → pending | ready | error ──
 			GET: async ({ request }) => {
 				const url = new URL(request.url);
+				const videoId = url.searchParams.get("videoId");
 				const session = getOrCreateSession(
 					url.searchParams.get("sessionId") ?? undefined,
 				);
-				const job = session.videos.find(
-					(v) => v.id === url.searchParams.get("videoId"),
-				);
-				if (!job)
+				const job = session.videos.find((v) => v.id === videoId);
+				// Stateless poll fallback: the client re-sends the provider
+				// interaction id, so polling survives a fresh serverless instance.
+				const fallbackOperationId = url.searchParams.get("operationId");
+				if (!job) {
+					if (fallbackOperationId && videoId) {
+						try {
+							const s = await pollSalesVideo(fallbackOperationId);
+							if (s.status === "ready")
+								return Response.json({
+									video: {
+										id: videoId,
+										status: "ready",
+										url: s.videoDataUrl,
+										operationId: fallbackOperationId,
+									},
+								});
+							if (s.status === "error")
+								return Response.json({
+									video: {
+										id: videoId,
+										status: "error",
+										error: s.error,
+										operationId: fallbackOperationId,
+									},
+								});
+						} catch {
+							/* fall through to 404 */
+						}
+					}
 					return Response.json({ error: "Video not found" }, { status: 404 });
+				}
 				if (job.status !== "pending" || !job.operationId) {
 					return Response.json({ video: job });
 				}
