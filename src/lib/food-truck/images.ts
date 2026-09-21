@@ -1,4 +1,10 @@
-import { geometryFor } from "./constants";
+import { CONCEPT_VIEWS, type ConceptView, geometryFor } from "./constants";
+import {
+	buildReferences,
+	conceptStages,
+	continuityLock,
+	type RenderReference,
+} from "./continuity";
 import { factoryReference } from "./references";
 
 /**
@@ -18,17 +24,18 @@ function geminiKey() {
 
 export function placeholderImage(label: string, title: string): string {
 	const pretty = label.replace(/_/g, " ");
+	// Industrial palette, matching the /chat design system — the old
+	// placeholder was still painting the retired purple theme.
 	const svg =
 		`<svg xmlns='http://www.w3.org/2000/svg' width='960' height='540'>` +
-		`<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
-		`<stop offset='0' stop-color='#1e1b29'/><stop offset='1' stop-color='#0b0b10'/></linearGradient></defs>` +
-		`<rect width='960' height='540' fill='url(#g)'/>` +
-		`<rect x='120' y='200' width='720' height='150' rx='18' fill='none' stroke='#a855f7' stroke-opacity='0.55' stroke-width='3'/>` +
-		`<rect x='150' y='225' width='220' height='100' rx='10' fill='#a855f7' fill-opacity='0.18'/>` +
-		`<circle cx='300' cy='370' r='34' fill='#18181b' stroke='#71717a'/><circle cx='660' cy='370' r='34' fill='#18181b' stroke='#71717a'/>` +
-		`<text x='480' y='120' text-anchor='middle' fill='#e9d5ff' font-family='sans-serif' font-size='34' font-weight='700'>${escapeXml(title)}</text>` +
-		`<text x='480' y='160' text-anchor='middle' fill='#8b8b96' font-family='sans-serif' font-size='18'>${escapeXml(pretty)} · powered by Rolling Retail rendering</text>` +
-		`<text x='480' y='285' text-anchor='middle' fill='#c4b5fd' font-family='sans-serif' font-size='22'>concept preview</text>` +
+		`<rect width='960' height='540' fill='#0c1424'/>` +
+		`<rect x='0' y='0' width='960' height='6' fill='#0a3dad'/>` +
+		`<rect x='120' y='200' width='720' height='150' rx='6' fill='none' stroke='#2071ba' stroke-opacity='0.5' stroke-width='3'/>` +
+		`<rect x='150' y='225' width='220' height='100' rx='4' fill='#2071ba' fill-opacity='0.16'/>` +
+		`<circle cx='300' cy='370' r='34' fill='#121c30' stroke='#39476b'/><circle cx='660' cy='370' r='34' fill='#121c30' stroke='#39476b'/>` +
+		`<text x='480' y='120' text-anchor='middle' fill='#e8edf6' font-family='Montserrat,sans-serif' font-size='34' font-weight='800'>${escapeXml(title)}</text>` +
+		`<text x='480' y='158' text-anchor='middle' fill='#7b89a3' font-family='sans-serif' font-size='17' letter-spacing='2'>${escapeXml(pretty.toUpperCase())}</text>` +
+		`<text x='480' y='288' text-anchor='middle' fill='#ff9900' font-family='Montserrat,sans-serif' font-size='20' font-weight='700'>RENDER UNAVAILABLE</text>` +
 		`</svg>`;
 	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
@@ -43,20 +50,13 @@ export interface TruckImageArgs {
 	label: string;
 	prompt: string;
 	/**
-	 * A real photo of the factory's trailer. This is geometry truth — the model
-	 * may restyle it but may not redesign the shell.
+	 * The reference set for this view, already ordered by `buildReferences` —
+	 * closest viewpoint first, identity anchor next, shell photo last. The
+	 * three loose `*Reference` slots this replaced could only ever express
+	 * "shell + livery + mood", which is why interior views never saw each
+	 * other.
 	 */
-	bodyReference?: string | null;
-	/**
-	 * The hero render from this round. Carries the livery so the remaining
-	 * views agree on wrap, logo placement and signage.
-	 */
-	liveryReference?: string | null;
-	/**
-	 * A photo the buyer uploaded. Styling direction only — never a body to copy,
-	 * because it is usually somebody else's truck.
-	 */
-	inspirationReference?: string | null;
+	references?: readonly RenderReference[];
 	/** Fixed geometry of this body, from VEHICLE_GEOMETRY. */
 	geometry?: string | null;
 }
@@ -72,57 +72,28 @@ export async function generateTruckImage(
 			model: "placeholder (no key)",
 		};
 	}
-	// Only real photographs chain as references — an SVG placeholder would
-	// poison the model's sense of the trailer, so they are skipped.
-	const isPhoto = (u: string | null | undefined): u is string =>
-		typeof u === "string" && u.startsWith("data:image/");
-
-	// Order matters: the model weights earlier images more heavily, and body
-	// geometry has to outrank livery, which has to outrank someone else's truck.
-	const slots: Array<{ url: string; role: string }> = [];
-	if (isPhoto(args.bodyReference))
-		slots.push({ url: args.bodyReference, role: "body" });
-	if (isPhoto(args.liveryReference))
-		slots.push({ url: args.liveryReference, role: "livery" });
-	if (isPhoto(args.inspirationReference))
-		slots.push({ url: args.inspirationReference, role: "inspiration" });
-
+	/*
+	 * The reference set arrives already prioritised by `buildReferences`, so
+	 * this only has to decode it. Anything that fails to decode is dropped
+	 * from BOTH the parts array and the lock text — a lock that numbers an
+	 * image the model never received is worse than no lock at all, and that
+	 * desync is exactly how the old three-slot version mislabelled its
+	 * references whenever one slot was empty.
+	 */
 	const refParts: Array<{ inlineData: { mimeType: string; data: string } }> =
 		[];
-	const roles: string[] = [];
-	for (const slot of slots.slice(0, 3)) {
-		const m = slot.url.match(
+	const attached: RenderReference[] = [];
+	for (const ref of args.references ?? []) {
+		const m = ref.url.match(
 			/^data:(image\/[^;,]+)(?:;charset=[^;,]+)?;base64,(.*)$/s,
 		);
-		if (m?.[2]) {
-			refParts.push({ inlineData: { mimeType: m[1], data: m[2] } });
-			roles.push(slot.role);
-		}
+		if (!m?.[2] || m[1] === "image/svg+xml") continue;
+		refParts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+		attached.push(ref);
 	}
 
-	const locks: string[] = [];
-	if (roles.includes("body")) {
-		locks.push(
-			`BODY LOCK: reference image ${roles.indexOf("body") + 1} is a photograph of the actual trailer this concept is built on. Reproduce its shell exactly — silhouette, proportions, panel lines, door and hatch positions, window and vent placement, wheel and axle position. The shell has: ${args.geometry ?? "the body shown in the photograph"}. You may change ONLY cosmetics: paint, wrap graphics, signage, lighting, counter finishes and the equipment visible inside. Do NOT move, add or remove a door, hatch, window or vent. Do NOT change the body shape or length.`,
-		);
-	} else if (args.geometry) {
-		locks.push(
-			`BODY LOCK: the trailer has ${args.geometry}. Keep every one of those features in this view, in the same place. Do not invent additional doors, hatches or windows.`,
-		);
-	}
-	if (roles.includes("livery")) {
-		locks.push(
-			`LIVERY LOCK: reference image ${roles.indexOf("livery") + 1} is the same trailer already rendered for this brand. Copy its wrap artwork, brand colors, logo placement and signage exactly. Only the camera angle and time of day change between views.`,
-		);
-	}
-	if (roles.includes("inspiration")) {
-		locks.push(
-			`STYLE REFERENCE ONLY: reference image ${roles.indexOf("inspiration") + 1} is a photo the buyer shared for mood. Borrow its palette, typography feel and finish. Do NOT copy its body shape — the trailer must stay the one described above.`,
-		);
-	}
-
-	const text =
-		locks.length > 0 ? `${args.prompt} ${locks.join(" ")}` : args.prompt;
+	const lock = continuityLock(attached, args.geometry);
+	const text = lock ? `${args.prompt} ${lock}` : args.prompt;
 	try {
 		const res = await fetch(
 			`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
@@ -363,6 +334,16 @@ export interface StarterConcept {
 	url: string;
 	model: string;
 	filename: string;
+	/**
+	 * Explicit per-view outcome. A failed view now travels through the
+	 * pipeline as a first-class record instead of vanishing, which is what
+	 * left blank slots in the panel with nothing to explain them.
+	 */
+	status: "ready" | "failed";
+	/** Why it failed, for the panel's retry affordance. */
+	error?: string;
+	/** Which views this render was conditioned on, for debugging drift. */
+	references?: string[];
 }
 
 export interface StarterConceptArgs {
@@ -389,21 +370,41 @@ export interface StarterConceptArgs {
 	 * the round falls back to it when the fresh hero is a placeholder.
 	 */
 	masterReference?: string | null;
+	/** Only regenerate these views, reusing `completed` for the rest. */
+	only?: readonly ConceptView[];
+	/** Renders already in hand (a retry, or an earlier round) by view. */
+	completed?: Partial<Record<ConceptView, string>>;
+}
+
+export interface StageProgress {
+	/** 1-based stage of `conceptStages()`. */
+	stage: number;
+	stageCount: number;
+	/** Views finished so far, across the whole round. */
+	completed: number;
+	total: number;
+	/** Views this stage is generating right now. */
+	generating: readonly string[];
 }
 
 /**
- * One shared visual round used by BOTH the manual button and the automatic
- * threshold path. Consumes exactly 1 credit and bumps visualRounds so the
- * auto path only ever fires once per session. Generates a complete 9-view
- * concept set with the hero first (the livery lock) then the rest in one
- * parallel wave, so the round fits inside the serverless timeout.
+ * One visual round, generated as a single continuous visual world.
+ *
+ * The round walks `conceptStages()`: the exterior hero is produced alone and
+ * becomes the property's anchor, then each later stage runs in parallel with
+ * the finished pixels of its dependencies attached as references. Views in a
+ * stage never reference each other, which is what makes the parallelism safe.
+ *
+ * Consumes exactly 1 credit and bumps visualRounds so the auto path only ever
+ * fires once per session. Every view in `CONCEPT_VIEWS` yields a record, ready
+ * or failed — the caller is never left guessing why it got eight images.
  */
 export async function runStarterConcepts(
 	creditsUsed: number,
 	args: StarterConceptArgs,
-	// ponytail: per-batch callback so the server can stream each batch of 3
-	// over SSE immediately — one giant 9-image frame risks truncation/timeout.
-	onBatch?: (batch: StarterConcept[]) => void,
+	// Per-stage callback so the server can stream results over SSE as they
+	// land — one giant 9-image frame risks truncation/timeout.
+	onBatch?: (batch: StarterConcept[], progress: StageProgress) => void,
 ): Promise<{
 	images: StarterConcept[];
 	creditsUsed: number;
@@ -442,16 +443,14 @@ export async function runStarterConcepts(
 		brainNote,
 		hasBrand,
 	});
+	const promptFor = new Map(prompts.map((p) => [p.label, p.prompt]));
 
 	// The factory's own photo of this body, and the written description of its
 	// fixed geometry. Together these anchor the whole round to a trailer that
 	// exists, instead of one the model invents afresh for every view.
-	const bodyReference = await factoryReference(args.vehicleId, vehicleBody);
+	const bodyPhoto = await factoryReference(args.vehicleId, vehicleBody);
 	const geometry = geometryFor(vehicleBody);
 
-	// Only a real photo may chain — placeholders would poison the model's
-	// sense of the trailer. Master outranks buyer inspiration on the hero:
-	// same-product continuity beats fresh mood direction.
 	const photoOrNull = (u: string | null | undefined): string | null =>
 		typeof u === "string" &&
 		u.startsWith("data:image/") &&
@@ -460,63 +459,106 @@ export async function runStarterConcepts(
 			: null;
 	const masterPhoto = photoOrNull(args.masterReference);
 
+	// Renders available as references. Seeded with anything the caller already
+	// holds so a targeted retry still inherits the round's visual world.
+	const completed: Partial<Record<ConceptView, string>> = {};
+	for (const [view, url] of Object.entries(args.completed ?? {})) {
+		const ok = photoOrNull(url);
+		if (ok) completed[view as ConceptView] = ok;
+	}
+
+	const wanted = new Set<ConceptView>(args.only ?? CONCEPT_VIEWS);
+	const stages = conceptStages();
+	const total = wanted.size;
 	const images: StarterConcept[] = [];
-	// Hero first, then everything else chains off it as a livery reference —
-	// this is what stops the wrap drifting view to view. The hero itself is
-	// anchored to the factory photo, so the shell does not drift either.
-	const hero = prompts.find((p) => p.label === "exterior_hero");
-	const rest = prompts.filter((p) => p.label !== "exterior_hero");
-	let heroUrl = "";
-	if (hero) {
-		const r = await generateTruckImage({
-			brand,
-			vehicleLabel,
-			label: hero.label,
-			prompt: hero.prompt,
-			bodyReference,
-			liveryReference: masterPhoto,
-			inspirationReference: args.inspirationImage ?? null,
-			geometry,
+	let done = 0;
+
+	for (const [i, stage] of stages.entries()) {
+		const todo = stage.filter((v) => wanted.has(v));
+		if (todo.length === 0) continue;
+
+		onBatch?.([], {
+			stage: i + 1,
+			stageCount: stages.length,
+			completed: done,
+			total,
+			generating: todo,
 		});
-		images.push({
-			label: hero.label,
-			url: r.url,
-			model: r.model,
-			filename: `${hero.label}.png`,
-		});
-		onBatch?.(images.slice());
-		if (!r.model.startsWith("placeholder")) heroUrl = r.url;
-	}
-	// One parallel wave for the rest. The inspiration photo is deliberately
-	// dropped here: the hero already absorbed it, and re-sending it invites
-	// the model to copy that truck's body.
-	// Livery falls back to the cross-round master when the fresh hero failed.
-	// ponytail: one wave, not batches of 3 — 4 sequential Gemini round-trips
-	// blew the 60s Vercel wall and truncated rounds to 4/9 images.
-	const roundLivery = heroUrl || masterPhoto;
-	const results = await Promise.all(
-		rest.map((p) =>
-			generateTruckImage({
-				brand,
-				vehicleLabel,
-				label: p.label,
-				prompt: p.prompt,
-				bodyReference,
-				liveryReference: roundLivery || null,
-				geometry,
+
+		const results = await Promise.all(
+			todo.map(async (view) => {
+				const references = buildReferences({
+					view,
+					completed,
+					bodyPhoto,
+					masterPhoto,
+					inspiration: args.inspirationImage,
+				});
+				const prompt = promptFor.get(view);
+				if (!prompt) {
+					return {
+						label: view,
+						url: placeholderImage(view, brand),
+						model: "placeholder (no prompt)",
+						filename: `${view}.png`,
+						status: "failed" as const,
+						error: "No prompt for this view.",
+						references: references.map((r) => r.from),
+					};
+				}
+				try {
+					const r = await generateTruckImage({
+						brand,
+						vehicleLabel,
+						label: view,
+						prompt,
+						references,
+						geometry,
+					});
+					const failed = r.model.startsWith("placeholder");
+					return {
+						label: view,
+						url: r.url,
+						model: r.model,
+						filename: `${view}.png`,
+						status: failed ? ("failed" as const) : ("ready" as const),
+						error: failed
+							? "The image model did not return a render."
+							: undefined,
+						references: references.map((r2) => r2.from),
+					};
+				} catch (err) {
+					// A throw here used to take the whole Promise.all down and lose
+					// every sibling in the stage with it.
+					console.warn(`[food-truck] ${view} failed:`, err);
+					return {
+						label: view,
+						url: placeholderImage(view, brand),
+						model: "placeholder (error)",
+						filename: `${view}.png`,
+						status: "failed" as const,
+						error: err instanceof Error ? err.message : "Render failed.",
+						references: references.map((r2) => r2.from),
+					};
+				}
 			}),
-		),
-	);
-	const done: StarterConcept[] = [];
-	for (let j = 0; j < rest.length; j++) {
-		done.push({
-			label: rest[j].label,
-			url: results[j].url,
-			model: results[j].model,
-			filename: `${rest[j].label}.png`,
+		);
+
+		// Only real renders join the reference pool — a placeholder would
+		// poison every view downstream of it.
+		for (const r of results) {
+			if (r.status === "ready") completed[r.label as ConceptView] = r.url;
+		}
+		images.push(...results);
+		done += results.length;
+		onBatch?.(results, {
+			stage: i + 1,
+			stageCount: stages.length,
+			completed: done,
+			total,
+			generating: [],
 		});
 	}
-	images.push(...done);
-	onBatch?.(done);
+
 	return { images, creditsUsed: creditsUsed + 1, brainNoteUsed: brainNote };
 }

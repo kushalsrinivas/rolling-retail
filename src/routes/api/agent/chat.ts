@@ -6,7 +6,11 @@ import {
 	describeVehicle,
 	updateBrain,
 } from "#/lib/food-truck/brain";
-import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
+import {
+	CONCEPT_VIEW_COUNT,
+	getBusiness,
+	getVehicle,
+} from "#/lib/food-truck/constants";
 import {
 	getFoodTruckAgent,
 	hasLlmKey,
@@ -16,8 +20,11 @@ import {
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import {
 	adoptMasterFromImages,
+	conceptsByView,
 	creditsLeft,
 	getOrCreateSession,
+	listConcepts,
+	putConcepts,
 } from "#/lib/food-truck/session";
 import { layoutFor } from "#/lib/food-truck/tools";
 
@@ -173,6 +180,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 								const run = await runStarterConcepts(
 									session.creditsUsed,
 									{
+										completed: conceptsByView(session),
 										vehicleId: effectiveVehicleId,
 										inspirationImage: session.inspirationImage,
 										masterReference: session.masterImageUrl,
@@ -207,13 +215,40 @@ export const Route = createFileRoute("/api/agent/chat")({
 											.filter(Boolean)
 											.join("; "),
 									},
-									(batch) => send({ type: "images", images: batch }),
+									(batch, progress) => {
+										// Persist before announcing: if the frame never
+										// arrives, the render is still recoverable from
+										// GET /api/agent/images.
+										if (batch.length > 0) putConcepts(session, batch);
+										send({
+											type: "images",
+											images: batch,
+											progress,
+										});
+									},
 								);
 								session.creditsUsed = run.creditsUsed;
 								session.visualRounds += 1;
 								adoptMasterFromImages(session, run.images);
+								putConcepts(session, run.images);
+								send({
+									type: "images_done",
+									images: listConcepts(session),
+									creditsLeft: creditsLeft(session),
+								});
 							} catch (imgErr) {
 								console.warn("[food-truck] auto visuals failed:", imgErr);
+								// The panel must leave its loading state even when the
+								// whole round throws, or it spins forever.
+								send({
+									type: "images_done",
+									images: listConcepts(session),
+									creditsLeft: creditsLeft(session),
+									error:
+										imgErr instanceof Error
+											? imgErr.message
+											: "Render round failed.",
+								});
 							}
 						};
 
@@ -235,7 +270,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 							} catch {
 								/* layout is best-effort — images still fire */
 							}
-							send({ type: "images_start", count: 9 });
+							send({ type: "images_start", count: CONCEPT_VIEW_COUNT });
 						};
 
 						// ── No LLM key: deterministic offline designer (demo never dies) ──

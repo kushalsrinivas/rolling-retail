@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { BUSINESS_TYPES, getVehicle, VEHICLES } from "./constants";
-import { layoutFor } from "./tools";
 import {
 	allEquipment,
 	getEquipment,
@@ -8,6 +7,7 @@ import {
 	planGalley,
 	powerBudget,
 } from "./equipment";
+import { layoutFor } from "./tools";
 
 const airstreamM = getVehicle("airstream-m")!;
 const square3m = getVehicle("square-3m")!;

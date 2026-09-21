@@ -103,14 +103,23 @@ export interface VideoStart {
 export async function startSalesVideo(args: {
 	kind: SalesVideoKind;
 	ctx: SalesVideoContext;
-	/** Up to 3 approved still data-URLs (master first). */
+	/**
+	 * The already-built prompt. The route knows which concept views it
+	 * attached, so it — not this function — is what can name them in the
+	 * reference lock.
+	 */
+	prompt?: string;
+	/** Up to 3 approved still data-URLs, closest-matching view first. */
 	references: string[];
 }): Promise<VideoStart> {
 	const key = omniKey();
 	if (!key) throw new Error("video needs GOOGLE_API_KEY");
 	const model = videoModel();
 	const input: unknown[] = [
-		{ type: "text", text: buildSalesVideoPrompt(args.kind, args.ctx) },
+		{
+			type: "text",
+			text: args.prompt ?? buildSalesVideoPrompt(args.kind, args.ctx),
+		},
 	];
 	for (const ref of args.references.slice(0, 3)) {
 		const split = splitDataUrl(ref);

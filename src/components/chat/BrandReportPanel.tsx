@@ -1,4 +1,5 @@
 import {
+	AlertTriangle,
 	BarChart3,
 	Box,
 	Brain,
@@ -8,24 +9,29 @@ import {
 	Download,
 	FileJson,
 	ImageIcon,
+	Layers,
 	Loader2,
 	Lock,
 	Maximize2,
 	MessageCircle,
 	RefreshCw,
+	RotateCcw,
 	Star,
 	Truck,
 	Users,
 	X,
 } from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
-import type {
-	GeneratedImage,
-	GeneratedVideo,
-	PipelineLead,
-	TruckEstimate,
-	TruckLayout,
-	TruckSpec,
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+	type GeneratedImage,
+	type GeneratedVideo,
+	type PipelineLead,
+	type PipelineProgress,
+	prettyView,
+	type TruckEstimate,
+	type TruckLayout,
+	type TruckSpec,
 } from "#/hooks/use-chat";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
 import { CONCEPT_VIEW_COUNT } from "#/lib/food-truck/constants";
@@ -61,6 +67,8 @@ interface BrandReportPanelProps {
 	leads: PipelineLead[];
 	creditsLeft: number | null;
 	isGenerating: boolean;
+	progress: PipelineProgress;
+	onRetryFailed: () => void;
 	onAskAbout: (label: string, value: string) => void;
 	onGenerateConcepts: () => void;
 	onToggleFavorite: (label: string) => void;
@@ -192,6 +200,272 @@ function EmptyState({
 				</p>
 			)}
 		</div>
+	);
+}
+
+/**
+ * The tour's progress, as one honest display.
+ *
+ * Nine renders and up to three video parts used to land piecemeal into a grid
+ * that also held the finished article, so a half-built tour was
+ * indistinguishable from a finished one. This stands in front of the work
+ * until everything has settled.
+ */
+function TourProgress({
+	progress,
+	rendersReady,
+	rendersFailed,
+}: {
+	progress: PipelineProgress;
+	rendersReady: number;
+	rendersFailed: number;
+}) {
+	const renderPct = progress.rendersTotal
+		? Math.round(
+				((progress.rendersDone || rendersReady + rendersFailed) /
+					progress.rendersTotal) *
+					100,
+			)
+		: 0;
+	const videoPct = progress.videosTotal
+		? Math.round((progress.videosDone / progress.videosTotal) * 100)
+		: 0;
+	// Renders are the bulk of the wait; weight the bar accordingly rather
+	// than letting three video parts claim half of it.
+	const overall = progress.videosTotal
+		? Math.round(renderPct * 0.6 + videoPct * 0.4)
+		: renderPct;
+
+	const phaseLabel =
+		progress.phase === "videos"
+			? "Generating videos"
+			: progress.phase === "finalizing"
+				? "Finalizing tour"
+				: "Generating renders";
+
+	const steps: Array<{
+		id: string;
+		label: string;
+		done: boolean;
+		now: boolean;
+	}> = [
+		{
+			id: "renders",
+			label: "Generating renders",
+			done: progress.phase === "videos" || progress.phase === "finalizing",
+			now: progress.phase === "renders",
+		},
+		{
+			id: "videos",
+			label: "Generating videos",
+			done: progress.phase === "finalizing",
+			now: progress.phase === "videos",
+		},
+		{
+			id: "final",
+			label: "Finalizing tour",
+			done: false,
+			now: progress.phase === "finalizing",
+		},
+	];
+
+	return (
+		<div className={cn(CARD, "p-5")}>
+			<div className="flex items-center gap-2.5">
+				<Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--ftf-blue-800)]" />
+				<span className="ftf-label !text-[var(--ftf-ink)]">{phaseLabel}</span>
+				<span className="ml-auto ftf-display text-sm tabular-nums text-[var(--ftf-blue-800)]">
+					{overall}%
+				</span>
+			</div>
+
+			<div
+				className="mt-3 h-1.5 overflow-hidden rounded-sm bg-[var(--ftf-paper-3)]"
+				role="progressbar"
+				aria-valuenow={overall}
+				aria-valuemin={0}
+				aria-valuemax={100}
+				aria-label={phaseLabel}
+			>
+				<div
+					className="h-full bg-[var(--ftf-blue-800)] transition-[width] duration-500"
+					style={{ width: `${Math.max(2, overall)}%` }}
+				/>
+			</div>
+
+			{progress.step && (
+				<p className="mt-2.5 text-xs text-[var(--ftf-ink-2)]">
+					{progress.step}…
+				</p>
+			)}
+
+			<dl className="mt-4 grid grid-cols-2 gap-2">
+				<div className="rounded-sm bg-[var(--ftf-paper-2)] px-3 py-2">
+					<dt className="ftf-label">Renders</dt>
+					<dd className="ftf-display mt-0.5 text-sm tabular-nums text-[var(--ftf-ink)]">
+						{rendersReady} / {progress.rendersTotal || CONCEPT_VIEW_COUNT}
+						{rendersFailed > 0 && (
+							<span className="ml-1.5 text-[11px] font-medium text-[var(--ftf-red-600)]">
+								{rendersFailed} failed
+							</span>
+						)}
+					</dd>
+				</div>
+				<div className="rounded-sm bg-[var(--ftf-paper-2)] px-3 py-2">
+					<dt className="ftf-label">Video parts</dt>
+					<dd className="ftf-display mt-0.5 text-sm tabular-nums text-[var(--ftf-ink)]">
+						{progress.videosTotal
+							? `${progress.videosDone} / ${progress.videosTotal}`
+							: "—"}
+					</dd>
+				</div>
+			</dl>
+
+			<ol className="mt-4 space-y-1.5 border-t border-[var(--ftf-line)] pt-3">
+				{steps.map((st) => (
+					<li
+						key={st.id}
+						className={cn(
+							"flex items-center gap-2 text-[11px]",
+							st.now
+								? "font-semibold text-[var(--ftf-ink)]"
+								: st.done
+									? "text-[var(--ftf-teal-600)]"
+									: "text-[var(--ftf-ink-4)]",
+						)}
+					>
+						{st.done ? (
+							<Check className="h-3 w-3 shrink-0" />
+						) : st.now ? (
+							<Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+						) : (
+							<span className="h-3 w-3 shrink-0 rounded-[1px] border border-current opacity-40" />
+						)}
+						{st.label}
+					</li>
+				))}
+			</ol>
+
+			<p className="mt-3 text-[11px] leading-relaxed text-[var(--ftf-ink-3)]">
+				Each view is generated from the ones before it, so the whole set
+				describes the same truck. That chaining is why it is not instant.
+			</p>
+		</div>
+	);
+}
+
+/**
+ * Full-screen image viewer.
+ *
+ * Rendered through a portal on `document.body`. It previously lived inside
+ * the split pane, where any ancestor with a transform, filter or containment
+ * turns `position: fixed` into "fixed to that ancestor" — which is how an
+ * expanded render ended up painted behind the panel. A portal puts it outside
+ * every one of those stacking contexts by construction.
+ */
+function Lightbox({
+	image,
+	onClose,
+	onPrev,
+	onNext,
+	footer,
+}: {
+	image: GeneratedImage;
+	onClose: () => void;
+	onPrev?: () => void;
+	onNext?: () => void;
+	footer?: React.ReactNode;
+}) {
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+			if (e.key === "ArrowLeft") onPrev?.();
+			if (e.key === "ArrowRight") onNext?.();
+		};
+		window.addEventListener("keydown", onKey);
+		// The panel behind must not scroll under the overlay on touch.
+		const prevOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		return () => {
+			window.removeEventListener("keydown", onKey);
+			document.body.style.overflow = prevOverflow;
+		};
+	}, [onClose, onPrev, onNext]);
+
+	if (typeof document === "undefined") return null;
+
+	return createPortal(
+		// biome-ignore lint/a11y/useKeyWithClickEvents: Escape is bound above; the backdrop is a convenience target
+		// biome-ignore lint/a11y/noStaticElementInteractions: dialog semantics are on the inner panel
+		<div
+			className="ftf lightbox-overlay fixed inset-0 z-[999] flex flex-col bg-black/90 backdrop-blur-sm"
+			onClick={onClose}
+		>
+			{/* Bar first in DOM order so the close control is reachable on phones. */}
+			<div className="flex shrink-0 items-start justify-between gap-3 p-4">
+				<span className="min-w-0">
+					<span className="block truncate text-sm font-semibold text-white">
+						{LABEL_MAP[image.label] || prettyView(image.label)}
+					</span>
+					<span className="ftf-label !text-white/50">
+						{salesSlideFor(image.label)}
+					</span>
+				</span>
+				<button
+					type="button"
+					onClick={onClose}
+					aria-label="Close"
+					className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white/10 text-white transition-colors hover:bg-white/20"
+				>
+					<X className="h-4.5 w-4.5" />
+				</button>
+			</div>
+
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: stops the backdrop handler */}
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-label={LABEL_MAP[image.label] || prettyView(image.label)}
+				className="lightbox-content flex min-h-0 flex-1 items-center justify-center px-4"
+				onClick={(e) => e.stopPropagation()}
+			>
+				<img
+					src={image.url}
+					alt={LABEL_MAP[image.label] || image.label}
+					className="max-h-full max-w-full rounded object-contain"
+				/>
+			</div>
+
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: stops the backdrop handler */}
+			<div
+				className="flex shrink-0 flex-wrap items-center justify-between gap-3 p-4"
+				onClick={(e) => e.stopPropagation()}
+				style={{
+					paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))",
+				}}
+			>
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={onPrev}
+						disabled={!onPrev}
+						className="rounded bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:opacity-30"
+					>
+						← Previous
+					</button>
+					<button
+						type="button"
+						onClick={onNext}
+						disabled={!onNext}
+						className="rounded bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:opacity-30"
+					>
+						Next →
+					</button>
+				</div>
+				{footer}
+			</div>
+		</div>,
+		document.body,
 	);
 }
 
@@ -376,13 +650,17 @@ export default function BrandReportPanel({
 	leads,
 	creditsLeft,
 	isGenerating,
+	progress,
+	onRetryFailed,
 	onAskAbout,
 	onGenerateConcepts,
 	onToggleFavorite,
 	onRefreshLeads,
 }: BrandReportPanelProps) {
 	const [tab, setTab] = useState<TabId>("visuals");
-	const [lightbox, setLightbox] = useState<number | null>(null);
+	// Keyed by view, not index: the grid reorders as slots settle, and an
+	// index would silently start pointing at a different render.
+	const [lightbox, setLightbox] = useState<string | null>(null);
 	const [loaded, setLoaded] = useState<Set<string>>(new Set());
 	const [copied, setCopied] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -391,6 +669,33 @@ export default function BrandReportPanel({
 	useEffect(() => {
 		if (tab === "build") onRefreshLeads();
 	}, [tab, onRefreshLeads]);
+
+	const readyImages = images.filter((i) => i.status === "ready");
+	const failedImages = images.filter((i) => i.status === "failed");
+	const hasFailures = failedImages.length > 0;
+	const lightboxIndex = readyImages.findIndex((i) => i.label === lightbox);
+	const lightboxImage =
+		lightboxIndex >= 0 ? readyImages[lightboxIndex] : undefined;
+
+	const saveConcept = useCallback(
+		async (img: GeneratedImage) => {
+			setSaving(true);
+			try {
+				const marked = await watermarkImage(img.url, {
+					text: WATERMARK_TEXT,
+					subtext: prettyView(img.label),
+					tile: true,
+				});
+				downloadDataUrl(
+					marked,
+					`${spec?.brandName?.replace(/\s+/g, "-").toLowerCase() ?? "concept"}-${img.label}.png`,
+				);
+			} finally {
+				setSaving(false);
+			}
+		},
+		[spec],
+	);
 
 	const handoffText = [
 		spec ? `Brand: ${spec.brandName} (${spec.business})` : "Brand: —",
@@ -463,20 +768,31 @@ export default function BrandReportPanel({
 					<SectionHeader
 						icon={ImageIcon}
 						title="Truck concepts"
-						tone={isGenerating ? "working" : "neutral"}
+						tone={isGenerating ? "working" : hasFailures ? "neutral" : "live"}
 						badge={
 							isGenerating
 								? "Rendering"
-								: images.length
-									? `${images.length} view${images.length === 1 ? "" : "s"}`
+								: readyImages.length
+									? `${readyImages.length} of ${CONCEPT_VIEW_COUNT} views`
 									: undefined
 						}
 					/>
-					{images.length === 0 && !isGenerating ? (
+					{/*
+					 * While a round is in flight the panel shows progress and
+					 * nothing else. A grid that fills in one tile at a time reads
+					 * as a broken tour, not a loading one.
+					 */}
+					{isGenerating ? (
+						<TourProgress
+							progress={progress}
+							rendersReady={readyImages.length}
+							rendersFailed={failedImages.length}
+						/>
+					) : images.length === 0 ? (
 						<EmptyState
 							icon={Truck}
 							title={`No concepts yet — start with ${CONCEPT_VIEW_COUNT}`}
-							body="One master hero, then eight deck-ready views built off it: overview, feature, use-case, technical, vision. Star the ones you approve and the video films those, so nothing drifts."
+							body="The exterior hero is rendered first and becomes the anchor; every later view is generated with the finished renders before it attached as references, so all nine show the same truck rather than nine interpretations of it."
 							action={{
 								label: `Generate ${CONCEPT_VIEW_COUNT} starter concepts`,
 								onClick: onGenerateConcepts,
@@ -490,6 +806,23 @@ export default function BrandReportPanel({
 						/>
 					) : (
 						<>
+							{hasFailures && (
+								<div className="mb-3 flex flex-wrap items-center gap-2 rounded border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-3 py-2.5">
+									<AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[var(--ftf-amber-600)]" />
+									<p className="flex-1 text-[11px] leading-relaxed text-[var(--ftf-amber-600)]">
+										{failedImages.length} view
+										{failedImages.length === 1 ? "" : "s"} did not render:{" "}
+										{failedImages.map((f) => prettyView(f.label)).join(", ")}.
+									</p>
+									<button
+										type="button"
+										onClick={onRetryFailed}
+										className="inline-flex shrink-0 items-center gap-1.5 rounded border border-[var(--ftf-amber-600)]/40 bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--ftf-amber-600)] transition-colors hover:bg-[var(--ftf-amber-100)]"
+									>
+										<RotateCcw className="h-3 w-3" /> Retry these
+									</button>
+								</div>
+							)}
 							<div
 								className={cn(
 									"grid gap-2.5",
@@ -498,86 +831,128 @@ export default function BrandReportPanel({
 										: "grid-cols-1 md:grid-cols-2",
 								)}
 							>
-								{images.map((img, i) => (
-									<div
-										// biome-ignore lint/suspicious/noArrayIndexKey: labels repeat across regenerations; label+index is the stable identity
-										key={`${img.label}-${i}`}
-										className={cn(
-											"showcase-card group relative aspect-video overflow-hidden rounded border-2 bg-[var(--ftf-well)] transition-colors",
-											img.favorite
-												? "border-[var(--ftf-orange-500)]"
-												: "border-transparent hover:border-[var(--ftf-blue-600)]",
-										)}
-									>
-										{!loaded.has(img.label) && (
-											<div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--ftf-well)]">
-												<Loader2 className="h-5 w-5 animate-spin text-white/40" />
+								{images.map((img) => {
+									const title = LABEL_MAP[img.label] || prettyView(img.label);
+									// Every view keeps its tile whatever happened to it —
+									// a failure states itself instead of leaving a hole.
+									if (img.status !== "ready") {
+										return (
+											<div
+												key={img.label}
+												className={cn(
+													"flex aspect-video flex-col items-center justify-center gap-2 rounded px-4 text-center",
+													img.status === "pending"
+														? "ftf-working bg-[var(--ftf-well)]"
+														: "border border-dashed border-[var(--ftf-line-strong)] bg-[var(--ftf-paper-2)]",
+												)}
+											>
+												{img.status === "pending" ? (
+													<>
+														<Loader2 className="h-5 w-5 animate-spin text-white/40" />
+														<span className="ftf-label !text-white/40">
+															{title}
+														</span>
+													</>
+												) : (
+													<>
+														<AlertTriangle className="h-5 w-5 text-[var(--ftf-ink-4)]" />
+														<span className="ftf-label">{title}</span>
+														<span className="max-w-[240px] text-[11px] leading-snug text-[var(--ftf-ink-3)]">
+															{img.error ?? "This view did not render."}
+														</span>
+														<button
+															type="button"
+															onClick={() => onRetryFailed()}
+															className="mt-0.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
+														>
+															<RotateCcw className="h-3 w-3" /> Retry
+														</button>
+													</>
+												)}
 											</div>
-										)}
-										<button
-											type="button"
-											onClick={() => setLightbox(i)}
-											className="absolute inset-0 h-full w-full"
-											title="Enlarge"
-										>
-											<img
-												src={img.url}
-												alt={LABEL_MAP[img.label] || img.label}
-												className="h-full w-full object-cover"
-												onLoad={() =>
-													setLoaded((p) => new Set(p).add(img.label))
-												}
-											/>
-										</button>
-										<button
-											type="button"
-											onClick={() => onToggleFavorite(img.label)}
-											title={
-												img.favorite
-													? "Approved for deck + video — click to unstar"
-													: "Star to approve for deck + video"
-											}
+										);
+									}
+									return (
+										<div
+											key={img.label}
 											className={cn(
-												"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-sm transition",
+												"showcase-card group relative aspect-video overflow-hidden rounded border-2 bg-[var(--ftf-well)] transition-colors",
 												img.favorite
-													? "bg-[var(--ftf-orange-500)] text-[#241200]"
-													: "bg-black/55 text-white/80 opacity-0 backdrop-blur-sm hover:bg-black/75 group-hover:opacity-100",
+													? "border-[var(--ftf-orange-500)]"
+													: "border-transparent hover:border-[var(--ftf-blue-600)]",
 											)}
 										>
-											<Star
-												className={cn(
-													"h-3.5 w-3.5",
-													img.favorite && "fill-[#241200]",
-												)}
-											/>
-										</button>
-										{/* Caption plate: always readable, not a hover surprise. */}
-										<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 pb-2.5 pt-8">
-											<span className="min-w-0">
-												<span className="block truncate text-xs font-semibold text-white">
-													{LABEL_MAP[img.label] || img.label}
-												</span>
-												<span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/60">
-													{salesSlideFor(img.label)}
-													{img.favorite && " · approved"}
-												</span>
-											</span>
-											<Maximize2 className="h-4 w-4 shrink-0 text-white/60 opacity-0 transition-opacity group-hover:opacity-100" />
-										</div>
-									</div>
-								))}
-								{isGenerating &&
-									Array.from({ length: Math.max(0, 3 - images.length) }).map(
-										(_, i) => (
-											<div
-												// biome-ignore lint/suspicious/noArrayIndexKey: transient loading slots
-												key={`generating-${i}`}
-												className="ftf-working flex aspect-video items-center justify-center rounded bg-[var(--ftf-well)]"
+											{!loaded.has(img.label) && (
+												<div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--ftf-well)]">
+													<Loader2 className="h-5 w-5 animate-spin text-white/40" />
+												</div>
+											)}
+											<button
+												type="button"
+												onClick={() => setLightbox(img.label)}
+												className="absolute inset-0 h-full w-full"
+												title="Enlarge"
 											>
-												<Loader2 className="h-5 w-5 animate-spin text-white/40" />
+												<img
+													src={img.url}
+													alt={title}
+													className="h-full w-full object-cover"
+													onLoad={() =>
+														setLoaded((prev) => new Set(prev).add(img.label))
+													}
+													onError={() =>
+														setLoaded((prev) => new Set(prev).add(img.label))
+													}
+												/>
+											</button>
+											<button
+												type="button"
+												onClick={() => onToggleFavorite(img.label)}
+												title={
+													img.favorite
+														? "Approved for deck + video — click to unstar"
+														: "Star to approve for deck + video"
+												}
+												className={cn(
+													"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-sm transition",
+													img.favorite
+														? "bg-[var(--ftf-orange-500)] text-[#241200]"
+														: "bg-black/55 text-white/80 opacity-0 backdrop-blur-sm hover:bg-black/75 group-hover:opacity-100",
+												)}
+											>
+												<Star
+													className={cn(
+														"h-3.5 w-3.5",
+														img.favorite && "fill-[#241200]",
+													)}
+												/>
+											</button>
+											{/* Provenance: which renders this one inherited from. */}
+											{img.references && img.references.length > 0 && (
+												<span
+													title={`Generated with references: ${img.references.map(prettyView).join(", ")}`}
+													className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-sm bg-black/55 px-1.5 py-1 text-[10px] font-medium text-white/70 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+												>
+													<Layers className="h-3 w-3" />
+													{img.references.length}
+												</span>
+											)}
+											{/* Caption plate: always readable, not a hover surprise. */}
+											<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 pb-2.5 pt-8">
+												<span className="min-w-0">
+													<span className="block truncate text-xs font-semibold text-white">
+														{title}
+													</span>
+													<span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/60">
+														{salesSlideFor(img.label)}
+														{img.favorite && " · approved"}
+													</span>
+												</span>
+												<Maximize2 className="h-4 w-4 shrink-0 text-white/60 opacity-0 transition-opacity group-hover:opacity-100" />
 											</div>
-										),
-									)}
+										</div>
+									);
+								})}
 							</div>
 							<div className="mt-3 flex flex-wrap gap-2">
 								<button
@@ -619,9 +994,10 @@ export default function BrandReportPanel({
 									}
 								/>
 								<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
-									Star stills to approve them — the master hero plus up to two
-									starred views become the video's references. Drop the clip
-									straight into the deck.
+									Each clip is filmed from the renders that show the space it
+									covers — the walkthrough from the interior views, the night
+									cut from the night render — so the camera moves through the
+									truck you approved rather than a new one.
 								</p>
 								<div className="grid gap-2 sm:grid-cols-2">
 									{SALES_VIDEO_PRESETS.map((p) => (
@@ -629,7 +1005,7 @@ export default function BrandReportPanel({
 											key={p.kind}
 											type="button"
 											onClick={() => onGenerateVideo(p.kind)}
-											disabled={isGeneratingVideo || images.length === 0}
+											disabled={isGeneratingVideo || readyImages.length === 0}
 											className={cn(
 												CARD,
 												"px-3 py-2.5 text-left transition-colors hover:border-[var(--ftf-blue-600)] hover:bg-[var(--ftf-blue-50)] disabled:opacity-40 disabled:hover:border-[var(--ftf-line)] disabled:hover:bg-white",
@@ -644,7 +1020,17 @@ export default function BrandReportPanel({
 										</button>
 									))}
 								</div>
-								{videos.length > 0 &&
+								{isGeneratingVideo && (
+									<div className="mt-2.5">
+										<TourProgress
+											progress={progress}
+											rendersReady={readyImages.length}
+											rendersFailed={failedImages.length}
+										/>
+									</div>
+								)}
+								{!isGeneratingVideo &&
+									videos.length > 0 &&
 									(() => {
 										const groups = new Map<string, GeneratedVideo[]>();
 										const singles: GeneratedVideo[] = [];
@@ -748,7 +1134,7 @@ export default function BrandReportPanel({
 									{/* The paid half: one chosen render becomes a real mesh. */}
 									<Suspense fallback={null}>
 										<ConceptToModel
-											concepts={images.map((i) => ({
+											concepts={readyImages.map((i) => ({
 												label: i.label,
 												url: i.url,
 											}))}
@@ -1028,69 +1414,34 @@ export default function BrandReportPanel({
 				</div>
 			)}
 
-			{/* ── Lightbox ── */}
-			{lightbox !== null && images[lightbox] && (
-				// biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: lightbox dismiss
-				<div
-					className="lightbox-overlay fixed inset-0 z-50 flex items-center justify-center bg-[var(--ftf-well)]/95 p-6 backdrop-blur-sm"
-					onClick={() => setLightbox(null)}
-				>
-					{/* biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: stop propagation */}
-					<div
-						className="lightbox-content relative max-h-[90vh] max-w-[90vw]"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<img
-							src={images[lightbox].url}
-							alt={images[lightbox].label}
-							className="max-h-[80vh] rounded object-contain"
-						/>
-						<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-							<span>
-								<span className="block text-sm font-semibold text-white">
-									{LABEL_MAP[images[lightbox].label] || images[lightbox].label}
-								</span>
-								<span className="ftf-label !text-white/50">
-									{salesSlideFor(images[lightbox].label)}
-								</span>
-							</span>
-							{/* Concepts leave with the factory's mark on them. */}
-							<button
-								type="button"
-								disabled={saving}
-								onClick={async () => {
-									const img = images[lightbox];
-									setSaving(true);
-									try {
-										const marked = await watermarkImage(img.url, {
-											text: WATERMARK_TEXT,
-											subtext: img.label.replace(/_/g, " "),
-											tile: true,
-										});
-										downloadDataUrl(
-											marked,
-											`${spec?.brandName?.replace(/\s+/g, "-").toLowerCase() ?? "concept"}-${img.label}.png`,
-										);
-									} finally {
-										setSaving(false);
-									}
-								}}
-								className="ftf-cta inline-flex items-center gap-1.5 rounded px-4 py-2 text-xs"
-							>
-								<Download className="h-3.5 w-3.5" />
-								{saving ? "Preparing…" : "Download"}
-							</button>
-						</div>
+			{/* ── Lightbox: portalled to <body>, above every stacking context ── */}
+			{lightboxImage && (
+				<Lightbox
+					image={lightboxImage}
+					onClose={() => setLightbox(null)}
+					onPrev={
+						lightboxIndex > 0
+							? () => setLightbox(readyImages[lightboxIndex - 1].label)
+							: undefined
+					}
+					onNext={
+						lightboxIndex < readyImages.length - 1
+							? () => setLightbox(readyImages[lightboxIndex + 1].label)
+							: undefined
+					}
+					footer={
+						/* Concepts leave with the factory's mark on them. */
 						<button
 							type="button"
-							onClick={() => setLightbox(null)}
-							aria-label="Close"
-							className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-sm bg-white text-[var(--ftf-ink)] transition-colors hover:bg-[var(--ftf-red-500)] hover:text-white"
+							disabled={saving}
+							onClick={() => saveConcept(lightboxImage)}
+							className="ftf-cta inline-flex items-center gap-1.5 rounded px-4 py-2 text-xs"
 						>
-							<X className="h-4 w-4" />
+							<Download className="h-3.5 w-3.5" />
+							{saving ? "Preparing…" : "Download"}
 						</button>
-					</div>
-				</div>
+					}
+				/>
 			)}
 		</div>
 	);

@@ -1,5 +1,6 @@
 import type { ProjectBrain } from "./brain";
-import { FREE_VISUAL_CREDITS } from "./constants";
+import { CONCEPT_VIEWS, FREE_VISUAL_CREDITS } from "./constants";
+import type { StarterConcept } from "./images";
 
 export interface VideoJob {
 	id: string;
@@ -50,6 +51,16 @@ export interface TruckSession {
 	masterImageUrl: string | null;
 	/** Sales-video jobs (Omni Flash interactions), newest first, capped at 10. */
 	videos: VideoJob[];
+	/**
+	 * The current round's renders, keyed by view.
+	 *
+	 * Renders used to live only in the SSE frames that carried them: if a
+	 * frame was dropped, truncated or arrived after the reader closed, that
+	 * render was gone with no way to ask for it again. This is the canonical
+	 * copy — the panel reconciles against it, and video generation reads its
+	 * references from here rather than trusting whatever the client still has.
+	 */
+	images: Record<string, StarterConcept>;
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -74,6 +85,7 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			inspirationImage: null,
 			masterImageUrl: null,
 			videos: [],
+			images: {},
 		};
 		sessions.set(id, s);
 	}
@@ -114,6 +126,39 @@ export function listLeads(): PipelineLead[] {
 		});
 	}
 	return out.sort((a, b) => b.lastSeen - a.lastSeen);
+}
+
+/**
+ * Record a batch of renders against the session.
+ *
+ * A later round overwrites a view outright — that is the point of paying a
+ * credit — but a FAILED render never displaces a good one, so a flaky retry
+ * cannot blank a view the buyer already has.
+ */
+export function putConcepts(s: TruckSession, images: StarterConcept[]) {
+	for (const img of images) {
+		const held = s.images[img.label];
+		if (img.status === "failed" && held?.status === "ready") continue;
+		s.images[img.label] = img;
+	}
+}
+
+/** The round as the panel should see it, in canonical view order. */
+export function listConcepts(s: TruckSession): StarterConcept[] {
+	return CONCEPT_VIEWS.map((v) => s.images[v]).filter(
+		(c): c is StarterConcept => Boolean(c),
+	);
+}
+
+/** Ready renders by view — the reference pool for videos and retries. */
+export function conceptsByView(s: TruckSession): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const [view, c] of Object.entries(s.images)) {
+		if (c.status === "ready" && c.url.startsWith("data:image/")) {
+			out[view] = c.url;
+		}
+	}
+	return out;
 }
 
 /** First real exterior_hero wins and never changes — it is the visual truth

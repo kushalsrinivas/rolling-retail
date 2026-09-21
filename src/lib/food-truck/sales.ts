@@ -176,9 +176,25 @@ function productBrief(ctx: SalesVideoContext): string {
  * The hard constraint. The references are approved renders the buyer already
  * signed off, so the model's job is cinematography, not design — one wrong
  * hatch and the clip stops matching the quote the factory sends.
+ *
+ * Naming the view each reference came from matters: a walkthrough handed the
+ * exterior hero and told only "match the references" still has to invent an
+ * interior, and invents a different one every run. Told that image 1 IS the
+ * galley it is filming, it moves a camera through it instead.
  */
-const LOCK =
-	"REFERENCE LOCK — the attached images are approved renders of this exact trailer, and reference image 1 is the master. Reproduce it precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography. You are filming a product that already exists. Change nothing but the camera, the light within the stated time of day, and the people and food moving inside the frame.";
+function lockFor(referenceViews: readonly string[] = []): string {
+	const named = referenceViews
+		.map((v, i) => `image ${i + 1} is the approved ${v.replace(/_/g, " ")}`)
+		.join(", ");
+	return [
+		"REFERENCE LOCK — the attached images are approved renders of this exact trailer, already signed off by the buyer.",
+		named
+			? `Reference ${named}. The space, objects and surfaces you can see in them are the set for this shot.`
+			: "Reference image 1 is the master.",
+		"Reproduce them precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography, and — inside — the layout, counters, equipment, materials, flooring, wall and ceiling finishes.",
+		"You are operating a camera inside a space that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and the people and food moving through the frame.",
+	].join(" ");
+}
 
 /** What generic video models add unprompted, and what ruins a sales asset. */
 const NEGATIVE =
@@ -198,8 +214,11 @@ const CRAFT =
 export function buildSalesVideoPrompt(
 	kind: SalesVideoKind,
 	ctx: SalesVideoContext,
+	/** Concept views attached as references, in the order the model sees them. */
+	referenceViews: readonly string[] = [],
 ): string {
 	const brief = productBrief(ctx);
+	const LOCK = lockFor(referenceViews);
 
 	if (kind === "walkthrough") {
 		return [
@@ -269,8 +288,10 @@ export const TOUR_PARTS = 3;
 export function tourContinuationPrompt(
 	part: number,
 	ctx: SalesVideoContext,
+	referenceViews: readonly string[] = [],
 ): string {
 	const brief = productBrief(ctx);
+	const LOCK = lockFor(referenceViews);
 	const continuity =
 		"CONTINUITY: this continues the previous clip as one unbroken take. Start on the exact frame the previous part ended on — same trailer, same position in frame, same golden-hour light, same camera height, same grade — and keep moving in the same direction at the same speed. No cut, no jump, no re-establish, no fade.";
 

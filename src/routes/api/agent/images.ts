@@ -7,8 +7,11 @@ import {
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import {
 	adoptMasterFromImages,
+	conceptsByView,
 	creditsLeft,
 	getOrCreateSession,
+	listConcepts,
+	putConcepts,
 } from "#/lib/food-truck/session";
 
 const LABELS = CONCEPT_VIEWS;
@@ -26,6 +29,8 @@ export const Route = createFileRoute("/api/agent/images")({
 						colors?: string;
 						vibe?: string;
 						brainNote?: string;
+						/** Retry just these views, inheriting the round's references. */
+						only?: string[];
 					};
 					const session = getOrCreateSession(body.sessionId);
 					if (creditsLeft(session) <= 0) {
@@ -61,10 +66,30 @@ export const Route = createFileRoute("/api/agent/images")({
 								? "walk-in"
 								: "hatch-serve";
 
+					// A targeted retry reuses the round's existing renders as
+					// references instead of starting a fresh visual world.
+					const only = Array.isArray(body.only)
+						? CONCEPT_VIEWS.filter((v) => body.only?.includes(v))
+						: undefined;
+					// An `only` list that names nothing real must not quietly fall
+					// through to a full round — that spends a credit the caller
+					// never asked for.
+					if (Array.isArray(body.only) && only?.length === 0) {
+						return Response.json(
+							{
+								error: `Unknown view(s): ${body.only.join(", ")}`,
+								labels: [...CONCEPT_VIEWS],
+							},
+							{ status: 400 },
+						);
+					}
+
 					const run = await runStarterConcepts(session.creditsUsed, {
 						vehicleId: vehicle?.id ?? null,
 						inspirationImage: session.inspirationImage,
 						masterReference: session.masterImageUrl,
+						only: only?.length ? only : undefined,
+						completed: conceptsByView(session),
 						brand,
 						vehicleLabel,
 						vehicleBody: vehicle?.body ?? "square",
@@ -82,8 +107,9 @@ export const Route = createFileRoute("/api/agent/images")({
 					session.creditsUsed = run.creditsUsed;
 					session.visualRounds += 1;
 					adoptMasterFromImages(session, run.images);
+					putConcepts(session, run.images);
 					return Response.json({
-						images: run.images,
+						images: listConcepts(session),
 						creditsLeft: creditsLeft(session),
 						creditsUsed: session.creditsUsed,
 					});
@@ -95,25 +121,31 @@ export const Route = createFileRoute("/api/agent/images")({
 					);
 				}
 			},
-			// ── Legacy GET (ADK file-based) kept as a compat shim ──
+			/*
+			 * ── Reconcile: the authoritative list of this session's renders ──
+			 *
+			 * The panel calls this once a run settles. SSE is the fast path, but
+			 * a dropped or truncated frame used to lose a render permanently
+			 * because nothing else ever held it; now the client can always ask
+			 * what the server actually produced.
+			 */
 			GET: async ({ request }) => {
 				const url = new URL(request.url);
-				if (!url.searchParams.get("file")) {
+				const sessionId = url.searchParams.get("sessionId");
+				if (!sessionId) {
 					return Response.json({
 						images: [],
 						engine: "langgraph",
-						notice:
-							"File-based ADK images are retired. POST to this route to generate concepts.",
 						labels: [...LABELS],
+						notice: "Pass ?sessionId= to read this session's renders.",
 					});
 				}
-				return Response.json(
-					{
-						error:
-							"ADK artifact images are retired in the LangGraph build. Regenerate via POST.",
-					},
-					{ status: 410 },
-				);
+				const session = getOrCreateSession(sessionId);
+				return Response.json({
+					images: listConcepts(session),
+					labels: [...LABELS],
+					creditsLeft: creditsLeft(session),
+				});
 			},
 		},
 	},

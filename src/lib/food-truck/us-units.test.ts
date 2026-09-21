@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { footprintFt, getVehicle, toFt, toSqft, VEHICLES } from "./constants";
 import { updateBrain } from "./brain";
+import { footprintFt, getVehicle, toFt, toSqft, VEHICLES } from "./constants";
 import { estimateFor } from "./tools";
 
 describe("US unit conversion", () => {

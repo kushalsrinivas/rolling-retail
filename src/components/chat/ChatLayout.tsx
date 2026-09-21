@@ -72,6 +72,8 @@ export default function ChatLayout() {
 			leads={chat.leads}
 			creditsLeft={chat.creditsLeft}
 			isGenerating={chat.isGeneratingImages}
+			progress={chat.progress}
+			onRetryFailed={() => chat.retryFailedRenders()}
 			onAskAbout={(label, value) => chat.sendContextMessage(label, value)}
 			onGenerateConcepts={() => chat.generateConcepts()}
 			onToggleFavorite={(label) => chat.toggleFavorite(label)}
@@ -100,7 +102,7 @@ export default function ChatLayout() {
 	}
 
 	if (!isDesktop) {
-		const conceptCount = chat.images.length;
+		const conceptCount = chat.images.filter((i) => i.status === "ready").length;
 		return (
 			<div className="ftf chat-layout flex h-dvh w-full flex-col overflow-hidden">
 				<div className="min-h-0 flex-1 overflow-hidden">

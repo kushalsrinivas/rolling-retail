@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
+import { videoReferenceViews } from "#/lib/food-truck/continuity";
 import { equipmentPhrase } from "#/lib/food-truck/images";
 import {
 	buildSalesVideoPrompt,
@@ -8,7 +9,11 @@ import {
 	type SalesVideoKind,
 	tourContinuationPrompt,
 } from "#/lib/food-truck/sales";
-import { getOrCreateSession, type VideoJob } from "#/lib/food-truck/session";
+import {
+	conceptsByView,
+	getOrCreateSession,
+	type VideoJob,
+} from "#/lib/food-truck/session";
 import {
 	extendSalesVideo,
 	pollSalesVideo,
@@ -71,14 +76,9 @@ export const Route = createFileRoute("/api/agent/video")({
 								typeof r === "string" && r.startsWith("data:image/"),
 						)
 					: [];
-				if (refs.length === 0 && !body.extendJobId) {
-					return Response.json(
-						{
-							error: "Generate concepts first — video needs an approved still.",
-						},
-						{ status: 400 },
-					);
-				}
+				// The "no stills" check moved below reference selection — the
+				// server now sources references from its own stored renders, so a
+				// client that sends none is no longer necessarily empty-handed.
 				if (refs.some((r) => r.length > 12_000_000)) {
 					return Response.json(
 						{ error: "Reference image too large." },
@@ -158,6 +158,39 @@ export const Route = createFileRoute("/api/agent/video")({
 						{ status: 409 },
 					);
 				}
+				/*
+				 * Reference selection: the still that actually shows the space
+				 * this clip films leads, then the identity anchor.
+				 *
+				 * This used to be "master hero first, then whatever the buyer
+				 * starred", so a serve-up walkthrough was briefed on an exterior
+				 * three-quarter and had to invent the galley — a different one
+				 * every run. The server picks from its own stored renders so the
+				 * clip cannot disagree with the deck, and only falls back to the
+				 * bytes the client sent when this session has nothing stored.
+				 */
+				const stored = conceptsByView(session);
+				const refViews: string[] = [];
+				const planned: string[] = [];
+				for (const view of videoReferenceViews(kind)) {
+					const url = stored[view];
+					if (!url || planned.includes(url)) continue;
+					planned.push(url);
+					refViews.push(view);
+					if (planned.length >= 3) break;
+				}
+				const videoRefs = planned.length > 0 ? planned : refs.slice(0, 3);
+				const referenceViews = planned.length > 0 ? refViews : [];
+
+				if (videoRefs.length === 0 && !wantsExtend) {
+					return Response.json(
+						{
+							error: "Generate concepts first — video needs an approved still.",
+						},
+						{ status: 400 },
+					);
+				}
+
 				const part = wantsExtend
 					? base
 						? base.part + 1
@@ -165,9 +198,9 @@ export const Route = createFileRoute("/api/agent/video")({
 							? body.part
 							: 2
 					: 1;
-				const prompt = base
-					? tourContinuationPrompt(part, ctx)
-					: buildSalesVideoPrompt(kind, ctx);
+				const prompt = wantsExtend
+					? tourContinuationPrompt(part, ctx, referenceViews)
+					: buildSalesVideoPrompt(kind, ctx, referenceViews);
 				const job: VideoJob = {
 					id: newId(),
 					kind,
@@ -191,7 +224,8 @@ export const Route = createFileRoute("/api/agent/video")({
 						: await startSalesVideo({
 								kind,
 								ctx,
-								references: refs.slice(0, 3),
+								prompt,
+								references: videoRefs,
 							});
 					job.operationId = started.operationId;
 					if (started.readyUrl) {

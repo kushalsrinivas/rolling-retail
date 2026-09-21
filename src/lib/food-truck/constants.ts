@@ -238,6 +238,8 @@ export const CONCEPT_VIEWS = [
 	"brand_mark",
 ] as const;
 
+export type ConceptView = (typeof CONCEPT_VIEWS)[number];
+
 export const CONCEPT_VIEW_COUNT = CONCEPT_VIEWS.length;
 
 export const FREE_VISUAL_CREDITS = 5;

@@ -4,6 +4,8 @@ import { generateTruckImage } from "./images";
 
 const PNG_URL =
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const PNG_URL2 = PNG_URL.replace("iVBORw0", "iVBORw1");
+const PNG_URL3 = PNG_URL.replace("iVBORw0", "iVBORw2");
 const SVG_PLACEHOLDER =
 	"data:image/svg+xml;charset=utf-8,%3Csvg%3E%3C%2Fsvg%3E";
 
@@ -52,17 +54,18 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-describe("reference locks", () => {
+describe("continuity locks", () => {
 	it("tells the model the factory photo is the shell it must keep", async () => {
 		const seen = captureRequest();
 		await generateTruckImage({
 			...base,
-			bodyReference: PNG_URL,
+			references: [
+				{ url: PNG_URL, role: "body", from: "factory catalog photo" },
+			],
 			geometry: geometryFor("airstream"),
 		});
-		expect(seen.text).toContain("BODY LOCK");
-		expect(seen.text).toContain("reference image 1");
-		expect(seen.text).toContain("ONLY cosmetics");
+		expect(seen.text).toContain("CONTINUITY LOCK");
+		expect(seen.text).toContain("Reference image 1 is a photograph");
 		expect(seen.text).toContain("rounded belt line");
 		expect(seen.parts).toHaveLength(1);
 	});
@@ -75,40 +78,82 @@ describe("reference locks", () => {
 		expect(seen.parts).toHaveLength(0);
 	});
 
-	it("orders body before livery so geometry outranks the wrap", async () => {
+	it("numbers each reference in the order the model receives it", async () => {
 		const seen = captureRequest();
 		await generateTruckImage({
 			...base,
-			bodyReference: PNG_URL,
-			liveryReference: PNG_URL,
+			references: [
+				{ url: PNG_URL, role: "spatial", from: "interior_layout" },
+				{ url: PNG_URL2, role: "anchor", from: "exterior_hero" },
+				{ url: PNG_URL3, role: "body", from: "factory catalog photo" },
+			],
 			geometry: geometryFor("airstream"),
 		});
-		expect(seen.text).toContain("BODY LOCK: reference image 1");
-		expect(seen.text).toContain("LIVERY LOCK: reference image 2");
-		expect(seen.parts).toHaveLength(2);
+		expect(seen.parts).toHaveLength(3);
+		expect(seen.text).toContain("Reference image 1 is the same truck");
+		expect(seen.text).toContain("interior layout");
+		expect(seen.text).toContain("Reference image 2 is the APPROVED MASTER");
+		expect(seen.text).toContain("Reference image 3 is a photograph");
+	});
+
+	it("renumbers rather than desyncs when a reference cannot be decoded", async () => {
+		const seen = captureRequest();
+		await generateTruckImage({
+			...base,
+			references: [
+				{ url: SVG_PLACEHOLDER, role: "body", from: "factory catalog photo" },
+				{ url: PNG_URL, role: "anchor", from: "exterior_hero" },
+			],
+		});
+		// The SVG is dropped from the parts, so the anchor must become image 1
+		// — the old three-slot version left the numbering pointing at a gap.
+		expect(seen.parts).toHaveLength(1);
+		expect(seen.text).toContain("Reference image 1 is the APPROVED MASTER");
+		expect(seen.text).not.toContain("Reference image 2");
 	});
 
 	it("treats a buyer's photo as style only, never a body to copy", async () => {
 		const seen = captureRequest();
 		await generateTruckImage({
 			...base,
-			bodyReference: PNG_URL,
-			inspirationReference: PNG_URL,
+			references: [
+				{ url: PNG_URL, role: "body", from: "factory catalog photo" },
+				{ url: PNG_URL2, role: "inspiration", from: "buyer photo" },
+			],
 			geometry: geometryFor("airstream"),
 		});
-		expect(seen.text).toContain("STYLE REFERENCE ONLY");
+		expect(seen.text).toContain("mood photo the buyer shared");
 		expect(seen.text).toContain("Do NOT copy its body shape");
+	});
+
+	it("spells out the drift it must not introduce", async () => {
+		const seen = captureRequest();
+		await generateTruckImage({
+			...base,
+			references: [{ url: PNG_URL, role: "anchor", from: "exterior_hero" }],
+		});
+		for (const forbidden of [
+			"add, remove or move furniture",
+			"change the floor plan or room dimensions",
+			"move, add or remove windows, doors, hatches or vents",
+			"change materials, flooring, wall colours",
+			"ONLY thing this view changes is the camera position",
+		]) {
+			expect(seen.text).toContain(forbidden);
+		}
 	});
 
 	it("never chains an SVG placeholder as a reference", async () => {
 		const seen = captureRequest();
 		await generateTruckImage({
 			...base,
-			bodyReference: SVG_PLACEHOLDER,
-			liveryReference: SVG_PLACEHOLDER,
+			references: [
+				{ url: SVG_PLACEHOLDER, role: "body", from: "factory catalog photo" },
+				{ url: SVG_PLACEHOLDER, role: "anchor", from: "exterior_hero" },
+			],
 		});
 		expect(seen.parts).toHaveLength(0);
-		expect(seen.text).not.toContain("BODY LOCK");
+		expect(seen.text).not.toContain("CONTINUITY LOCK");
 	});
 
 	it("adds no lock text at all when there is nothing to lock", async () => {

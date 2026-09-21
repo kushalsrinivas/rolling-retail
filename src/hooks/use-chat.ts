@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
+import { CONCEPT_VIEW_COUNT, CONCEPT_VIEWS } from "#/lib/food-truck/constants";
 import {
 	pickApprovedReferences,
 	pickMasterReference,
@@ -26,7 +27,41 @@ export interface GeneratedImage {
 	url: string;
 	timestamp: Date;
 	favorite?: boolean;
+	/**
+	 * A slot exists for every concept view from the moment a round starts, so
+	 * a view that is still rendering or has failed shows as itself rather than
+	 * as a gap in the grid.
+	 */
+	status: "pending" | "ready" | "failed";
+	error?: string;
+	/** Views this render was conditioned on — surfaced as provenance. */
+	references?: string[];
 }
+
+/** Where a generation round has got to, for one honest progress display. */
+export interface PipelineProgress {
+	phase: "idle" | "renders" | "videos" | "finalizing" | "complete";
+	/** Human label for the step in flight, e.g. "Rendering interior layout". */
+	step: string;
+	rendersDone: number;
+	rendersTotal: number;
+	videosDone: number;
+	videosTotal: number;
+}
+
+/** "interior_layout" → "interior layout", for progress copy. */
+export function prettyView(view: string): string {
+	return view.replace(/_/g, " ");
+}
+
+export const IDLE_PROGRESS: PipelineProgress = {
+	phase: "idle",
+	step: "",
+	rendersDone: 0,
+	rendersTotal: 0,
+	videosDone: 0,
+	videosTotal: 0,
+};
 
 export interface GeneratedVideo {
 	id: string;
@@ -182,6 +217,7 @@ export function useChat() {
 		},
 	]);
 	const [images, setImages] = useState<GeneratedImage[]>([]);
+	const [progress, setProgress] = useState<PipelineProgress>(IDLE_PROGRESS);
 	const [brain, setBrain] = useState<ProjectBrain | null>(null);
 	const [layout, setLayout] = useState<TruckLayout | null>(null);
 	const [estimate, setEstimate] = useState<TruckEstimate | null>(null);
@@ -223,27 +259,131 @@ export function useChat() {
 		return data.sessionId;
 	}, []);
 
+	/**
+	 * Fold a batch of renders into the view-keyed set.
+	 *
+	 * Keyed by view, latest wins. The previous version appended and deduped on
+	 * the image bytes, so every regeneration stacked another nine tiles into
+	 * the same grid — which is the opposite of "one property seen from nine
+	 * angles". A failed render never displaces a good one, mirroring the
+	 * server's own rule, so a flaky retry cannot blank a view.
+	 */
 	const mergeImages = useCallback(
-		(incoming: Array<{ label: string; filename: string; url: string }>) => {
+		(
+			incoming: Array<{
+				label: string;
+				filename?: string;
+				url: string;
+				status?: string;
+				error?: string;
+				references?: string[];
+			}>,
+		) => {
+			if (incoming.length === 0) return;
 			const now = new Date();
 			setImages((prev) => {
-				// Dedupe on the render itself, not its label. Every round emits the
-				// same nine labels, so keying on label meant a second round — a
-				// regeneration the buyer just paid a credit for — added nothing.
-				const existing = new Set(prev.map((p) => p.url));
-				const fresh = incoming
-					.filter((i) => !existing.has(i.url))
-					.map((i) => ({
+				const byView = new Map(prev.map((p) => [p.label, p]));
+				for (const i of incoming) {
+					const held = byView.get(i.label);
+					const status: GeneratedImage["status"] =
+						i.status === "failed"
+							? "failed"
+							: i.status === "pending"
+								? "pending"
+								: "ready";
+					if (status === "failed" && held?.status === "ready") continue;
+					byView.set(i.label, {
 						label: i.label,
-						filename: i.filename,
+						filename: i.filename ?? `${i.label}.png`,
 						url: i.url,
 						timestamp: now,
-					}));
-				return fresh.length > 0 ? [...prev, ...fresh] : prev;
+						status,
+						error: i.error,
+						references: i.references,
+						// Starring is the buyer's, not the pipeline's.
+						favorite: held?.favorite,
+					});
+				}
+				return CONCEPT_VIEWS.map((v) => byView.get(v)).filter(
+					(v): v is GeneratedImage => Boolean(v),
+				);
 			});
 		},
 		[],
 	);
+
+	/** Open a slot per view so the grid shows the whole round immediately. */
+	const openRenderSlots = useCallback(() => {
+		const now = new Date();
+		setImages((prev) => {
+			const byView = new Map(prev.map((p) => [p.label, p]));
+			for (const v of CONCEPT_VIEWS) {
+				const held = byView.get(v);
+				if (held?.status === "ready") continue;
+				byView.set(v, {
+					label: v,
+					filename: `${v}.png`,
+					url: "",
+					timestamp: now,
+					status: "pending",
+					favorite: held?.favorite,
+				});
+			}
+			return CONCEPT_VIEWS.map((view) => byView.get(view)).filter(
+				(x): x is GeneratedImage => Boolean(x),
+			);
+		});
+	}, []);
+
+	/**
+	 * Ask the server what it actually produced.
+	 *
+	 * SSE is the fast path but not a reliable one — a dropped or truncated
+	 * frame used to lose a render for good, because nothing but that frame
+	 * ever held it. Every round now ends by reconciling against the store.
+	 */
+	const reconcileImages = useCallback(async () => {
+		const sessionId = sessionIdRef.current;
+		if (!sessionId) return;
+		try {
+			const res = await fetch(
+				`/api/agent/images?sessionId=${encodeURIComponent(sessionId)}`,
+			);
+			if (!res.ok) return;
+			const data = (await res.json()) as {
+				images?: Array<{
+					label: string;
+					filename?: string;
+					url: string;
+					status?: string;
+					error?: string;
+					references?: string[];
+				}>;
+				creditsLeft?: number;
+			};
+			if (Array.isArray(data.images) && data.images.length > 0) {
+				mergeImages(data.images);
+			}
+			// Any slot still "pending" after the server has settled never
+			// landed — mark it so the grid can offer a retry instead of
+			// spinning forever.
+			setImages((prev) =>
+				prev.map((i) =>
+					i.status === "pending"
+						? {
+								...i,
+								status: "failed",
+								error: "This view did not come back from the renderer.",
+							}
+						: i,
+				),
+			);
+			if (typeof data.creditsLeft === "number")
+				setCreditsLeft(data.creditsLeft);
+		} catch {
+			/* reconciliation is best-effort — SSE data still stands */
+		}
+	}, [mergeImages]);
 
 	const refreshLeads = useCallback(async () => {
 		try {
@@ -295,25 +435,66 @@ export function useChat() {
 			} else if (type === "done") {
 				if (typeof evt.creditsLeft === "number")
 					setCreditsLeft(evt.creditsLeft as number);
-				setIsGeneratingImages(false);
 			} else if (type === "brain") {
 				setBrain(evt.brain as ProjectBrain);
 			} else if (type === "images_start") {
 				setIsGeneratingImages(true);
+				openRenderSlots();
+				setProgress({
+					phase: "renders",
+					step: "Preparing the render brief",
+					rendersDone: 0,
+					rendersTotal:
+						typeof evt.count === "number"
+							? (evt.count as number)
+							: CONCEPT_VIEW_COUNT,
+					videosDone: 0,
+					videosTotal: 0,
+				});
 			} else if (type === "images") {
+				// A stage announces itself with an empty batch before it runs, so
+				// the panel can name the views currently in flight.
+				const batch = (evt.images ?? []) as Array<{
+					label: string;
+					filename: string;
+					url: string;
+					status?: string;
+					error?: string;
+					references?: string[];
+				}>;
+				mergeImages(batch);
+				const p = evt.progress as
+					| { completed?: number; total?: number; generating?: string[] }
+					| undefined;
+				if (p) {
+					setProgress((prev) => ({
+						...prev,
+						phase: "renders",
+						step: p.generating?.length
+							? `Rendering ${p.generating.map(prettyView).join(", ")}`
+							: prev.step,
+						rendersDone: p.completed ?? prev.rendersDone,
+						rendersTotal: p.total ?? prev.rendersTotal,
+					}));
+				}
+			} else if (type === "images_done") {
 				mergeImages(
-					(evt.images ?? []) as Array<{
-						label: string;
-						filename: string;
-						url: string;
-					}>,
+					(evt.images ?? []) as Array<{ label: string; url: string }>,
 				);
 				setIsGeneratingImages(false);
+				setProgress((prev) => ({
+					...prev,
+					phase: "complete",
+					step: "",
+					rendersDone: prev.rendersTotal,
+				}));
 				if (typeof evt.creditsLeft === "number")
 					setCreditsLeft(evt.creditsLeft as number);
+				if (typeof evt.error === "string") setError(evt.error);
+				void reconcileImages();
 			}
 		},
-		[refreshLeads, mergeImages],
+		[refreshLeads, mergeImages, openRenderSlots, reconcileImages],
 	);
 
 	const sendMessage = useCallback(
@@ -443,11 +624,28 @@ export function useChat() {
 		[sendMessage],
 	);
 
+	/**
+	 * One visual round.
+	 *
+	 * `only` retries a subset of views; the server reuses the round's existing
+	 * renders as their references, so a retried view rejoins the same visual
+	 * world instead of starting a new one.
+	 */
 	const generateConcepts = useCallback(
-		async (opts?: { colors?: string; vibe?: string }) => {
+		async (opts?: { colors?: string; vibe?: string; only?: string[] }) => {
 			if (isGeneratingImages) return;
 			setError(null);
 			setIsGeneratingImages(true);
+			const targets = opts?.only?.length ? opts.only : [...CONCEPT_VIEWS];
+			openRenderSlots();
+			setProgress({
+				phase: "renders",
+				step: "Preparing the render brief",
+				rendersDone: 0,
+				rendersTotal: targets.length,
+				videosDone: 0,
+				videosTotal: 0,
+			});
 			try {
 				const sessionId = await ensureSession();
 				const res = await fetch("/api/agent/images", {
@@ -459,10 +657,18 @@ export function useChat() {
 						vehicleId,
 						colors: opts?.colors || "bold brand colors",
 						vibe: opts?.vibe || businessType,
+						only: opts?.only,
 					}),
 				});
 				const data = (await res.json()) as {
-					images?: Array<{ label: string; url: string; filename: string }>;
+					images?: Array<{
+						label: string;
+						url: string;
+						filename: string;
+						status?: string;
+						error?: string;
+						references?: string[];
+					}>;
 					creditsLeft?: number;
 					error?: string;
 				};
@@ -482,8 +688,9 @@ export function useChat() {
 				mergeImages(data.images ?? []);
 				if (typeof data.creditsLeft === "number")
 					setCreditsLeft(data.creditsLeft);
+				if (opts?.only?.length) return;
 				await sendMessage(
-					`I just generated the full 9-view concept set (exterior hero, rear, side elevation, interior layout, front elevation, assembly theater, night, roof plan, brand mark) for ${brandName} on the current vehicle. Which direction should we develop — and what should change?`,
+					`I just generated the full ${CONCEPT_VIEW_COUNT}-view concept set (exterior hero, rear, side elevation, interior layout, front elevation, assembly theater, night, roof plan, brand mark) for ${brandName} on the current vehicle. Which direction should we develop — and what should change?`,
 				);
 			} catch (err) {
 				setError(
@@ -491,6 +698,9 @@ export function useChat() {
 				);
 			} finally {
 				setIsGeneratingImages(false);
+				// Settles any slot the round never filled, so nothing spins on.
+				await reconcileImages();
+				setProgress((prev) => ({ ...prev, phase: "complete", step: "" }));
 			}
 		},
 		[
@@ -501,8 +711,19 @@ export function useChat() {
 			businessType,
 			sendMessage,
 			mergeImages,
+			openRenderSlots,
+			reconcileImages,
 		],
 	);
+
+	/** Re-render just the views that failed, keeping the rest as references. */
+	const retryFailedRenders = useCallback(async () => {
+		const failed = images
+			.filter((i) => i.status === "failed")
+			.map((i) => i.label);
+		if (failed.length === 0) return;
+		await generateConcepts({ only: failed });
+	}, [images, generateConcepts]);
 
 	const toggleFavorite = useCallback(
 		async (label: string) => {
@@ -527,18 +748,26 @@ export function useChat() {
 
 	const clearError = useCallback(() => setError(null), []);
 
-	// ── Sales video: master + starred stills in, Omni Flash video out ──
-	// Client sends the reference bytes (server keeps no image store); the
-	// route polls the provider, we poll the route. Tours chain TOUR_PARTS
-	// 10s segments via previous_interaction_id into ~30s.
+	/*
+	 * ── Sales video ──
+	 *
+	 * The server now chooses the references: it holds the round's renders and
+	 * picks the ones that show the space each preset films (a walkthrough gets
+	 * the interior views, not the exterior hero). These bytes are only a
+	 * fallback for a session whose renders the server never stored.
+	 *
+	 * The route polls the provider, we poll the route. Tours chain TOUR_PARTS
+	 * 10s segments via previous_interaction_id into ~30s.
+	 */
 	const generateVideo = useCallback(
 		async (kind: SalesVideoKind = "hero-orbit") => {
 			if (isGeneratingVideo) return;
 			setError(null);
-			const master = pickMasterReference(images);
+			const ready = images.filter((i) => i.status === "ready");
+			const master = pickMasterReference(ready);
 			const refs = [
 				...(master ? [master] : []),
-				...pickApprovedReferences(images, master),
+				...pickApprovedReferences(ready, master),
 			].slice(0, 3);
 			if (refs.length === 0) {
 				setError(
@@ -547,6 +776,17 @@ export function useChat() {
 				return;
 			}
 			setIsGeneratingVideo(true);
+			const partsTotal = kind === "tour" ? TOUR_PARTS : 1;
+			setProgress((prev) => ({
+				...prev,
+				phase: "videos",
+				step:
+					kind === "tour"
+						? "Filming the tour · part 1"
+						: "Filming the approved stills",
+				videosDone: 0,
+				videosTotal: partsTotal,
+			}));
 			try {
 				const sessionId = await ensureSession();
 				const startPart = async (
@@ -613,9 +853,18 @@ export function useChat() {
 					}
 					return current;
 				};
-				const parts = kind === "tour" ? TOUR_PARTS : 1;
+				const parts = partsTotal;
 				let previous: GeneratedVideo | null = null;
 				for (let part = 1; part <= parts; part++) {
+					setProgress((prev) => ({
+						...prev,
+						phase: "videos",
+						step:
+							parts > 1
+								? `Filming the tour · part ${part} of ${parts}`
+								: "Filming the approved stills",
+						videosDone: part - 1,
+					}));
 					const job = await startPart(
 						previous?.id,
 						previous,
@@ -635,13 +884,20 @@ export function useChat() {
 						break;
 					}
 					previous = final;
+					setProgress((prev) => ({ ...prev, videosDone: part }));
 				}
+				setProgress((prev) => ({
+					...prev,
+					phase: "finalizing",
+					step: "Assembling the tour",
+				}));
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Video generation failed",
 				);
 			} finally {
 				setIsGeneratingVideo(false);
+				setProgress((prev) => ({ ...prev, phase: "complete", step: "" }));
 			}
 		},
 		[
@@ -687,6 +943,8 @@ export function useChat() {
 		isConnecting,
 		isGeneratingImages,
 		isGeneratingImagesAlias: isGeneratingImages,
+		progress,
+		retryFailedRenders,
 		creditsLeft,
 		vehicleId,
 		setVehicleId,
