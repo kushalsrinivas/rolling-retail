@@ -2,6 +2,7 @@ import {
 	BarChart3,
 	Box,
 	Brain,
+	Check,
 	Clapperboard,
 	ClipboardCopy,
 	Download,
@@ -12,7 +13,6 @@ import {
 	Maximize2,
 	MessageCircle,
 	RefreshCw,
-	Send,
 	Star,
 	Truck,
 	Users,
@@ -68,27 +68,128 @@ interface BrandReportPanelProps {
 
 type TabId = "visuals" | "build";
 
+/* ── Shared primitives ─────────────────────────────────────────────────── */
+
+/** A white sheet. Every block of content in the panel is one of these. */
+const CARD = "rounded border border-[var(--ftf-line)] bg-white";
+
+/** A quiet secondary action: square, outlined, blue label. */
+const GHOST_BTN =
+	"inline-flex items-center gap-1.5 rounded border border-[var(--ftf-line-strong)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--ftf-blue-800)] transition-colors hover:bg-[var(--ftf-blue-50)] disabled:opacity-40 disabled:hover:bg-white";
+
 function SectionHeader({
 	icon: Icon,
 	title,
 	badge,
+	tone = "neutral",
 }: {
 	icon: React.ComponentType<{ className?: string }>;
 	title: string;
 	badge?: string;
+	tone?: "neutral" | "working" | "live";
 }) {
 	return (
-		<div className="flex items-center gap-2 pb-2 pt-1">
-			<Icon className="h-3.5 w-3.5 text-purple-400" />
-			<span className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
-				{title}
-			</span>
+		<div className="flex items-center gap-2.5 pb-3">
+			<Icon className="h-4 w-4 shrink-0 text-[var(--ftf-blue-800)]" />
+			<span className="ftf-label !text-[var(--ftf-ink)]">{title}</span>
 			{badge && (
-				<span className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-400">
+				<span
+					className={cn(
+						"shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold",
+						tone === "working" &&
+							"bg-[var(--ftf-amber-100)] text-[var(--ftf-amber-600)]",
+						tone === "live" &&
+							"bg-[var(--ftf-teal-100)] text-[var(--ftf-teal-600)]",
+						tone === "neutral" &&
+							"bg-[var(--ftf-paper-3)] text-[var(--ftf-ink-2)]",
+					)}
+				>
 					{badge}
 				</span>
 			)}
-			<div className="ml-2 h-px flex-1 bg-gradient-to-r from-[rgba(163,130,255,0.15)] to-transparent" />
+			<div className="h-px flex-1 bg-[var(--ftf-line)]" />
+		</div>
+	);
+}
+
+/** A labelled read-only figure. Used wherever the panel states a number. */
+function Stat({
+	label,
+	value,
+	note,
+	accent,
+}: {
+	label: string;
+	value: string;
+	note?: string;
+	accent?: "blue" | "teal";
+}) {
+	return (
+		<div className={cn(CARD, "p-3")}>
+			<p className="ftf-label">{label}</p>
+			<p
+				className={cn(
+					"ftf-display mt-1 text-lg leading-none",
+					accent === "teal"
+						? "text-[var(--ftf-teal-600)]"
+						: "text-[var(--ftf-blue-800)]",
+				)}
+			>
+				{value}
+			</p>
+			{note && (
+				<p className="mt-1.5 text-[11px] leading-snug text-[var(--ftf-ink-3)]">
+					{note}
+				</p>
+			)}
+		</div>
+	);
+}
+
+/** The panel's one empty state, so all three read as the same product. */
+function EmptyState({
+	icon: Icon,
+	title,
+	body,
+	action,
+	footnote,
+}: {
+	icon: React.ComponentType<{ className?: string }>;
+	title: string;
+	body: string;
+	action?: { label: string; onClick: () => void };
+	footnote?: React.ReactNode;
+}) {
+	return (
+		<div
+			className={cn(
+				CARD,
+				"flex flex-col items-center gap-3 px-6 py-10 text-center",
+			)}
+		>
+			<div className="flex h-12 w-12 items-center justify-center rounded bg-[var(--ftf-blue-50)]">
+				<Icon className="h-5 w-5 text-[var(--ftf-blue-800)]" />
+			</div>
+			<div>
+				<p className="ftf-display text-[15px] text-[var(--ftf-ink)]">{title}</p>
+				<p className="mx-auto mt-1.5 max-w-[320px] text-xs leading-relaxed text-[var(--ftf-ink-2)]">
+					{body}
+				</p>
+			</div>
+			{action && (
+				<button
+					type="button"
+					onClick={action.onClick}
+					className="ftf-cta mt-1 rounded px-4 py-2 text-xs"
+				>
+					{action.label}
+				</button>
+			)}
+			{footnote && (
+				<p className="flex items-center gap-1.5 text-[11px] text-[var(--ftf-ink-4)]">
+					{footnote}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -117,17 +218,16 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 	if (!clip) {
 		if (failed && !pending) {
 			return (
-				<p className="px-3 py-2.5 text-xs text-red-400">
+				<p className="px-3 py-3 text-xs text-[var(--ftf-red-600)]">
 					Tour failed{failed.error ? ` — ${failed.error}` : ""}. Stills are
 					unaffected; try again.
 				</p>
 			);
 		}
 		return (
-			<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
+			<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
 				<Loader2 className="h-3.5 w-3.5 animate-spin" />
-				Filming part {parts.length + 1} of 3 — the full tour takes a few
-				minutes.
+				Filming part {parts.length} of 3 — the full tour takes a few minutes.
 			</p>
 		);
 	}
@@ -140,13 +240,13 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 				controls
 				playsInline
 				autoPlay
-				className="aspect-video w-full bg-black"
+				className="aspect-video w-full bg-[var(--ftf-well)]"
 				onEnded={() => {
 					if (idx < ready.length - 1) setIdx(idx + 1);
 				}}
 			/>
-			<div className="flex items-center justify-between gap-2 px-3 py-2">
-				<span className="text-xs text-zinc-400">
+			<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
+				<span className="text-[11px] text-[var(--ftf-ink-2)]">
 					Full tour · part {clip.part ?? 1} of {ready.length}
 					{pending ? " · filming next…" : " · ~30s"}
 				</span>
@@ -156,7 +256,7 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 							key={p.id}
 							href={p.url ?? undefined}
 							download={`tour-part-${p.part ?? 1}.mp4`}
-							className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+							className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
 						>
 							<Download className="h-3 w-3" /> Pt{p.part ?? 1}
 						</a>
@@ -171,12 +271,18 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 	if (!brain || brain.signals === 0) {
 		return (
-			<div className="mb-5 rounded-xl border border-dashed border-[rgba(163,130,255,0.2)] bg-[#111113] p-3.5 text-center">
-				<p className="flex items-center justify-center gap-1.5 text-xs font-medium text-zinc-300">
-					<Brain className="h-3.5 w-3.5 text-purple-400" />
-					Project Brain — empty
+			<div
+				className={cn(
+					"mb-5 rounded border border-dashed border-[var(--ftf-line-strong)] bg-white p-4 text-center",
+				)}
+			>
+				<p className="flex items-center justify-center gap-2">
+					<Brain className="h-4 w-4 text-[var(--ftf-blue-800)]" />
+					<span className="ftf-label !text-[var(--ftf-ink)]">
+						Project brain · empty
+					</span>
 				</p>
-				<p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+				<p className="mx-auto mt-2 max-w-[320px] text-[11px] leading-relaxed text-[var(--ftf-ink-2)]">
 					Dump everything in chat — menu, vibe, colors, photos. Understanding
 					builds here, then concepts generate on their own.
 				</p>
@@ -191,27 +297,32 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 		{ label: "Aesthetic", value: brain.confidence.aesthetic },
 	];
 	return (
-		<div className="mb-5 rounded-xl border border-[rgba(163,130,255,0.12)] bg-[#111113] p-3.5">
-			<div className="flex items-center justify-between">
-				<p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-					<Brain className="h-3 w-3 text-purple-400" />
-					Project Brain{brain.brandName ? ` · ${brain.brandName}` : ""}
+		<div className={cn(CARD, "mb-5 p-4")}>
+			<div className="flex items-center justify-between gap-2">
+				<p className="flex items-center gap-2">
+					<Brain className="h-4 w-4 shrink-0 text-[var(--ftf-blue-800)]" />
+					<span className="ftf-label !text-[var(--ftf-ink)]">
+						Project brain
+						{brain.brandName ? ` · ${brain.brandName}` : ""}
+					</span>
 				</p>
-				<span className="flex items-center gap-1 text-[10px] text-emerald-400">
-					<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-					learning
+				<span className="flex shrink-0 items-center gap-1.5 rounded-sm bg-[var(--ftf-teal-100)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ftf-teal-600)]">
+					<span className="h-1.5 w-1.5 rounded-full bg-[var(--ftf-teal-500)]" />
+					Learning
 				</span>
 			</div>
-			<div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2">
+			<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
 				{bars.map((b) => (
 					<div key={b.label}>
-						<div className="flex items-center justify-between text-[10px]">
-							<span className="text-zinc-500">{b.label}</span>
-							<span className="tabular-nums text-zinc-400">{b.value}%</span>
+						<div className="flex items-center justify-between text-[11px]">
+							<span className="text-[var(--ftf-ink-2)]">{b.label}</span>
+							<span className="font-semibold tabular-nums text-[var(--ftf-ink)]">
+								{b.value}%
+							</span>
 						</div>
-						<div className="mt-0.5 h-1 overflow-hidden rounded-full bg-zinc-800/70">
+						<div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-[var(--ftf-paper-3)]">
 							<div
-								className="h-full rounded-full bg-purple-500/70 transition-all duration-500"
+								className="metric-bar h-full bg-[var(--ftf-blue-800)]"
 								style={{ width: `${b.value}%` }}
 							/>
 						</div>
@@ -219,12 +330,12 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 				))}
 			</div>
 			{brain.unknowns.length > 0 && (
-				<div className="mt-2.5 flex flex-wrap gap-1.5">
-					<span className="text-[10px] text-zinc-600">Still open:</span>
+				<div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--ftf-line)] pt-3">
+					<span className="ftf-label">Still open</span>
 					{brain.unknowns.map((u) => (
 						<span
 							key={u}
-							className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400"
+							className="rounded-sm bg-[var(--ftf-paper-2)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ftf-ink-2)]"
 						>
 							{u}
 						</span>
@@ -300,87 +411,82 @@ export default function BrandReportPanel({
 	};
 
 	return (
-		<div className="flex h-full w-full flex-col bg-[#09090b]">
-			{/* Tabs */}
-			<div className="flex items-center gap-1 border-b border-[rgba(163,130,255,0.1)] px-4 py-2">
+		<div className="brand-report flex h-full w-full flex-col bg-[var(--ftf-paper-2)]">
+			{/* ── Tabs: an underline bar, not pills ── */}
+			<div className="flex shrink-0 items-center gap-1 border-b border-[var(--ftf-line)] bg-white px-4">
 				{[
 					{ id: "visuals" as TabId, label: "Visuals", icon: Truck },
-					{ id: "build" as TabId, label: "Build & Spec", icon: BarChart3 },
+					{ id: "build" as TabId, label: "Build & spec", icon: BarChart3 },
 				].map((t) => (
 					<button
 						key={t.id}
 						type="button"
 						onClick={() => setTab(t.id)}
+						aria-current={tab === t.id}
 						className={cn(
-							"relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+							"relative flex items-center gap-2 px-2.5 py-3.5 text-xs font-semibold transition-colors",
 							tab === t.id
-								? "bg-purple-500/10 text-purple-300"
-								: "text-zinc-500 hover:text-zinc-300",
+								? "text-[var(--ftf-blue-800)]"
+								: "text-[var(--ftf-ink-3)] hover:text-[var(--ftf-ink)]",
 						)}
 					>
-						<t.icon className="h-3.5 w-3.5" />
+						<t.icon className="h-4 w-4" />
 						{t.label}
+						{tab === t.id && (
+							<span className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--ftf-blue-800)]" />
+						)}
 					</button>
 				))}
-				<div className="ml-auto flex items-center gap-1">
+				<div className="ml-auto flex items-center gap-1.5">
 					{typeof creditsLeft === "number" && (
-						<span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-							{creditsLeft} / 5 visuals left
+						<span className="rounded-sm border border-[var(--ftf-line)] px-2 py-1 text-[10px] font-medium tabular-nums text-[var(--ftf-ink-2)]">
+							{creditsLeft} / 5 visuals
 						</span>
 					)}
 					{(layout || estimate || spec) && (
-						<span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-							live build
+						<span className="flex items-center gap-1.5 rounded-sm bg-[var(--ftf-teal-100)] px-2 py-1 text-[10px] font-semibold text-[var(--ftf-teal-600)]">
+							<span className="h-1.5 w-1.5 rounded-full bg-[var(--ftf-teal-500)]" />
+							Live build
 						</span>
 					)}
 				</div>
 			</div>
 
 			{tab === "visuals" ? (
-				<div className="flex-1 overflow-y-auto px-4 pb-8 pt-4">
+				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
 					<SectionHeader
 						icon={ImageIcon}
-						title="Truck Concepts"
+						title="Truck concepts"
+						tone={isGenerating ? "working" : "neutral"}
 						badge={
 							isGenerating
-								? "Generating…"
+								? "Rendering"
 								: images.length
-									? `${images.length} concept${images.length === 1 ? "" : "s"}`
+									? `${images.length} view${images.length === 1 ? "" : "s"}`
 									: undefined
 						}
 					/>
 					{images.length === 0 && !isGenerating ? (
-						<div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
-							<div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[rgba(163,130,255,0.12)] bg-[rgba(168,85,247,0.05)]">
-								<Truck className="h-7 w-7 text-purple-500/40" />
-							</div>
-							<div>
-								<p className="text-sm font-medium text-zinc-300">
-									No concepts yet — start with {CONCEPT_VIEW_COUNT}
-								</p>
-								<p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-zinc-500">
-									One master hero, nine deck-ready views off it (hero, overview,
-									feature, use-case, technical, vision). Star the ones to
-									approve for video — no angle drift.
-								</p>
-							</div>
-							<button
-								type="button"
-								onClick={onGenerateConcepts}
-								className="rounded-full bg-purple-600 px-4 py-2 text-xs font-medium text-white hover:bg-purple-500"
-							>
-								Generate {CONCEPT_VIEW_COUNT} starter concepts
-							</button>
-							<p className="flex items-center gap-1 text-[10px] text-zinc-600">
-								<Lock className="h-3 w-3" /> 5 free visuals · then top-up or
-								talk to sales
-							</p>
-						</div>
+						<EmptyState
+							icon={Truck}
+							title={`No concepts yet — start with ${CONCEPT_VIEW_COUNT}`}
+							body="One master hero, then eight deck-ready views built off it: overview, feature, use-case, technical, vision. Star the ones you approve and the video films those, so nothing drifts."
+							action={{
+								label: `Generate ${CONCEPT_VIEW_COUNT} starter concepts`,
+								onClick: onGenerateConcepts,
+							}}
+							footnote={
+								<>
+									<Lock className="h-3 w-3" /> 5 free visuals · then top-up or
+									talk to sales
+								</>
+							}
+						/>
 					) : (
 						<>
 							<div
 								className={cn(
-									"mt-3 grid gap-2.5",
+									"grid gap-2.5",
 									images.length === 1
 										? "grid-cols-1"
 										: "grid-cols-1 md:grid-cols-2",
@@ -391,15 +497,15 @@ export default function BrandReportPanel({
 										// biome-ignore lint/suspicious/noArrayIndexKey: labels repeat across regenerations; label+index is the stable identity
 										key={`${img.label}-${i}`}
 										className={cn(
-											"group relative aspect-video overflow-hidden rounded-xl border bg-[#111113] transition",
+											"showcase-card group relative aspect-video overflow-hidden rounded border-2 bg-[var(--ftf-well)] transition-colors",
 											img.favorite
-												? "border-amber-400/50 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
-												: "border-[rgba(163,130,255,0.1)] hover:border-purple-500/30",
+												? "border-[var(--ftf-orange-500)]"
+												: "border-transparent hover:border-[var(--ftf-blue-600)]",
 										)}
 									>
 										{!loaded.has(img.label) && (
-											<div className="absolute inset-0 z-10 flex items-center justify-center bg-[#111113]">
-												<Loader2 className="h-5 w-5 animate-spin text-purple-500/50" />
+											<div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--ftf-well)]">
+												<Loader2 className="h-5 w-5 animate-spin text-white/40" />
 											</div>
 										)}
 										<button
@@ -426,30 +532,31 @@ export default function BrandReportPanel({
 													: "Star to approve for deck + video"
 											}
 											className={cn(
-												"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-sm transition",
+												"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-sm transition",
 												img.favorite
-													? "bg-amber-400 text-black"
-													: "bg-black/60 text-zinc-400 opacity-0 hover:text-amber-300 group-hover:opacity-100",
+													? "bg-[var(--ftf-orange-500)] text-[#241200]"
+													: "bg-black/55 text-white/80 opacity-0 backdrop-blur-sm hover:bg-black/75 group-hover:opacity-100",
 											)}
 										>
 											<Star
 												className={cn(
 													"h-3.5 w-3.5",
-													img.favorite && "fill-black",
+													img.favorite && "fill-[#241200]",
 												)}
 											/>
 										</button>
-										<div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition group-hover:opacity-100">
-											<div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
-												<span className="text-xs font-medium text-white/90">
+										{/* Caption plate: always readable, not a hover surprise. */}
+										<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 pb-2.5 pt-8">
+											<span className="min-w-0">
+												<span className="block truncate text-xs font-semibold text-white">
 													{LABEL_MAP[img.label] || img.label}
-													{img.favorite && " · approved"}
-													<span className="ml-1.5 rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-200">
-														{salesSlideFor(img.label)}
-													</span>
 												</span>
-												<Maximize2 className="h-4 w-4 shrink-0 text-white/70" />
-											</div>
+												<span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/60">
+													{salesSlideFor(img.label)}
+													{img.favorite && " · approved"}
+												</span>
+											</span>
+											<Maximize2 className="h-4 w-4 shrink-0 text-white/60 opacity-0 transition-opacity group-hover:opacity-100" />
 										</div>
 									</div>
 								))}
@@ -459,9 +566,9 @@ export default function BrandReportPanel({
 											<div
 												// biome-ignore lint/suspicious/noArrayIndexKey: transient loading slots
 												key={`generating-${i}`}
-												className="flex aspect-video items-center justify-center rounded-xl border border-[rgba(163,130,255,0.08)] bg-[#111113]"
+												className="ftf-working flex aspect-video items-center justify-center rounded bg-[var(--ftf-well)]"
 											>
-												<Loader2 className="h-5 w-5 animate-spin text-purple-500/50" />
+												<Loader2 className="h-5 w-5 animate-spin text-white/40" />
 											</div>
 										),
 									)}
@@ -471,9 +578,10 @@ export default function BrandReportPanel({
 									type="button"
 									onClick={onGenerateConcepts}
 									disabled={isGenerating}
-									className="rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10 disabled:opacity-50"
+									className={GHOST_BTN}
 								>
-									Regenerate (uses 1 credit)
+									<RefreshCw className="h-3 w-3" />
+									Regenerate · 1 credit
 								</button>
 								<button
 									type="button"
@@ -483,41 +591,50 @@ export default function BrandReportPanel({
 											"Develop the hatch-open direction with bolder signage.",
 										)
 									}
-									className="flex items-center gap-1 rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10"
+									className={GHOST_BTN}
 								>
 									<MessageCircle className="h-3 w-3" /> Refine in chat
 								</button>
 							</div>
+
 							{/* Sales video — Omni Flash films the master + starred
 							    stills, so the video shows the approved product. */}
-							<div className="mt-6">
+							<div className="mt-8">
 								<SectionHeader
 									icon={Clapperboard}
 									title="Sales video"
+									tone={isGeneratingVideo ? "working" : "neutral"}
 									badge={
 										isGeneratingVideo
-											? "Generating…"
+											? "Filming"
 											: videos.length
 												? `${videos.length} clip${videos.length === 1 ? "" : "s"}`
 												: undefined
 									}
 								/>
-								<p className="mt-2 mb-3 text-xs leading-relaxed text-zinc-500">
+								<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
 									Star stills to approve them — the master hero plus up to two
 									starred views become the video's references. Drop the clip
 									straight into the deck.
 								</p>
-								<div className="flex flex-wrap gap-2">
+								<div className="grid gap-2 sm:grid-cols-2">
 									{SALES_VIDEO_PRESETS.map((p) => (
 										<button
 											key={p.kind}
 											type="button"
 											onClick={() => onGenerateVideo(p.kind)}
 											disabled={isGeneratingVideo || images.length === 0}
-											title={p.blurb}
-											className="rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10 disabled:opacity-50"
+											className={cn(
+												CARD,
+												"px-3 py-2.5 text-left transition-colors hover:border-[var(--ftf-blue-600)] hover:bg-[var(--ftf-blue-50)] disabled:opacity-40 disabled:hover:border-[var(--ftf-line)] disabled:hover:bg-white",
+											)}
 										>
-											{p.label}
+											<span className="block text-xs font-semibold text-[var(--ftf-ink)]">
+												{p.label}
+											</span>
+											<span className="mt-0.5 block text-[11px] leading-snug text-[var(--ftf-ink-3)]">
+												{p.blurb}
+											</span>
 										</button>
 									))}
 								</div>
@@ -540,7 +657,7 @@ export default function BrandReportPanel({
 												{[...groups.values()].map((parts) => (
 													<div
 														key={parts[0].seriesId || parts[0].id}
-														className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
+														className={cn(CARD, "mt-2.5 overflow-hidden")}
 													>
 														<TourSeries parts={parts} />
 													</div>
@@ -548,7 +665,7 @@ export default function BrandReportPanel({
 												{singles.map((v) => (
 													<div
 														key={v.id}
-														className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
+														className={cn(CARD, "mt-2.5 overflow-hidden")}
 													>
 														{v.status === "ready" && v.url ? (
 															<>
@@ -557,10 +674,10 @@ export default function BrandReportPanel({
 																	src={v.url}
 																	controls
 																	playsInline
-																	className="aspect-video w-full bg-black"
+																	className="aspect-video w-full bg-[var(--ftf-well)]"
 																/>
-																<div className="flex items-center justify-between px-3 py-2">
-																	<span className="text-xs text-zinc-400">
+																<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
+																	<span className="text-[11px] font-medium text-[var(--ftf-ink-2)]">
 																		{SALES_VIDEO_PRESETS.find(
 																			(p) => p.kind === v.kind,
 																		)?.label ?? v.kind}
@@ -568,7 +685,7 @@ export default function BrandReportPanel({
 																	<a
 																		href={v.url}
 																		download={`${v.kind}.mp4`}
-																		className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+																		className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
 																	>
 																		<Download className="h-3 w-3" /> Deck-ready
 																		MP4
@@ -576,13 +693,13 @@ export default function BrandReportPanel({
 																</div>
 															</>
 														) : v.status === "error" ? (
-															<p className="px-3 py-2.5 text-xs text-red-400">
+															<p className="px-3 py-3 text-xs leading-relaxed text-[var(--ftf-red-600)]">
 																Video failed
 																{v.error ? ` — ${v.error}` : ""}. Stills are
 																unaffected; try again.
 															</p>
 														) : (
-															<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
+															<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
 																<Loader2 className="h-3.5 w-3.5 animate-spin" />
 																Filming the approved stills — this takes a
 																minute or two.
@@ -594,23 +711,25 @@ export default function BrandReportPanel({
 										);
 									})()}
 							</div>
+
 							{/* The trailer itself — built from the factory's dimensions,
 							    so it cannot disagree with the spec above. */}
 							{layout && (
-								<div className="mt-6">
+								<div className="mt-8">
 									<SectionHeader
 										icon={Box}
 										title="Your trailer"
-										badge="live model"
+										badge="Live model"
+										tone="live"
 									/>
-									<p className="mt-2 mb-3 text-xs leading-relaxed text-zinc-500">
+									<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
 										Built from the factory's own dimensions and your equipment
 										list — change the layout and the power draw, the aisle and
 										every render angle follow.
 									</p>
 									<Suspense
 										fallback={
-											<div className="h-[280px] w-full animate-pulse rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#0b0b10] sm:h-[340px]" />
+											<div className="ftf-working h-[280px] w-full rounded bg-[var(--ftf-well)] sm:h-[340px]" />
 										}
 									>
 										<TruckConfigurator
@@ -643,76 +762,68 @@ export default function BrandReportPanel({
 					)}
 				</div>
 			) : (
-				<div className="flex-1 overflow-y-auto px-4 pb-8 pt-4">
+				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
 					<BrainCard brain={brain} />
 					{!layout && !estimate && !spec ? (
-						<div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
-							<div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[rgba(163,130,255,0.12)] bg-[rgba(168,85,247,0.05)]">
-								<BarChart3 className="h-7 w-7 text-purple-500/40" />
-							</div>
-							<p className="text-sm font-medium text-zinc-300">
-								Your build sheet appears here
-							</p>
-							<p className="max-w-[280px] text-xs leading-relaxed text-zinc-500">
-								Layout zones, equipment, wrap area + ranges, BOM and the private
-								investor spec — built live as you chat.
-							</p>
-							<button
-								type="button"
-								onClick={() =>
+						<EmptyState
+							icon={BarChart3}
+							title="Your build sheet appears here"
+							body="Layout zones, equipment, wrap area and price ranges, bill of materials and the private investor spec — all built live as you chat."
+							action={{
+								label: "Recommend my layout",
+								onClick: () =>
 									onAskAbout(
 										"Layout",
 										"Recommend the layout for my menu and vehicle.",
-									)
-								}
-								className="rounded-full bg-purple-600 px-4 py-2 text-xs font-medium text-white hover:bg-purple-500"
-							>
-								Recommend my layout
-							</button>
-						</div>
+									),
+							}}
+						/>
 					) : (
 						<>
 							{layout && (
-								<div className="mb-5">
+								<div className="mb-6">
 									<SectionHeader
 										icon={Truck}
 										title="Recommended layout"
 										badge={layout.serveMode}
 									/>
-									<div className="mt-3 rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3.5">
-										<p className="text-sm font-semibold text-zinc-100">
+									<div className={cn(CARD, "p-4")}>
+										<p className="ftf-display text-[15px] text-[var(--ftf-ink)]">
 											{layout.layoutName}
 										</p>
-										<ul className="mt-2 space-y-1">
+										<ul className="mt-2.5 space-y-1.5">
 											{layout.zones.map((z) => (
 												<li
 													key={z}
-													className="text-xs leading-relaxed text-zinc-400"
+													className="flex gap-2.5 text-xs leading-relaxed text-[var(--ftf-ink-2)]"
 												>
-													· {z}
+													<span className="mt-[7px] h-[5px] w-[5px] shrink-0 rounded-[1px] bg-[var(--ftf-blue-600)]" />
+													<span className="flex-1">{z}</span>
 												</li>
 											))}
 										</ul>
-										<div className="mt-3 flex flex-wrap gap-1.5">
+										<div className="mt-3.5 flex flex-wrap gap-1.5 border-t border-[var(--ftf-line)] pt-3.5">
 											{layout.equipment.map((e) => (
 												<span
 													key={e}
-													className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-300"
+													className="rounded-sm bg-[var(--ftf-blue-50)] px-2 py-0.5 text-[10px] font-medium text-[var(--ftf-blue-800)]"
 												>
 													{e}
 												</span>
 											))}
 										</div>
-										<p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-											<span className="text-zinc-300">Power:</span>{" "}
+										<p className="mt-3 text-[11px] leading-relaxed text-[var(--ftf-ink-2)]">
+											<span className="font-semibold text-[var(--ftf-ink)]">
+												Power:
+											</span>{" "}
 											{layout.powerNotes}
 										</p>
 										{layout.complianceNotes.map((c) => (
 											<p
 												key={c}
-												className="mt-1 text-[11px] leading-relaxed text-amber-300/80"
+												className="mt-2 border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-amber-600)]"
 											>
-												⚠ {c}
+												{c}
 											</p>
 										))}
 									</div>
@@ -720,117 +831,124 @@ export default function BrandReportPanel({
 							)}
 
 							{estimate && (
-								<div className="mb-5">
+								<div className="mb-6">
 									<SectionHeader
 										icon={BarChart3}
 										title="Wrap & build estimate"
-										badge="ranges"
+										badge="Ranges"
 									/>
-									<div className="mt-3 grid grid-cols-2 gap-2">
-										<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
-											<p className="text-[10px] text-zinc-500">Wrap area</p>
-											<p className="text-lg font-bold text-purple-300">
-												~{estimate.wrapSqft} sq ft
-											</p>
-											<p className="text-[10px] text-zinc-600">
-												{estimate.wrapTier} · {estimate.vehicleLabel}
-											</p>
-										</div>
-										<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
-											<p className="text-[10px] text-zinc-500">Wrap range</p>
-											<p className="text-lg font-bold text-emerald-400">
-												${estimate.wrapLow.toLocaleString()}–$
-												{estimate.wrapHigh.toLocaleString()}
-											</p>
-											<p className="text-[10px] text-zinc-600">
-												film + labor · final quote by sales
-											</p>
-										</div>
+									<div className="grid grid-cols-2 gap-2">
+										<Stat
+											label="Wrap area"
+											value={`~${estimate.wrapSqft} sq ft`}
+											note={`${estimate.wrapTier} · ${estimate.vehicleLabel}`}
+										/>
+										<Stat
+											label="Wrap range"
+											accent="teal"
+											value={`$${estimate.wrapLow.toLocaleString()}–$${estimate.wrapHigh.toLocaleString()}`}
+											note="film + labor · final quote by sales"
+										/>
 									</div>
-									<div className="mt-2 rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
-										<p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-											Bill of materials
-										</p>
+									<div className={cn(CARD, "mt-2 p-4")}>
+										<p className="ftf-label mb-2.5">Bill of materials</p>
 										{estimate.bom.map((b) => (
 											<div
 												key={`${b.item}-${b.detail}`}
-												className="flex items-start justify-between gap-2 border-b border-zinc-800/50 py-1.5 last:border-0"
+												className="flex items-start justify-between gap-3 border-b border-[var(--ftf-line)] py-2 last:border-0"
 											>
-												<span className="text-xs text-zinc-300">{b.item}</span>
-												<span className="text-right text-[11px] text-zinc-500">
+												<span className="text-xs font-medium text-[var(--ftf-ink)]">
+													{b.item}
+												</span>
+												<span className="text-right text-[11px] text-[var(--ftf-ink-2)]">
 													{b.detail}
 												</span>
 											</div>
 										))}
-										<p className="mt-2 text-[11px] text-zinc-500">
-											Lead time: {estimate.leadTimeWeeks}
+										<p className="mt-2.5 border-t border-[var(--ftf-line)] pt-2.5 text-[11px] text-[var(--ftf-ink-2)]">
+											<span className="font-semibold text-[var(--ftf-ink)]">
+												Lead time:
+											</span>{" "}
+											{estimate.leadTimeWeeks}
 										</p>
 									</div>
 								</div>
 							)}
 
 							{spec && (
-								<div className="mb-5">
+								<div className="mb-6">
 									<SectionHeader
 										icon={FileJson}
-										title="Investor spec · private"
-										badge="yours only"
+										title="Investor spec"
+										badge="Private"
+										tone="live"
 									/>
-									<div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5">
-										<p className="text-sm font-semibold text-zinc-100">
-											{spec.brandName} — {spec.business}
-										</p>
-										<p className="mt-0.5 text-xs text-zinc-400">
-											{spec.vehicle} · {spec.footprintM}
-										</p>
-										<p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-400">
-											<Lock className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" />{" "}
-											{spec.privacy}
-										</p>
-										<ol className="mt-2 space-y-1">
-											{spec.nextSteps.map((n) => (
-												<li key={n} className="text-[11px] text-zinc-500">
-													→ {n}
-												</li>
-											))}
-										</ol>
-										<div className="mt-3 flex flex-wrap gap-2">
-											<button
-												type="button"
-												onClick={() =>
-													downloadJson(
-														`${spec.brandName.replace(/\s+/g, "-").toLowerCase()}-spec.json`,
-														{ spec, layout, estimate },
-													)
-												}
-												className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/25"
-											>
-												<Download className="h-3 w-3" /> Spec JSON
-											</button>
-											<button
-												type="button"
-												onClick={copyHandoff}
-												className="flex items-center gap-1 rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10"
-											>
-												{copied ? (
-													<Send className="h-3 w-3" />
-												) : (
-													<ClipboardCopy className="h-3 w-3" />
-												)}
-												{copied ? "Copied!" : "Copy WhatsApp handoff"}
-											</button>
+									<div className="overflow-hidden rounded border border-[var(--ftf-line)] bg-white">
+										<div className="h-1 bg-[var(--ftf-teal-500)]" />
+										<div className="p-4">
+											<p className="ftf-display text-[15px] text-[var(--ftf-ink)]">
+												{spec.brandName}
+											</p>
+											<p className="mt-0.5 text-xs text-[var(--ftf-ink-2)]">
+												{spec.business} · {spec.vehicle} · {spec.footprintM}
+											</p>
+											<p className="mt-3 flex items-start gap-2 rounded-sm bg-[var(--ftf-teal-100)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--ftf-teal-600)]">
+												<Lock className="mt-px h-3 w-3 shrink-0" />
+												{spec.privacy}
+											</p>
+											<ol className="mt-3 space-y-1.5">
+												{spec.nextSteps.map((n, i) => (
+													<li
+														key={n}
+														className="flex gap-2.5 text-[11px] leading-relaxed text-[var(--ftf-ink-2)]"
+													>
+														<span className="w-3 shrink-0 text-right font-semibold tabular-nums text-[var(--ftf-blue-600)]">
+															{i + 1}
+														</span>
+														<span className="flex-1">{n}</span>
+													</li>
+												))}
+											</ol>
+											<div className="mt-4 flex flex-wrap gap-2">
+												<button
+													type="button"
+													onClick={() =>
+														downloadJson(
+															`${spec.brandName.replace(/\s+/g, "-").toLowerCase()}-spec.json`,
+															{ spec, layout, estimate },
+														)
+													}
+													className="ftf-cta inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs"
+												>
+													<Download className="h-3 w-3" /> Spec JSON
+												</button>
+												<button
+													type="button"
+													onClick={copyHandoff}
+													className={GHOST_BTN}
+												>
+													{copied ? (
+														<Check className="h-3 w-3" />
+													) : (
+														<ClipboardCopy className="h-3 w-3" />
+													)}
+													{copied ? "Copied" : "Copy WhatsApp handoff"}
+												</button>
+											</div>
 										</div>
 									</div>
 								</div>
 							)}
 
-							<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3.5">
-								<div className="flex items-center justify-between">
-									<p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-										<Users className="h-3 w-3" />
-										Factory pipeline
+							<div className={cn(CARD, "p-4")}>
+								<div className="flex items-center justify-between gap-2">
+									<p className="flex items-center gap-2">
+										<Users className="h-4 w-4 shrink-0 text-[var(--ftf-blue-800)]" />
+										<span className="ftf-label !text-[var(--ftf-ink)]">
+											Factory pipeline
+										</span>
 										{leads.length > 0 && (
-											<span className="rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[10px] text-purple-300">
+											<span className="rounded-sm bg-[var(--ftf-paper-3)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--ftf-ink-2)]">
 												{leads.length}
 											</span>
 										)}
@@ -839,26 +957,26 @@ export default function BrandReportPanel({
 										type="button"
 										onClick={onRefreshLeads}
 										title="Refresh pipeline"
-										className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 hover:bg-purple-500/10 hover:text-purple-300"
+										aria-label="Refresh pipeline"
+										className="flex h-7 w-7 items-center justify-center rounded-sm text-[var(--ftf-ink-3)] transition-colors hover:bg-[var(--ftf-blue-50)] hover:text-[var(--ftf-blue-800)]"
 									>
-										<RefreshCw className="h-3 w-3" />
+										<RefreshCw className="h-3.5 w-3.5" />
 									</button>
 								</div>
 								{lead && (
-									<p className="mt-1 text-xs leading-relaxed text-emerald-300">
+									<p className="mt-2 rounded-sm bg-[var(--ftf-teal-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-teal-600)]">
 										This session: handoff saved (
-										{String((lead as { stage?: string }).stage ?? "new")}
-										).
+										{String((lead as { stage?: string }).stage ?? "new")}).
 									</p>
 								)}
 								{leads.length === 0 ? (
-									<p className="mt-1 text-xs leading-relaxed text-zinc-400">
+									<p className="mt-2 text-[11px] leading-relaxed text-[var(--ftf-ink-2)]">
 										{lead
 											? "Refreshing pipeline…"
 											: "Day 0 · designing. Drop your name + WhatsApp/email in chat and I'll save the handoff — even cold sessions convert on follow-up."}
 									</p>
 								) : (
-									<div className="mt-2 space-y-1.5">
+									<div className="mt-2.5 space-y-1">
 										{leads.slice(0, 8).map((l) => (
 											<button
 												key={l.sessionId}
@@ -869,18 +987,18 @@ export default function BrandReportPanel({
 														`${l.vehicle ?? "vehicle tbd"} · stage ${l.stage ?? "new"}. How should sales follow up?`,
 													)
 												}
-												className="w-full rounded-lg bg-zinc-900/50 p-2 text-left transition hover:bg-zinc-900"
+												className="w-full rounded-sm border border-[var(--ftf-line)] p-2.5 text-left transition-colors hover:border-[var(--ftf-blue-600)] hover:bg-[var(--ftf-blue-50)]"
 												title="Ask the designer about this lead"
 											>
-												<div className="flex items-center justify-between">
-													<span className="text-xs font-medium text-zinc-200">
+												<div className="flex items-center justify-between gap-2">
+													<span className="truncate text-xs font-semibold text-[var(--ftf-ink)]">
 														{l.brandName ?? "Unknown brand"}
 													</span>
-													<span className="rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[9px] text-purple-300">
+													<span className="shrink-0 rounded-sm bg-[var(--ftf-paper-2)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--ftf-ink-2)]">
 														{l.stage ?? "new"}
 													</span>
 												</div>
-												<p className="mt-0.5 truncate text-[10px] text-zinc-500">
+												<p className="mt-0.5 truncate text-[10px] text-[var(--ftf-ink-3)]">
 													{l.vehicle ?? "vehicle tbd"} ·{" "}
 													{new Date(l.lastSeen).toLocaleString([], {
 														month: "short",
@@ -891,7 +1009,7 @@ export default function BrandReportPanel({
 												</p>
 											</button>
 										))}
-										<p className="text-[10px] text-zinc-600">
+										<p className="pt-1 text-[10px] leading-relaxed text-[var(--ftf-ink-4)]">
 											What sales sees — contact + concept + full chat log per
 											session. Open /chat in another tab to simulate a second
 											buyer.
@@ -904,55 +1022,66 @@ export default function BrandReportPanel({
 				</div>
 			)}
 
-			{/* Lightbox */}
+			{/* ── Lightbox ── */}
 			{lightbox !== null && images[lightbox] && (
 				// biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: lightbox dismiss
 				<div
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+					className="lightbox-overlay fixed inset-0 z-50 flex items-center justify-center bg-[var(--ftf-well)]/95 p-6 backdrop-blur-sm"
 					onClick={() => setLightbox(null)}
 				>
 					{/* biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: stop propagation */}
 					<div
-						className="relative max-h-[90vh] max-w-[90vw]"
+						className="lightbox-content relative max-h-[90vh] max-w-[90vw]"
 						onClick={(e) => e.stopPropagation()}
 					>
 						<img
 							src={images[lightbox].url}
 							alt={images[lightbox].label}
-							className="max-h-[85vh] rounded-lg object-contain shadow-2xl"
+							className="max-h-[80vh] rounded object-contain"
 						/>
+						<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+							<span>
+								<span className="block text-sm font-semibold text-white">
+									{LABEL_MAP[images[lightbox].label] || images[lightbox].label}
+								</span>
+								<span className="ftf-label !text-white/50">
+									{salesSlideFor(images[lightbox].label)}
+								</span>
+							</span>
+							{/* Concepts leave with the factory's mark on them. */}
+							<button
+								type="button"
+								disabled={saving}
+								onClick={async () => {
+									const img = images[lightbox];
+									setSaving(true);
+									try {
+										const marked = await watermarkImage(img.url, {
+											text: WATERMARK_TEXT,
+											subtext: img.label.replace(/_/g, " "),
+											tile: true,
+										});
+										downloadDataUrl(
+											marked,
+											`${spec?.brandName?.replace(/\s+/g, "-").toLowerCase() ?? "concept"}-${img.label}.png`,
+										);
+									} finally {
+										setSaving(false);
+									}
+								}}
+								className="ftf-cta inline-flex items-center gap-1.5 rounded px-4 py-2 text-xs"
+							>
+								<Download className="h-3.5 w-3.5" />
+								{saving ? "Preparing…" : "Download"}
+							</button>
+						</div>
 						<button
 							type="button"
 							onClick={() => setLightbox(null)}
-							className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white/70 hover:bg-zinc-700 hover:text-white"
+							aria-label="Close"
+							className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-sm bg-white text-[var(--ftf-ink)] transition-colors hover:bg-[var(--ftf-red-500)] hover:text-white"
 						>
 							<X className="h-4 w-4" />
-						</button>
-						{/* Concepts leave with the factory's mark on them. */}
-						<button
-							type="button"
-							disabled={saving}
-							onClick={async () => {
-								const img = images[lightbox];
-								setSaving(true);
-								try {
-									const marked = await watermarkImage(img.url, {
-										text: WATERMARK_TEXT,
-										subtext: img.label.replace(/_/g, " "),
-										tile: true,
-									});
-									downloadDataUrl(
-										marked,
-										`${spec?.brandName?.replace(/\s+/g, "-").toLowerCase() ?? "concept"}-${img.label}.png`,
-									);
-								} finally {
-									setSaving(false);
-								}
-							}}
-							className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3.5 py-2 text-xs font-medium text-white/85 backdrop-blur transition hover:bg-black/85 disabled:opacity-60"
-						>
-							<Download className="h-3.5 w-3.5" />
-							{saving ? "Preparing…" : "Download"}
 						</button>
 					</div>
 				</div>

@@ -84,18 +84,19 @@ export default function ConceptToModel({
 	};
 
 	return (
-		<div className="mt-6">
-			<div className="flex items-center justify-between gap-3">
-				<p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-					<Box className="h-3 w-3" />
+		<div className="mt-8">
+			<div className="flex items-center gap-2.5 pb-3">
+				<Box className="h-4 w-4 shrink-0 text-[var(--ftf-blue-800)]" />
+				<span className="ftf-label !text-[var(--ftf-ink)]">
 					Photoreal 3D model
-				</p>
-				<span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-					paid step
 				</span>
+				<span className="shrink-0 rounded-sm bg-[var(--ftf-orange-100)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ftf-orange-600)]">
+					Paid step
+				</span>
+				<div className="h-px flex-1 bg-[var(--ftf-line)]" />
 			</div>
 
-			<p className="mt-2 text-xs leading-relaxed text-zinc-500">
+			<p className="text-xs leading-relaxed text-[var(--ftf-ink-2)]">
 				The trailer above is built from the factory&rsquo;s dimensions and is
 				free to change as often as you like. When a direction is settled, turn
 				one render into a real mesh you can spin, share and hand to a
@@ -111,10 +112,10 @@ export default function ConceptToModel({
 						onClick={() => setSelected(c.url)}
 						disabled={busy}
 						title={c.label.replace(/_/g, " ")}
-						className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-colors disabled:opacity-50 ${
+						className={`h-14 w-20 shrink-0 overflow-hidden rounded border-2 bg-[var(--ftf-well)] transition-colors disabled:opacity-50 ${
 							c.url === best
-								? "border-purple-500/60"
-								: "border-transparent hover:border-[rgba(163,130,255,0.3)]"
+								? "border-[var(--ftf-orange-500)]"
+								: "border-transparent hover:border-[var(--ftf-blue-600)]"
 						}`}
 					>
 						<img
@@ -128,10 +129,10 @@ export default function ConceptToModel({
 
 			{model ? (
 				<div className="mt-3">
-					<div className="h-[260px] w-full overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#0b0b10]">
+					<div className="h-[260px] w-full overflow-hidden rounded bg-[var(--ftf-well)]">
 						<Suspense
 							fallback={
-								<div className="h-full w-full animate-pulse bg-[#111113]" />
+								<div className="ftf-working h-full w-full bg-[var(--ftf-well)]" />
 							}
 						>
 							<ModelViewer modelUrl={model.viewerUrl} />
@@ -141,14 +142,14 @@ export default function ConceptToModel({
 						<a
 							href={model.downloadUrl}
 							download
-							className="flex items-center gap-1.5 rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10"
+							className="ftf-cta inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs"
 						>
 							<Download className="h-3 w-3" /> Download .glb
 						</a>
 						<button
 							type="button"
 							onClick={run}
-							className="flex items-center gap-1.5 rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
+							className="inline-flex items-center gap-1.5 rounded border border-[var(--ftf-line-strong)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--ftf-blue-800)] transition-colors hover:bg-[var(--ftf-blue-50)]"
 						>
 							<RotateCcw className="h-3 w-3" /> Rebuild
 						</button>
@@ -159,7 +160,7 @@ export default function ConceptToModel({
 					type="button"
 					onClick={run}
 					disabled={busy}
-					className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-60"
+					className="ftf-cta mt-3 flex w-full items-center justify-center gap-2 rounded px-4 py-3 text-xs"
 				>
 					{busy ? (
 						<>
@@ -176,9 +177,9 @@ export default function ConceptToModel({
 			)}
 
 			{busy && (
-				<div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-zinc-800">
+				<div className="mt-2 h-1 w-full overflow-hidden rounded-sm bg-[var(--ftf-paper-3)]">
 					<div
-						className="h-full bg-purple-500 transition-[width] duration-500"
+						className="h-full bg-[var(--ftf-blue-800)] transition-[width] duration-500"
 						style={{
 							width:
 								progress?.fraction === null || progress?.fraction === undefined
@@ -190,13 +191,17 @@ export default function ConceptToModel({
 			)}
 
 			{busy && (
-				<p className="mt-1.5 text-[10px] text-zinc-600">
+				<p className="mt-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 					This usually takes a couple of minutes. You can keep designing — it
 					will finish in the background.
 				</p>
 			)}
 
-			{error && <p className="mt-2 text-[11px] text-red-400">{error}</p>}
+			{error && (
+				<p className="mt-2 border-l-2 border-[var(--ftf-red-500)] bg-[var(--ftf-red-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-red-600)]">
+					{error}
+				</p>
+			)}
 		</div>
 	);
 }

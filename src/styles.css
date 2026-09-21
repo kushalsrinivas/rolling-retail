@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap");
 @import "tailwindcss";
 @plugin '@tailwindcss/typography';
 @import "tw-animate-css";
@@ -120,11 +121,11 @@ body {
   background: rgba(168, 85, 247, 0.25);
 }
 
-a:not(.rr-landing a) {
+a:not(.rr-landing a):not(.ftf a) {
   color: var(--purple);
   text-decoration: none;
 }
-a:not(.rr-landing a):hover {
+a:not(.rr-landing a):not(.ftf a):hover {
   color: #c084fc;
 }
 
@@ -425,352 +426,334 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ─── Chat Interface ─── */
+/* ══════════════════════════════════════════════════════════════════════════
+ * Food Truck Factory design system — the /chat surface.
+ *
+ * Palette and type are taken from the factory's own site: deep industrial
+ * blue for structure, a single orange for the one action that matters, white
+ * and cool-grey paper underneath, Montserrat for anything that labels
+ * something. Everything here is scoped to `.ftf` so the landing page and
+ * /studio keep the dark purple they were built against.
+ *
+ * Two rules the whole surface obeys:
+ *   1. Colour means something. Blue = structure and navigation, orange = the
+ *      primary action, teal = confirmed/live, amber = in progress, red =
+ *      failed. Nothing is coloured because it looked nice.
+ *   2. Renders sit in dark wells. A generated truck reads wrong on white, so
+ *      image tiles, video players and the 3D viewer get near-black plates
+ *      while the chrome around them stays paper.
+ * ══════════════════════════════════════════════════════════════════════════ */
 
-.chat-layout {
+.ftf {
+  /* ── Brand ── */
+  --ftf-blue-900: #071f5c;
+  --ftf-blue-800: #0a3dad;
+  --ftf-blue-700: #183f97;
+  --ftf-blue-600: #2071ba;
+  --ftf-blue-200: #bed4f4;
+  --ftf-blue-100: #e2ecfb;
+  --ftf-blue-50: #f2f6fd;
+
+  --ftf-orange-600: #d97c00;
+  --ftf-orange-500: #ff9900;
+  --ftf-orange-100: #fff1dc;
+
+  --ftf-teal-600: #3d8a83;
+  --ftf-teal-500: #4e9e97;
+  --ftf-teal-100: #e4f2f0;
+
+  --ftf-amber-600: #a86a00;
+  --ftf-amber-500: #f1b32e;
+  --ftf-amber-100: #fdf3dd;
+
+  --ftf-red-600: #b00009;
+  --ftf-red-500: #d7000f;
+  --ftf-red-100: #ffece8;
+
+  /* ── Paper ── */
+  --ftf-paper: #ffffff;
+  --ftf-paper-2: #f4f6fa;
+  --ftf-paper-3: #e9edf4;
+  --ftf-line: #dbe2ec;
+  --ftf-line-strong: #c2cddd;
+
+  /* ── Wells (renders, video, 3D) ── */
+  --ftf-well: #0c1424;
+  --ftf-well-2: #121c30;
+  --ftf-well-line: rgba(255, 255, 255, 0.1);
+
+  /* ── Ink ── */
+  --ftf-ink: #14203a;
+  --ftf-ink-2: #4a5878;
+  --ftf-ink-3: #7b89a3;
+  --ftf-ink-4: #9aa6bc;
+
+  /* ── Elevation: one shadow, used sparingly. No coloured glows. ── */
+  --ftf-shadow: 0 1px 2px rgba(20, 32, 58, 0.06), 0 1px 1px rgba(20, 32, 58, 0.04);
+  --ftf-shadow-lg: 0 8px 24px rgba(20, 32, 58, 0.12), 0 2px 6px rgba(20, 32, 58, 0.06);
+
+  --ftf-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /*
+   * shadcn/ui tokens, re-pointed inside the app. Every primitive in
+   * components/ui picks the industrial palette up without being touched.
+   * The radius scale drops from 12px to 6px — square corners are most of
+   * what separates "engineered" from "template".
+   */
+  --background: var(--ftf-paper);
+  --foreground: var(--ftf-ink);
+  --card: var(--ftf-paper);
+  --card-foreground: var(--ftf-ink);
+  --popover: var(--ftf-paper);
+  --popover-foreground: var(--ftf-ink);
+  --primary: var(--ftf-blue-800);
+  --primary-foreground: #ffffff;
+  --secondary: var(--ftf-paper-2);
+  --secondary-foreground: var(--ftf-ink);
+  --muted: var(--ftf-paper-2);
+  --muted-foreground: var(--ftf-ink-2);
+  --accent: var(--ftf-blue-100);
+  --accent-foreground: var(--ftf-blue-800);
+  --destructive: var(--ftf-red-500);
+  --destructive-foreground: #ffffff;
+  --border: var(--ftf-line);
+  --input: var(--ftf-line);
+  --ring: rgba(10, 61, 173, 0.35);
+  --radius: 0.375rem;
+
+  color: var(--ftf-ink);
+  background: var(--ftf-paper-2);
   cursor: default;
 }
 
-/* Message entry animation */
+/* Labels, headings and numbers are Montserrat; prose stays Inter. */
+.ftf-display {
+  font-family: "Montserrat", var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ftf-label {
+  font-family: "Montserrat", var(--font-sans);
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ftf-ink-3);
+}
+
+.ftf ::selection {
+  background: var(--ftf-blue-100);
+  color: var(--ftf-blue-900);
+}
+
+/* A dark plate for anything a render lives on. */
+.ftf-well {
+  background: var(--ftf-well);
+  color: #e8edf6;
+}
+
+/*
+ * The one loud control on screen. Orange is the factory's CTA colour and
+ * appears once per pane — "generate", "next", "send" — never twice.
+ */
+.ftf-cta {
+  background: var(--ftf-orange-500);
+  color: #241200;
+  font-family: "Montserrat", var(--font-sans);
+  font-weight: 700;
+  transition: background-color 0.15s var(--ftf-ease);
+}
+.ftf-cta:hover:not(:disabled) {
+  background: var(--ftf-orange-600);
+  color: #fff;
+}
+.ftf-cta:disabled {
+  background: var(--ftf-paper-3);
+  color: var(--ftf-ink-4);
+  cursor: not-allowed;
+}
+
+/* Focus: one ring, same everywhere, no glow. */
+.ftf :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ftf-blue-600);
+  outline-offset: 2px;
+}
+
+/* ─── Scrollbars ─── */
+
+.ftf ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.ftf ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ftf ::-webkit-scrollbar-thumb {
+  background: var(--ftf-line-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+.ftf ::-webkit-scrollbar-thumb:hover {
+  background: var(--ftf-ink-4);
+  background-clip: content-box;
+}
+.ftf * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ftf-line-strong) transparent;
+}
+.ftf .ftf-well::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: content-box;
+}
+
+/* ─── Motion ───
+ * Entrances only, all short, none looping in the corner of the eye. The
+ * pulsing borders and floating icons the panel used to have are gone; the
+ * only thing that repeats is a progress indicator, because it is progress. */
+
 .chat-message {
-  animation: chat-msg-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ftf-msg-in 220ms var(--ftf-ease) both;
 }
 
-@keyframes chat-msg-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Latest message subtle highlight pulse */
-.chat-message--latest .relative {
-  animation: chat-msg-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* Scrollable message list */
-.chat-messages {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(168, 85, 247, 0.12) transparent;
-}
-.chat-messages::-webkit-scrollbar {
-  width: 4px;
-}
-.chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(168, 85, 247, 0.12);
-  border-radius: 2px;
-}
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(168, 85, 247, 0.25);
-}
-
-/* Typing indicator dots */
-.typing-dot {
-  animation: typing-bounce 1.4s infinite ease-in-out;
-}
-.typing-dot--2 {
-  animation-delay: 0.2s;
-}
-.typing-dot--3 {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing-bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  30% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
-}
-
-/* Chat panel slide-in on mount */
-.chat-panel {
-  animation: chat-panel-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes chat-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* ─── Image Showcase ─── */
-
-.showcase-card {
-  animation: showcase-card-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes showcase-card-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.showcase-card-generating {
-  animation: showcase-gen-pulse 2s ease-in-out infinite both;
-}
-
-@keyframes showcase-gen-pulse {
-  0%,
-  100% {
-    border-color: rgba(163, 130, 255, 0.08);
-    background: #111113;
-  }
-  50% {
-    border-color: rgba(168, 85, 247, 0.2);
-    background: rgba(168, 85, 247, 0.03);
-  }
-}
-
-.showcase-empty-icon {
-  animation: showcase-empty-float 3s ease-in-out infinite;
-}
-
-@keyframes showcase-empty-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-.showcase-grid {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(168, 85, 247, 0.12) transparent;
-}
-.showcase-grid::-webkit-scrollbar {
-  width: 4px;
-}
-.showcase-grid::-webkit-scrollbar-thumb {
-  background: rgba(168, 85, 247, 0.12);
-  border-radius: 2px;
-}
-
-/* Lightbox */
-.lightbox-overlay {
-  animation: lightbox-in 200ms ease both;
-}
-
-@keyframes lightbox-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lightbox-content {
-  animation: lightbox-scale-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes lightbox-scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* ─── Brand Report Panel ─── */
-
-.brand-report {
-  animation: report-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes report-enter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.brand-report .report-section {
-  min-height: auto;
-  display: block;
-  align-items: unset;
-  justify-content: unset;
-  animation: report-section-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes report-section-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.report-section-header {
-  animation: report-header-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes report-header-in {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.metric-card {
-  animation: metric-card-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes metric-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.metric-bar {
-  animation: metric-bar-fill 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes metric-bar-fill {
-  from {
-    width: 0;
-  }
-}
-
-.metric-radar-path {
-  animation: metric-radar-draw 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 400ms;
-}
-
-@keyframes metric-radar-draw {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-    transform-origin: center;
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    transform-origin: center;
-  }
-}
-
-/* Event cards */
-
-.event-card {
-  animation: event-card-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes event-card-in {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Timeline steps */
-
-.timeline-step {
-  animation: timeline-step-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes timeline-step-in {
+@keyframes ftf-msg-in {
   from {
     opacity: 0;
     transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-/* FAQ accordion answer */
-
-.faq-answer {
-  animation: faq-open 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.chat-panel {
+  animation: ftf-fade 240ms var(--ftf-ease) both;
 }
 
-@keyframes faq-open {
+.brand-report {
+  animation: ftf-fade 240ms var(--ftf-ease) both;
+}
+
+@keyframes ftf-fade {
   from {
     opacity: 0;
-    max-height: 0;
   }
   to {
     opacity: 1;
-    max-height: 200px;
   }
 }
 
-/* Testimonial cards */
-
-.testimonial-card {
-  animation: testimonial-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.showcase-card {
+  animation: ftf-card-in 260ms var(--ftf-ease) both;
 }
 
-@keyframes testimonial-in {
+@keyframes ftf-card-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.98);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
-/* Scrollbar */
+/* Typing indicator: three dots, no colour story. */
+.typing-dot {
+  animation: ftf-typing 1.3s infinite ease-in-out;
+}
+.typing-dot--2 {
+  animation-delay: 0.16s;
+}
+.typing-dot--3 {
+  animation-delay: 0.32s;
+}
 
-.brand-report::-webkit-scrollbar {
-  width: 4px;
+@keyframes ftf-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
 }
-.brand-report::-webkit-scrollbar-track {
-  background: transparent;
+
+/* A working render slot: a blue sweep across the dark plate. */
+.ftf-working {
+  position: relative;
+  overflow: hidden;
 }
-.brand-report::-webkit-scrollbar-thumb {
-  background: rgba(163, 130, 255, 0.15);
-  border-radius: 4px;
+.ftf-working::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(32, 113, 186, 0.22) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: ftf-sweep 1.6s linear infinite;
 }
-.brand-report::-webkit-scrollbar-thumb:hover {
-  background: rgba(163, 130, 255, 0.3);
+
+@keyframes ftf-sweep {
+  to {
+    transform: translateX(100%);
+  }
 }
+
+/* Lightbox */
+.lightbox-overlay {
+  animation: ftf-fade 160ms ease both;
+}
+
+.lightbox-content {
+  animation: ftf-lightbox-in 220ms var(--ftf-ease) both;
+}
+
+@keyframes ftf-lightbox-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.metric-bar {
+  animation: ftf-bar-fill 600ms var(--ftf-ease) both;
+}
+
+@keyframes ftf-bar-fill {
+  from {
+    width: 0;
+  }
+}
+
+/* The report panel opts out of the landing page's 100vh section rule. */
+.brand-report .report-section {
+  min-height: auto;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ftf *,
+  .ftf *::after,
+  .ftf *::before {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 
 /* ─── Base Layer ─── */
 

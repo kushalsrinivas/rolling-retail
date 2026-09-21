@@ -1,7 +1,6 @@
-import { ArrowUp, ImagePlus, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
-import { Button } from "#/components/ui/button";
 import { fileToDataUrl } from "#/lib/image-file";
 import { cn } from "#/lib/utils";
 
@@ -10,8 +9,6 @@ interface ChatInputProps {
 	disabled?: boolean;
 	placeholder?: string;
 }
-
-/** Downscale to a vision-friendly JPEG data URL (keeps uploads small). */
 
 export default function ChatInput({
 	onSend,
@@ -67,36 +64,36 @@ export default function ChatInput({
 	const canSend = (value.trim().length > 0 || attached) && !disabled;
 
 	return (
-		<div className="px-4 pb-4 pt-2">
+		<div className="px-5 pb-4 pt-3">
 			<div
 				className={cn(
-					"relative overflow-hidden rounded-[20px] border bg-[#111113] transition-all duration-200",
+					"relative overflow-hidden rounded border bg-white transition-colors",
 					isFocused
-						? "border-purple-500/40 shadow-[0_0_0_3px_rgba(168,85,247,0.08)] ring-1 ring-purple-500/20"
-						: "border-[rgba(163,130,255,0.12)]",
+						? "border-[var(--ftf-blue-600)]"
+						: "border-[var(--ftf-line-strong)]",
 					disabled && "pointer-events-none opacity-50",
 				)}
 			>
 				{attached && (
-					<div className="flex items-center gap-2 px-4 pt-3">
+					<div className="flex items-center gap-2.5 border-b border-[var(--ftf-line)] bg-[var(--ftf-paper-2)] px-3 py-2.5">
 						<div className="relative">
 							<img
 								src={attached}
 								alt="Attached inspiration"
-								className="h-14 w-14 rounded-lg border border-purple-500/30 object-cover"
+								className="h-12 w-12 rounded-sm border border-[var(--ftf-line)] object-cover"
 							/>
 							<button
 								type="button"
 								onClick={() => setAttached(null)}
-								className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+								className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-sm bg-[var(--ftf-ink)] text-white transition-colors hover:bg-[var(--ftf-red-500)]"
 								title="Remove image"
 							>
 								<X className="h-3 w-3" />
 							</button>
 						</div>
-						<span className="text-[11px] text-zinc-500">
-							Inspiration image attached — the designer will reference it; your
-							concept remains original.
+						<span className="text-[11px] leading-snug text-[var(--ftf-ink-2)]">
+							Reference attached — used for styling direction only. Your concept
+							stays original.
 						</span>
 					</div>
 				)}
@@ -110,12 +107,12 @@ export default function ChatInput({
 					placeholder={placeholder}
 					rows={1}
 					disabled={disabled}
-					className="block w-full resize-none bg-transparent px-4 py-3 pr-12 text-sm text-[#fafafa] placeholder:text-[#52525b] focus:outline-none"
+					className="block w-full resize-none bg-transparent px-3.5 py-3 text-[13px] text-[var(--ftf-ink)] placeholder:text-[var(--ftf-ink-4)] focus:outline-none"
 					style={{ minHeight: "44px", maxHeight: "160px" }}
 				/>
 
-				<div className="flex items-center justify-between px-3 pb-2.5">
-					<div className="flex items-center gap-1">
+				<div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
+					<div className="flex min-w-0 items-center gap-2">
 						<input
 							ref={fileRef}
 							type="file"
@@ -124,52 +121,48 @@ export default function ChatInput({
 							onChange={handleFile}
 							disabled={disabled}
 						/>
-						<Button
+						<button
 							type="button"
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8 rounded-full text-zinc-500 hover:bg-[rgba(163,130,255,0.08)] hover:text-purple-400"
 							disabled={disabled}
-							title="Attach an inspiration image"
+							title="Attach a reference image"
 							onClick={() => fileRef.current?.click()}
+							className="flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-medium text-[var(--ftf-ink-2)] transition-colors hover:bg-[var(--ftf-paper-2)] hover:text-[var(--ftf-blue-800)]"
 						>
-							<Paperclip className="h-4 w-4" />
-						</Button>
-						{attachError ? (
-							<span className="text-[11px] text-red-400">{attachError}</span>
-						) : (
-							<span className="hidden items-center gap-1 text-[11px] text-zinc-600 sm:flex">
-								<ImagePlus className="h-3 w-3" />
-								Add inspiration image
+							<Paperclip className="h-3.5 w-3.5" />
+							<span className="hidden sm:inline">Reference image</span>
+						</button>
+						{attachError && (
+							<span className="truncate text-[11px] text-[var(--ftf-red-600)]">
+								{attachError}
 							</span>
 						)}
 					</div>
 
-					<Button
+					<button
 						type="button"
 						onClick={submit}
 						disabled={!canSend}
+						aria-label="Send message"
 						className={cn(
-							"h-8 w-8 rounded-full p-0 transition-all duration-200",
+							"flex h-8 w-8 shrink-0 items-center justify-center rounded transition-colors",
 							canSend
-								? "bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.35)] hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.5)]"
-								: "bg-[rgba(163,130,255,0.08)] text-zinc-600",
+								? "ftf-cta"
+								: "bg-[var(--ftf-paper-3)] text-[var(--ftf-ink-4)]",
 						)}
 					>
 						<ArrowUp className="h-4 w-4" />
-					</Button>
+					</button>
 				</div>
 			</div>
-			<p className="mt-2 text-center text-[11px] text-zinc-700">
-				Press{" "}
-				<kbd className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-500">
+			<p className="mt-2 text-center text-[10px] text-[var(--ftf-ink-4)]">
+				<kbd className="rounded-sm border border-[var(--ftf-line)] bg-white px-1 py-px font-sans">
 					Enter
 				</kbd>{" "}
 				to send ·{" "}
-				<kbd className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-500">
-					Shift+Enter
+				<kbd className="rounded-sm border border-[var(--ftf-line)] bg-white px-1 py-px font-sans">
+					Shift + Enter
 				</kbd>{" "}
-				for new line
+				for a new line
 			</p>
 		</div>
 	);

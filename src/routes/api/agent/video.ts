@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
+import { equipmentPhrase } from "#/lib/food-truck/images";
 import {
 	buildSalesVideoPrompt,
 	SALES_VIDEO_PRESETS,
+	type SalesVideoContext,
 	type SalesVideoKind,
 	tourContinuationPrompt,
 } from "#/lib/food-truck/sales";
@@ -13,6 +16,11 @@ import {
 } from "#/lib/food-truck/video";
 
 const KINDS = new Set(SALES_VIDEO_PRESETS.map((p) => p.kind));
+
+/** Trim a client-supplied string, or fall back. */
+function str(v: unknown, fallback: string): string {
+	return typeof v === "string" && v.trim() ? v.trim() : fallback;
+}
 
 function newId() {
 	return `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -27,9 +35,14 @@ export const Route = createFileRoute("/api/agent/video")({
 					sessionId?: string;
 					kind?: string;
 					brand?: string;
+					vehicleId?: string;
 					vehicleLabel?: string;
+					businessType?: string;
 					colors?: string;
 					vibe?: string;
+					/** Equipment ids from the live layout, if the buyer has one yet. */
+					equipment?: string[];
+					serveMode?: string;
 					references?: string[];
 					/** Ready video job id to continue from (tour chaining). */
 					extendJobId?: string;
@@ -65,17 +78,53 @@ export const Route = createFileRoute("/api/agent/video")({
 				}
 				const session = getOrCreateSession(body.sessionId);
 				const brain = session.brain;
-				const ctx = {
-					brand: body.brand?.trim() || brain?.brandName || "the business",
-					vehicleLabel: body.vehicleLabel?.trim() || "food trailer",
-					colors:
-						body.colors?.trim() ||
-						brain?.colors.slice(0, 3).join(", ") ||
-						"brand colors",
-					vibe:
-						body.vibe?.trim() ||
-						brain?.vibeWords.slice(0, 2).join(", ") ||
-						"bold street-food",
+
+				/*
+				 * The stills are briefed on body, dimensions, menu, equipment and
+				 * service model; the video used to get four loose strings, so it
+				 * filmed a generic trailer. Same brain, same vehicle table, same
+				 * equipment phrasing — the clip now describes this build.
+				 */
+				const vehicle =
+					getVehicle(body.vehicleId ?? brain?.vehicleId) ??
+					getVehicle("airstream-m");
+				const business = getBusiness(body.businessType ?? brain?.businessType);
+				const equipmentIds =
+					body.equipment?.filter((e) => typeof e === "string") ??
+					brain?.equipmentHints ??
+					[];
+				const brand = str(body.brand, brain?.brandName ?? "");
+				const serveMode: SalesVideoContext["serveMode"] =
+					body.serveMode === "walk-in" ||
+					body.serveMode === "hybrid" ||
+					body.serveMode === "hatch-serve"
+						? body.serveMode
+						: brain?.walkIn
+							? "walk-in"
+							: "hatch-serve";
+
+				const ctx: SalesVideoContext = {
+					brand: brand || "the business",
+					hasBrand: Boolean(brand),
+					vehicleLabel: str(
+						body.vehicleLabel,
+						vehicle?.label ?? "food trailer",
+					),
+					vehicleBody: vehicle?.body ?? null,
+					lengthM: vehicle?.lengthM ?? null,
+					widthM: vehicle?.widthM ?? null,
+					businessLabel: business?.label ?? null,
+					menu: brain?.menuKeywords.slice(0, 5).join(", ") || null,
+					equipment: equipmentIds.length ? equipmentPhrase(equipmentIds) : null,
+					serveMode,
+					colors: str(
+						body.colors,
+						brain?.colors.slice(0, 3).join(", ") || "brand colors",
+					),
+					vibe: str(
+						body.vibe,
+						brain?.vibeWords.slice(0, 2).join(", ") || "bold street-food",
+					),
 				};
 				// ── Extension: continue a ready part (no stills needed) ──
 				const base = body.extendJobId

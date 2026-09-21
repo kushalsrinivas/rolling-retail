@@ -184,7 +184,7 @@ export interface ConceptPromptArgs {
 }
 
 /** Turn raw equipment ids (e.g. "griddle-chargrill") into readable phrases. */
-function equipmentPhrase(equipment: readonly string[]): string {
+export function equipmentPhrase(equipment: readonly string[]): string {
 	const map: Record<string, string> = {
 		fryer: "electric fryer bank",
 		"griddle-chargrill": "flat-top griddle and chargrill",

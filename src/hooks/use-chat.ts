@@ -557,7 +557,15 @@ export function useChat() {
 							sessionId,
 							kind,
 							brand: brandName.trim() || undefined,
-							vibe: businessType,
+							// The picker values, not a stand-in for them: `vibe` used to
+							// carry the business-type id, so every clip was briefed with
+							// "grill" as its mood and "food trailer" as its body.
+							vehicleId: vehicleId || undefined,
+							businessType: businessType || undefined,
+							colors: brain?.colors.slice(0, 3).join(", ") || undefined,
+							vibe: brain?.vibeWords.slice(0, 2).join(", ") || undefined,
+							equipment: layout?.equipment,
+							serveMode: layout?.serveMode,
 							references: refs,
 							extendJobId,
 						}),
@@ -611,7 +619,16 @@ export function useChat() {
 				setIsGeneratingVideo(false);
 			}
 		},
-		[isGeneratingVideo, images, ensureSession, brandName, businessType],
+		[
+			isGeneratingVideo,
+			images,
+			ensureSession,
+			brandName,
+			businessType,
+			vehicleId,
+			brain,
+			layout,
+		],
 	);
 
 	const guidedStep: "brand" | "vehicle" | "layout" | "wrap" | "review" = spec

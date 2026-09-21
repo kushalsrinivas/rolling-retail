@@ -81,7 +81,7 @@ export default function ChatLayout() {
 
 	if (showIntake) {
 		return (
-			<div className="chat-layout h-dvh w-full overflow-hidden bg-[#09090b]">
+			<div className="ftf chat-layout h-dvh w-full overflow-hidden">
 				<IntakeFlow
 					onComplete={(brief, answers, image) => {
 						setIntakeDone(true);
@@ -102,14 +102,14 @@ export default function ChatLayout() {
 	if (!isDesktop) {
 		const conceptCount = chat.images.length;
 		return (
-			<div className="chat-layout flex h-dvh w-full flex-col overflow-hidden bg-black">
+			<div className="ftf chat-layout flex h-dvh w-full flex-col overflow-hidden">
 				<div className="min-h-0 flex-1 overflow-hidden">
 					{pane === "design" ? <ChatPanel chat={chat} /> : buildPanel}
 				</div>
 
 				{/* Bottom bar keeps the switch under the thumb, clear of the keyboard. */}
 				<nav
-					className="flex shrink-0 gap-1 border-t border-[rgba(163,130,255,0.1)] bg-[#0b0b10] p-1.5"
+					className="flex shrink-0 gap-1 border-t border-[var(--ftf-line)] bg-white p-1.5"
 					style={{
 						paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))",
 					}}
@@ -126,16 +126,16 @@ export default function ChatLayout() {
 							onClick={() => setPane(t.id)}
 							aria-current={pane === t.id}
 							className={cn(
-								"flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-medium transition-colors",
+								"ftf-label flex flex-1 items-center justify-center gap-1.5 rounded py-3 transition-colors",
 								pane === t.id
-									? "bg-purple-500/10 text-purple-300"
-									: "text-zinc-500",
+									? "bg-[var(--ftf-blue-800)] text-white"
+									: "text-[var(--ftf-ink-2)] hover:bg-[var(--ftf-paper-2)]",
 							)}
 						>
 							<t.icon className="h-4 w-4" />
 							{t.label}
 							{t.id === "build" && conceptCount > 0 && pane !== "build" && (
-								<span className="rounded-full bg-purple-500/15 px-1.5 text-[10px] text-purple-300">
+								<span className="rounded-sm bg-[var(--ftf-orange-500)] px-1.5 py-px text-[10px] text-[#241200]">
 									{conceptCount}
 								</span>
 							)}
@@ -150,7 +150,7 @@ export default function ChatLayout() {
 		<div
 			ref={containerRef}
 			className={cn(
-				"chat-layout relative flex h-dvh w-full overflow-hidden bg-black",
+				"ftf chat-layout relative flex h-dvh w-full overflow-hidden",
 				isDragging && "select-none",
 			)}
 		>
@@ -191,30 +191,25 @@ export default function ChatLayout() {
 					if (e.touches[0]) handleDragStart();
 				}}
 				className={cn(
-					"group relative z-30 flex w-[3px] shrink-0 cursor-col-resize items-center justify-center touch-none",
-					"bg-[rgba(163,130,255,0.08)] transition-colors hover:bg-purple-500/30",
-					isDragging && "bg-purple-500/50",
+					"group relative z-30 flex w-px shrink-0 cursor-col-resize touch-none items-center justify-center",
+					"bg-[var(--ftf-line-strong)] transition-colors hover:bg-[var(--ftf-blue-600)]",
+					isDragging && "bg-[var(--ftf-blue-800)]",
 				)}
 				aria-label="Resize panels"
 			>
 				<div
 					className={cn(
-						"flex h-10 w-5 -translate-x-[9px] items-center justify-center rounded-full border border-[rgba(163,130,255,0.2)] bg-[#111113] shadow-md transition-all duration-150",
-						"group-hover:border-purple-500/40 group-hover:bg-[#18181b] group-hover:shadow-[0_0_8px_rgba(168,85,247,0.25)]",
-						isDragging &&
-							"border-purple-500/60 shadow-[0_0_14px_rgba(168,85,247,0.4)]",
+						"flex h-9 w-4 -translate-x-[8px] items-center justify-center rounded-sm border bg-white transition-colors",
+						"border-[var(--ftf-line-strong)] group-hover:border-[var(--ftf-blue-600)]",
+						isDragging && "border-[var(--ftf-blue-800)]",
 					)}
 				>
-					<GripVertical className="h-3.5 w-3.5 text-zinc-600 group-hover:text-purple-400" />
+					<GripVertical className="h-3.5 w-3.5 text-[var(--ftf-ink-4)] group-hover:text-[var(--ftf-blue-600)]" />
 				</div>
 			</div>
 
 			{/* ── Right: Chat Panel ── */}
-			<div className="relative h-full flex-1 overflow-hidden border-l border-[rgba(163,130,255,0.08)]">
-				<div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-full border border-[rgba(163,130,255,0.15)] bg-[#111113]/80 px-3 py-1.5 backdrop-blur-sm">
-					<MessageSquare className="h-3.5 w-3.5 text-purple-400" />
-					<span className="text-xs font-medium text-purple-300">AI Chat</span>
-				</div>
+			<div className="relative h-full flex-1 overflow-hidden">
 				<ChatPanel chat={chat} />
 			</div>
 		</div>

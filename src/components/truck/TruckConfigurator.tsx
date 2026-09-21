@@ -35,7 +35,7 @@ class SceneBoundary extends Component<
 		if (this.state.failed) {
 			return (
 				<div className="flex h-full w-full items-center justify-center">
-					<p className="text-xs text-zinc-500">
+					<p className="text-xs text-[var(--ftf-ink-3)]">
 						3D view unavailable on this device
 					</p>
 				</div>
@@ -105,7 +105,7 @@ export default function TruckConfigurator({
 
 	return (
 		<div className={className}>
-			<div className="relative h-[280px] w-full overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#0b0b10] sm:h-[340px]">
+			<div className="relative h-[280px] w-full overflow-hidden rounded bg-[var(--ftf-well)] sm:h-[340px]">
 				<SceneBoundary>
 					<Canvas
 						shadows
@@ -148,19 +148,19 @@ export default function TruckConfigurator({
 				</SceneBoundary>
 
 				<div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
-					<span className="pointer-events-auto rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium text-zinc-300 backdrop-blur">
+					<span className="pointer-events-auto rounded-sm bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur">
 						{vehicle.label} · {ft(dims.widthM)} wide
 					</span>
 					<button
 						type="button"
 						onClick={() => setCutaway((v) => !v)}
-						className="pointer-events-auto rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium text-zinc-300 backdrop-blur transition hover:text-white"
+						className="pointer-events-auto rounded-sm bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur transition-colors hover:bg-[var(--ftf-blue-800)] hover:text-white"
 					>
 						{cutaway ? "Show shell" : "Cutaway"}
 					</button>
 				</div>
 
-				<p className="pointer-events-none absolute inset-x-0 bottom-0 p-2.5 text-center text-[10px] text-zinc-600">
+				<p className="pointer-events-none absolute inset-x-0 bottom-0 p-2.5 text-center text-[10px] text-white/50">
 					{selectedSpec
 						? `${selectedSpec.label} · ${ft(selectedSpec.widthM)} wide · ${selectedSpec.watts > 0 ? `${selectedSpec.watts.toLocaleString()} W` : "no power"}`
 						: "Drag to orbit · tap a unit to inspect it"}
@@ -176,7 +176,7 @@ export default function TruckConfigurator({
 					.map(([zone, color]) => (
 						<span
 							key={zone}
-							className="flex items-center gap-1.5 text-[10px] capitalize text-zinc-500"
+							className="flex items-center gap-1.5 text-[10px] font-medium capitalize text-[var(--ftf-ink-2)]"
 						>
 							<span
 								className="h-2 w-2 rounded-sm"
@@ -189,46 +189,46 @@ export default function TruckConfigurator({
 
 			{/* What the fit-out costs you in power and space */}
 			<div className="mt-2.5 grid grid-cols-2 gap-2">
-				<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
-					<p className="text-[10px] text-zinc-500">Power draw</p>
-					<p className="text-lg font-bold text-amber-400">
+				<div className="rounded border border-[var(--ftf-line)] bg-white p-3">
+					<p className="ftf-label">Power draw</p>
+					<p className="ftf-display mt-1 text-lg leading-none text-[var(--ftf-blue-800)]">
 						{(power.designWatts / 1000).toFixed(1)} kW
 					</p>
-					<p className="text-[10px] text-zinc-600">
+					<p className="mt-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 						{power.ampsAt240V}A · {power.supply}
 					</p>
 				</div>
-				<div className="rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113] p-3">
-					<p className="text-[10px] text-zinc-500">Chef aisle</p>
+				<div className="rounded border border-[var(--ftf-line)] bg-white p-3">
+					<p className="ftf-label">Chef aisle</p>
 					<p
-						className={`text-lg font-bold ${tightAisle ? "text-red-400" : "text-emerald-400"}`}
+						className={`ftf-display mt-1 text-lg leading-none ${tightAisle ? "text-[var(--ftf-red-600)]" : "text-[var(--ftf-teal-600)]"}`}
 					>
 						{ft(layout.aisleM)}
 					</p>
-					<p className="text-[10px] text-zinc-600">
+					<p className="mt-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 						{tightAisle ? "below working minimum" : "workable clearance"}
 					</p>
 				</div>
 			</div>
 
 			{(tightAisle || power.overShore || layout.overflow.length > 0) && (
-				<ul className="mt-2 space-y-1">
+				<ul className="mt-2 space-y-1.5">
 					{tightAisle && (
-						<li className="text-[10px] leading-relaxed text-amber-400/90">
+						<li className="border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-amber-600)]">
 							This menu fills both walls of a {ft(dims.lengthM)} box, leaving a{" "}
 							{ft(layout.aisleM)} aisle. A longer body, or moving the drinks
 							station to a hatch end-cap, buys the clearance back.
 						</li>
 					)}
 					{power.overShore && (
-						<li className="text-[10px] leading-relaxed text-amber-400/90">
+						<li className="border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-amber-600)]">
 							{(power.designWatts / 1000).toFixed(1)} kW exceeds a 50A shore
 							supply — this build needs a generator or a second feed. Swapping
 							the fryer to gas is the usual fix.
 						</li>
 					)}
 					{layout.overflow.length > 0 && (
-						<li className="text-[10px] leading-relaxed text-red-400/90">
+						<li className="border-l-2 border-[var(--ftf-red-500)] bg-[var(--ftf-red-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-red-600)]">
 							No room for {layout.overflow.map((o) => o.label).join(", ")} in
 							this body.
 						</li>

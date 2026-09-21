@@ -9,7 +9,7 @@
  * Three ways in, matching how people actually arrive: start from a template,
  * answer the questions, or skip straight to seeing ideas.
  */
-import { ArrowLeft, ArrowRight, ImagePlus, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	composeBrief,
@@ -26,6 +26,10 @@ export interface IntakeFlowProps {
 	onComplete: (brief: string, answers: IntakeAnswers, image?: string) => void;
 	onSkip: () => void;
 }
+
+/** One control treatment for every text-ish field in the flow. */
+const FIELD =
+	"w-full rounded border border-[var(--ftf-line-strong)] bg-white px-3 py-2.5 text-sm text-[var(--ftf-ink)] placeholder:text-[var(--ftf-ink-4)] outline-none transition-colors focus:border-[var(--ftf-blue-600)]";
 
 export default function IntakeFlow({
 	config = FOOD_TRUCK_INTAKE,
@@ -79,7 +83,7 @@ export default function IntakeFlow({
 						value={value}
 						onChange={(e) => set(field.id, e.target.value)}
 						placeholder={field.placeholder}
-						className="w-full rounded-xl border border-[rgba(163,130,255,0.15)] bg-[#141417] px-3.5 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+						className={FIELD}
 					/>
 				);
 			case "textarea":
@@ -89,7 +93,7 @@ export default function IntakeFlow({
 						onChange={(e) => set(field.id, e.target.value)}
 						placeholder={field.placeholder}
 						rows={3}
-						className="w-full resize-none rounded-xl border border-[rgba(163,130,255,0.15)] bg-[#141417] px-3.5 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+						className={cn(FIELD, "resize-none")}
 					/>
 				);
 			case "choice":
@@ -101,17 +105,24 @@ export default function IntakeFlow({
 								type="button"
 								onClick={() => set(field.id, value === o.value ? "" : o.value)}
 								className={cn(
-									"rounded-xl border px-3.5 py-2.5 text-left transition-colors",
+									"rounded border px-3 py-2.5 text-left transition-colors",
 									value === o.value
-										? "border-purple-500/50 bg-purple-500/10"
-										: "border-[rgba(163,130,255,0.12)] bg-[#141417] hover:border-[rgba(163,130,255,0.3)]",
+										? "border-[var(--ftf-blue-800)] bg-[var(--ftf-blue-50)]"
+										: "border-[var(--ftf-line)] bg-white hover:border-[var(--ftf-line-strong)]",
 								)}
 							>
-								<span className="block text-sm font-medium text-zinc-100">
+								<span
+									className={cn(
+										"block text-sm font-semibold",
+										value === o.value
+											? "text-[var(--ftf-blue-800)]"
+											: "text-[var(--ftf-ink)]",
+									)}
+								>
 									{o.label}
 								</span>
 								{o.blurb && (
-									<span className="mt-0.5 block text-[11px] leading-snug text-zinc-500">
+									<span className="mt-0.5 block text-[11px] leading-snug text-[var(--ftf-ink-3)]">
 										{o.blurb}
 									</span>
 								)}
@@ -133,10 +144,10 @@ export default function IntakeFlow({
 									type="button"
 									onClick={() => toggleChip(field.id, s)}
 									className={cn(
-										"rounded-full border px-3 py-1.5 text-xs transition-colors",
+										"rounded-sm border px-2.5 py-1.5 text-xs font-medium transition-colors",
 										selected.includes(s)
-											? "border-purple-500/50 bg-purple-500/15 text-purple-200"
-											: "border-[rgba(163,130,255,0.15)] bg-[#141417] text-zinc-400 hover:text-zinc-200",
+											? "border-[var(--ftf-blue-800)] bg-[var(--ftf-blue-800)] text-white"
+											: "border-[var(--ftf-line)] bg-white text-[var(--ftf-ink-2)] hover:border-[var(--ftf-line-strong)] hover:text-[var(--ftf-ink)]",
 									)}
 								>
 									{s}
@@ -147,7 +158,7 @@ export default function IntakeFlow({
 							value={value}
 							onChange={(e) => set(field.id, e.target.value)}
 							placeholder="…or type your own, separated by commas"
-							className="mt-2 w-full rounded-xl border border-[rgba(163,130,255,0.12)] bg-[#141417] px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+							className={cn(FIELD, "mt-2")}
 						/>
 					</div>
 				);
@@ -167,13 +178,13 @@ export default function IntakeFlow({
 								<img
 									src={image}
 									alt="Your inspiration"
-									className="h-28 rounded-xl border border-[rgba(163,130,255,0.15)] object-cover"
+									className="h-28 rounded border border-[var(--ftf-line)] object-cover"
 								/>
 								<button
 									type="button"
 									onClick={() => setImage(null)}
 									aria-label="Remove image"
-									className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-white/70 hover:text-white"
+									className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-sm bg-[var(--ftf-ink)] text-white transition-colors hover:bg-[var(--ftf-red-500)]"
 								>
 									<X className="h-3 w-3" />
 								</button>
@@ -182,48 +193,64 @@ export default function IntakeFlow({
 							<button
 								type="button"
 								onClick={() => fileRef.current?.click()}
-								className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(163,130,255,0.22)] bg-[#141417] px-3.5 py-6 text-sm text-zinc-400 transition-colors hover:border-purple-500/40 hover:text-zinc-200"
+								className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-[var(--ftf-line-strong)] bg-white px-3 py-6 text-sm font-medium text-[var(--ftf-ink-2)] transition-colors hover:border-[var(--ftf-blue-600)] hover:text-[var(--ftf-blue-800)]"
 							>
 								<ImagePlus className="h-4 w-4" />
 								Add a photo
 							</button>
 						)}
 						{imageError && (
-							<p className="mt-1.5 text-[11px] text-red-400">{imageError}</p>
+							<p className="mt-1.5 text-[11px] text-[var(--ftf-red-600)]">
+								{imageError}
+							</p>
 						)}
 					</div>
 				);
 		}
 	};
 
+	/**
+	 * One sheet, centred, with the factory's blue rule across the top. The card
+	 * is the only elevated thing on the page — there is nothing else to look at.
+	 */
 	const shell = (children: React.ReactNode) => (
-		<div className="flex h-full w-full flex-col overflow-y-auto bg-[#09090b] px-4 py-8">
-			<div className="mx-auto my-auto w-full max-w-lg">{children}</div>
+		<div className="flex h-full w-full flex-col overflow-y-auto bg-[var(--ftf-paper-2)] px-4 py-8">
+			<div className="mx-auto my-auto w-full max-w-lg">
+				<div className="overflow-hidden rounded border border-[var(--ftf-line)] bg-white shadow-[var(--ftf-shadow-lg)]">
+					<div className="h-1 bg-[var(--ftf-blue-800)]" />
+					<div className="px-6 py-7 sm:px-8">{children}</div>
+				</div>
+				<p className="mt-4 text-center text-[11px] text-[var(--ftf-ink-4)]">
+					Free concept renders · no account needed
+				</p>
+			</div>
 		</div>
 	);
 
 	if (stepIndex === -1) {
 		return shell(
 			<>
-				<h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+				<p className="ftf-label">Custom food truck design</p>
+				<h1 className="ftf-display mt-2 text-[26px] leading-[1.15] text-[var(--ftf-ink)]">
 					{config.welcomeTitle}
 				</h1>
-				<p className="mt-2 text-sm leading-relaxed text-zinc-400">
+				<p className="mt-2.5 text-sm leading-relaxed text-[var(--ftf-ink-2)]">
 					{config.welcomeBody}
 				</p>
 
 				<button
 					type="button"
 					onClick={() => setStepIndex(0)}
-					className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500"
+					className="ftf-cta mt-6 flex w-full items-center justify-center gap-2 rounded px-4 py-3 text-sm"
 				>
-					Start <ArrowRight className="h-4 w-4" />
+					Start the brief <ArrowRight className="h-4 w-4" />
 				</button>
 
-				<p className="mt-7 text-[11px] font-medium uppercase tracking-wider text-zinc-600">
-					Or start from one of these
-				</p>
-				<div className="mt-2 grid gap-1.5">
+				<div className="mt-7 flex items-center gap-3">
+					<span className="ftf-label shrink-0">Or start from a build</span>
+					<span className="h-px flex-1 bg-[var(--ftf-line)]" />
+				</div>
+				<div className="mt-3 divide-y divide-[var(--ftf-line)] border-y border-[var(--ftf-line)]">
 					{config.templates.map((t) => (
 						<button
 							key={t.id}
@@ -232,17 +259,17 @@ export default function IntakeFlow({
 								setAnswers(t.values);
 								finish(t.values);
 							}}
-							className="flex items-center justify-between rounded-xl border border-[rgba(163,130,255,0.12)] bg-[#141417] px-3.5 py-3 text-left transition-colors hover:border-purple-500/35"
+							className="group flex w-full items-center justify-between gap-3 py-3 text-left transition-colors hover:bg-[var(--ftf-blue-50)]"
 						>
-							<span>
-								<span className="block text-sm font-medium text-zinc-100">
+							<span className="min-w-0">
+								<span className="block text-sm font-semibold text-[var(--ftf-ink)]">
 									{t.label}
 								</span>
-								<span className="mt-0.5 block text-[11px] text-zinc-500">
+								<span className="mt-0.5 block text-[11px] leading-snug text-[var(--ftf-ink-3)]">
 									{t.blurb}
 								</span>
 							</span>
-							<ArrowRight className="h-4 w-4 shrink-0 text-zinc-600" />
+							<ArrowRight className="h-4 w-4 shrink-0 text-[var(--ftf-ink-4)] transition-colors group-hover:text-[var(--ftf-blue-800)]" />
 						</button>
 					))}
 				</div>
@@ -250,9 +277,8 @@ export default function IntakeFlow({
 				<button
 					type="button"
 					onClick={onSkip}
-					className="mt-6 flex w-full items-center justify-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+					className="mt-5 w-full text-center text-xs font-medium text-[var(--ftf-ink-3)] underline-offset-4 transition-colors hover:text-[var(--ftf-blue-800)] hover:underline"
 				>
-					<Sparkles className="h-3.5 w-3.5" />
 					Skip — I'd rather just look around
 				</button>
 			</>,
@@ -264,31 +290,45 @@ export default function IntakeFlow({
 
 	return shell(
 		<>
-			<div className="flex items-center gap-1.5">
+			<div className="flex items-center justify-between">
+				<p className="ftf-label">
+					Step {stepIndex + 1} of {config.steps.length}
+				</p>
+				<span className="text-[11px] tabular-nums text-[var(--ftf-ink-4)]">
+					{Math.round(((stepIndex + 1) / config.steps.length) * 100)}%
+				</span>
+			</div>
+			<div className="mt-2 flex items-center gap-1">
 				{config.steps.map((s, i) => (
 					<span
 						key={s.id}
 						className={cn(
-							"h-1 flex-1 rounded-full transition-colors",
-							i <= stepIndex ? "bg-purple-500" : "bg-zinc-800",
+							"h-1 flex-1 transition-colors",
+							i <= stepIndex
+								? "bg-[var(--ftf-blue-800)]"
+								: "bg-[var(--ftf-paper-3)]",
 						)}
 					/>
 				))}
 			</div>
 
-			<h2 className="mt-5 text-xl font-bold tracking-tight text-zinc-50">
+			<h2 className="ftf-display mt-5 text-[22px] leading-tight text-[var(--ftf-ink)]">
 				{step.title}
 			</h2>
 			{step.subtitle && (
-				<p className="mt-1.5 text-sm text-zinc-400">{step.subtitle}</p>
+				<p className="mt-1.5 text-sm leading-relaxed text-[var(--ftf-ink-2)]">
+					{step.subtitle}
+				</p>
 			)}
 
-			<div className="mt-5 space-y-5">
+			<div className="mt-6 space-y-5">
 				{step.fields.map((field) => (
 					<div key={field.id}>
-						<p className="text-sm font-medium text-zinc-200">{field.label}</p>
+						<p className="text-[13px] font-semibold text-[var(--ftf-ink)]">
+							{field.label}
+						</p>
 						{field.hint && (
-							<p className="mb-2 mt-0.5 text-[11px] leading-snug text-zinc-500">
+							<p className="mb-2 mt-0.5 text-[11px] leading-snug text-[var(--ftf-ink-3)]">
 								{field.hint}
 							</p>
 						)}
@@ -301,7 +341,7 @@ export default function IntakeFlow({
 				<button
 					type="button"
 					onClick={() => setStepIndex((i) => i - 1)}
-					className="flex items-center gap-1.5 rounded-xl border border-[rgba(163,130,255,0.15)] px-3.5 py-2.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+					className="flex items-center gap-1.5 rounded border border-[var(--ftf-line-strong)] px-3.5 py-2.5 text-sm font-medium text-[var(--ftf-ink-2)] transition-colors hover:bg-[var(--ftf-paper-2)] hover:text-[var(--ftf-ink)]"
 				>
 					<ArrowLeft className="h-4 w-4" />
 					Back
@@ -309,7 +349,7 @@ export default function IntakeFlow({
 				<button
 					type="button"
 					onClick={() => (isLast ? finish() : setStepIndex((i) => i + 1))}
-					className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500"
+					className="ftf-cta flex flex-1 items-center justify-center gap-2 rounded px-4 py-2.5 text-sm"
 				>
 					{isLast ? "See my concepts" : "Next"}
 					<ArrowRight className="h-4 w-4" />
@@ -319,7 +359,7 @@ export default function IntakeFlow({
 			<button
 				type="button"
 				onClick={() => finish()}
-				className="mt-3 w-full text-center text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+				className="mt-3 w-full text-center text-xs font-medium text-[var(--ftf-ink-3)] underline-offset-4 transition-colors hover:text-[var(--ftf-blue-800)] hover:underline"
 			>
 				{isLast ? "Skip the rest" : "Skip the rest — I'll fill it in as I go"}
 			</button>

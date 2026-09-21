@@ -1,10 +1,14 @@
-import { Bot, User } from "lucide-react";
+import { Factory, User } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ChatMessage as ChatMessageType } from "#/hooks/use-chat";
 import { cn } from "#/lib/utils";
 
 /** Minimal chat markdown: headings, bold, italic, code, bullets, numbered. */
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+function renderInline(
+	text: string,
+	keyPrefix: string,
+	onDark: boolean,
+): ReactNode[] {
 	const out: ReactNode[] = [];
 	// **bold**, *italic*, `code` — unclosed spans render as plain text (streaming-safe).
 	const re = /(\*\*([^*]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`)/g;
@@ -17,14 +21,17 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 			out.push(
 				<strong
 					key={`${keyPrefix}-b${k++}`}
-					className="font-semibold text-zinc-50"
+					className={cn(
+						"font-semibold",
+						onDark ? "text-white" : "text-[var(--ftf-ink)]",
+					)}
 				>
 					{m[2]}
 				</strong>,
 			);
 		} else if (m[3] !== undefined) {
 			out.push(
-				<em key={`${keyPrefix}-i${k++}`} className="text-zinc-200">
+				<em key={`${keyPrefix}-i${k++}`} className="italic">
 					{m[3]}
 				</em>,
 			);
@@ -32,7 +39,12 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 			out.push(
 				<code
 					key={`${keyPrefix}-c${k++}`}
-					className="rounded bg-zinc-800 px-1 py-px text-[12px] text-amber-200"
+					className={cn(
+						"rounded-sm px-1 py-px font-mono text-[12px]",
+						onDark
+							? "bg-white/15 text-white"
+							: "bg-[var(--ftf-paper-3)] text-[var(--ftf-blue-800)]",
+					)}
 				>
 					{m[4]}
 				</code>,
@@ -44,7 +56,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 	return out.length ? out : [text];
 }
 
-function Markdown({ text }: { text: string }) {
+function Markdown({ text, onDark }: { text: string; onDark: boolean }) {
 	const lines = text.split("\n");
 	const blocks: ReactNode[] = [];
 	let list: { type: "ul" | "ol"; items: string[] } | null = null;
@@ -54,24 +66,39 @@ function Markdown({ text }: { text: string }) {
 		list = null;
 		if (type === "ul") {
 			blocks.push(
-				<ul key={key} className="my-1.5 space-y-1 pl-1">
+				<ul key={key} className="my-1.5 space-y-1">
 					{items.map((it, i) => (
-						<li key={i} className="flex gap-2 leading-relaxed">
-							<span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-purple-400/80" />
-							<span className="flex-1">{renderInline(it, `${key}-${i}`)}</span>
+						<li key={i} className="flex gap-2.5 leading-relaxed">
+							{/* A square marker, not a dot — the whole surface is square. */}
+							<span
+								className={cn(
+									"mt-[7px] h-[5px] w-[5px] shrink-0 rounded-[1px]",
+									onDark ? "bg-white/50" : "bg-[var(--ftf-blue-600)]",
+								)}
+							/>
+							<span className="flex-1">
+								{renderInline(it, `${key}-${i}`, onDark)}
+							</span>
 						</li>
 					))}
 				</ul>,
 			);
 		} else {
 			blocks.push(
-				<ol key={key} className="my-1.5 space-y-1 pl-1">
+				<ol key={key} className="my-1.5 space-y-1">
 					{items.map((it, i) => (
-						<li key={i} className="flex gap-2 leading-relaxed">
-							<span className="w-4 shrink-0 text-right tabular-nums text-purple-300/90">
-								{i + 1}.
+						<li key={i} className="flex gap-2.5 leading-relaxed">
+							<span
+								className={cn(
+									"w-4 shrink-0 text-right font-semibold tabular-nums",
+									onDark ? "text-white/60" : "text-[var(--ftf-blue-600)]",
+								)}
+							>
+								{i + 1}
 							</span>
-							<span className="flex-1">{renderInline(it, `${key}-${i}`)}</span>
+							<span className="flex-1">
+								{renderInline(it, `${key}-${i}`, onDark)}
+							</span>
 						</li>
 					))}
 				</ol>,
@@ -92,9 +119,12 @@ function Markdown({ text }: { text: string }) {
 			blocks.push(
 				<p
 					key={`h${idx}`}
-					className="mb-0.5 mt-2.5 text-[13px] font-semibold tracking-tight text-zinc-50 first:mt-0"
+					className={cn(
+						"ftf-label mb-1 mt-3 first:mt-0",
+						onDark && "text-white/70",
+					)}
 				>
-					{renderInline(h[2], `h${idx}`)}
+					{renderInline(h[2], `h${idx}`, onDark)}
 				</p>,
 			);
 			return;
@@ -120,7 +150,7 @@ function Markdown({ text }: { text: string }) {
 		flushList(`l${idx}`);
 		blocks.push(
 			<p key={`p${idx}`} className="leading-relaxed">
-				{renderInline(stripped, `p${idx}`)}
+				{renderInline(stripped, `p${idx}`, onDark)}
 			</p>,
 		);
 	});
@@ -139,7 +169,7 @@ export default function ChatMessage({ message, isLatest }: ChatMessageProps) {
 	if (message.notice) {
 		return (
 			<div className="flex w-full justify-center px-1">
-				<p className="max-w-[90%] rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-center text-xs text-amber-300">
+				<p className="max-w-[90%] rounded-sm border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-3 py-2 text-center text-xs text-[var(--ftf-amber-600)]">
 					{message.content}
 				</p>
 			</div>
@@ -149,41 +179,46 @@ export default function ChatMessage({ message, isLatest }: ChatMessageProps) {
 	return (
 		<div
 			className={cn(
-				"chat-message flex w-full gap-3 px-1",
+				"chat-message flex w-full gap-2.5",
 				isUser ? "flex-row-reverse" : "flex-row",
-				isLatest && "chat-message--latest",
 			)}
 		>
-			{/* Avatar */}
+			{/* Avatar — a square badge, matching the header mark. */}
 			<div
 				className={cn(
-					"mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
+					"mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm",
 					isUser
-						? "border-purple-500/30 bg-purple-500/10 text-purple-400"
-						: "border-[rgba(163,130,255,0.15)] bg-[rgba(168,85,247,0.08)] text-purple-400",
+						? "border border-[var(--ftf-line)] bg-white text-[var(--ftf-ink-3)]"
+						: "bg-[var(--ftf-blue-800)] text-white",
 				)}
 			>
 				{isUser ? (
 					<User className="h-3.5 w-3.5" />
 				) : (
-					<Bot className="h-3.5 w-3.5" />
+					<Factory className="h-3.5 w-3.5" />
 				)}
 			</div>
 
 			{/* Bubble */}
 			<div
 				className={cn(
-					"relative max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+					"relative max-w-[80%] rounded px-3.5 py-2.5 text-[13px] leading-relaxed",
 					isUser
-						? "rounded-tr-sm bg-purple-600/20 text-[#fafafa] ring-1 ring-purple-500/25"
-						: "rounded-tl-sm bg-[#18181b] text-[#e4e4e7] ring-1 ring-[rgba(163,130,255,0.08)]",
+						? "bg-[var(--ftf-blue-800)] text-white"
+						: "border bg-white text-[var(--ftf-ink)]",
+					// The newest reply gets a firmer edge so the eye lands on it
+					// without a colour change or a glow doing the work.
+					!isUser &&
+						(isLatest
+							? "border-[var(--ftf-line-strong)]"
+							: "border-[var(--ftf-line)]"),
 				)}
 			>
 				{isUser && message.image && (
 					<img
 						src={message.image}
 						alt="Attached inspiration"
-						className="mb-2 max-h-48 w-auto rounded-xl border border-purple-500/25 object-cover"
+						className="mb-2 max-h-48 w-auto rounded-sm border border-white/25 object-cover"
 					/>
 				)}
 				{isUser && message.content.startsWith("[Context:") ? (
@@ -197,12 +232,11 @@ export default function ChatMessage({ message, isLatest }: ChatMessageProps) {
 						return (
 							<>
 								{ctxMatch && (
-									<div className="mb-2 flex items-center gap-1.5 rounded-lg border border-purple-500/20 bg-purple-500/10 px-2.5 py-1.5">
-										<span className="text-[10px] font-medium text-purple-300">
+									<div className="mb-2 flex items-center gap-1.5 rounded-sm border-l-2 border-white/40 bg-white/10 px-2.5 py-1.5">
+										<span className="ftf-label !text-white/90">
 											{ctxMatch[1]}
 										</span>
-										<span className="text-[10px] text-purple-400/60">·</span>
-										<span className="truncate text-[10px] text-purple-300/70">
+										<span className="truncate text-[11px] text-white/70">
 											{ctxMatch[2]}
 										</span>
 									</div>
@@ -214,17 +248,17 @@ export default function ChatMessage({ message, isLatest }: ChatMessageProps) {
 				) : isUser ? (
 					<span className="whitespace-pre-wrap">{message.content}</span>
 				) : (
-					<Markdown text={message.content} />
+					<Markdown text={message.content} onDark={false} />
 				)}
 				{message.isStreaming && (
-					<span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-purple-400/80" />
+					<span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-[var(--ftf-blue-600)] align-middle" />
 				)}
 				<span
 					className={cn(
-						"mt-1 block text-[10px]",
+						"mt-1.5 block text-[10px] tabular-nums",
 						isUser
-							? "text-right text-purple-300/50"
-							: "text-left text-zinc-600",
+							? "text-right text-white/50"
+							: "text-left text-[var(--ftf-ink-4)]",
 					)}
 				>
 					{message.timestamp.toLocaleTimeString([], {
