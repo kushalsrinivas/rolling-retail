@@ -63,7 +63,7 @@ describe("sales asset pipeline", () => {
 		const prompts = SALES_VIDEO_PRESETS.map((p) =>
 			buildSalesVideoPrompt(p.kind, ctx),
 		);
-		expect(new Set(prompts).size).toBe(3);
+		expect(new Set(prompts).size).toBe(SALES_VIDEO_PRESETS.length);
 		for (const p of prompts) {
 			expect(p).toContain("BIB Burgers");
 			expect(p).toMatch(/exact/i);

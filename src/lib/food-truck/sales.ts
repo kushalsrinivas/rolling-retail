@@ -68,7 +68,11 @@ export function coversAllConceptViews(): string[] {
 	return CONCEPT_VIEWS.filter((v) => !(v in SALES_SLIDE_MAP));
 }
 
-export type SalesVideoKind = "hero-orbit" | "walkthrough" | "night-cinematic";
+export type SalesVideoKind =
+	| "hero-orbit"
+	| "walkthrough"
+	| "night-cinematic"
+	| "tour";
 
 export interface SalesVideoPreset {
 	kind: SalesVideoKind;
@@ -91,6 +95,11 @@ export const SALES_VIDEO_PRESETS: SalesVideoPreset[] = [
 		kind: "night-cinematic",
 		label: "Night cinematic · 10s",
 		blurb: "Glowing hatch, street-food-at-night mood",
+	},
+	{
+		kind: "tour",
+		label: "Full tour · 10s",
+		blurb: "Guided walkthrough of every feature",
 	},
 ];
 
@@ -117,6 +126,9 @@ export function buildSalesVideoPrompt(
 	}
 	if (kind === "night-cinematic") {
 		return `10-second cinematic night video of the ${product}. Wet pavement reflections, hatch glowing warmly, illuminated signage on, a few customers silhouetted. Slow push-in, moody premium street-food vibe. ${lock}`;
+	}
+	if (kind === "tour") {
+		return `10-second guided tour video of the ${product}, like someone showing a buyer around. Open wide on the branded exterior, move to the open service hatch, glide along the serve line past each station — hot line, make-rail, drinks end-cap, signage and lighting — and finish back on the hero angle. Steady, deliberate camera; every feature gets its moment. ${lock}`;
 	}
 	return `10-second cinematic product video of the ${product}. Slowly orbit around the product at golden hour while maintaining its exact appearance from the references. ${lock}`;
 }
