@@ -383,6 +383,12 @@ export interface StarterConceptArgs {
 	vehicleId?: string | null;
 	/** A photo the buyer uploaded, used for styling direction only. */
 	inspirationImage?: string | null;
+	/**
+	 * Auto-hero master from an earlier round (session.masterImageUrl). The new
+	 * hero chains off it so regenerations stay the same product; the rest of
+	 * the round falls back to it when the fresh hero is a placeholder.
+	 */
+	masterReference?: string | null;
 }
 
 /**
@@ -443,6 +449,17 @@ export async function runStarterConcepts(
 	const bodyReference = await factoryReference(args.vehicleId, vehicleBody);
 	const geometry = geometryFor(vehicleBody);
 
+	// Only a real photo may chain — placeholders would poison the model's
+	// sense of the trailer. Master outranks buyer inspiration on the hero:
+	// same-product continuity beats fresh mood direction.
+	const photoOrNull = (u: string | null | undefined): string | null =>
+		typeof u === "string" &&
+		u.startsWith("data:image/") &&
+		!u.startsWith("data:image/svg")
+			? u
+			: null;
+	const masterPhoto = photoOrNull(args.masterReference);
+
 	const images: StarterConcept[] = [];
 	// Hero first, then everything else chains off it as a livery reference —
 	// this is what stops the wrap drifting view to view. The hero itself is
@@ -457,6 +474,7 @@ export async function runStarterConcepts(
 			label: hero.label,
 			prompt: hero.prompt,
 			bodyReference,
+			liveryReference: masterPhoto,
 			inspirationReference: args.inspirationImage ?? null,
 			geometry,
 		});
@@ -472,6 +490,8 @@ export async function runStarterConcepts(
 	// Batch of 3 concurrent keeps us under rate limits while cutting total time.
 	// The inspiration photo is deliberately dropped here: the hero already
 	// absorbed it, and re-sending it invites the model to copy that truck's body.
+	// Livery falls back to the cross-round master when the fresh hero failed.
+	const roundLivery = heroUrl || masterPhoto;
 	for (let i = 0; i < rest.length; i += 3) {
 		const batch = rest.slice(i, i + 3);
 		const results = await Promise.all(
@@ -482,7 +502,7 @@ export async function runStarterConcepts(
 					label: p.label,
 					prompt: p.prompt,
 					bodyReference,
-					liveryReference: heroUrl || null,
+					liveryReference: roundLivery || null,
 					geometry,
 				}),
 			),

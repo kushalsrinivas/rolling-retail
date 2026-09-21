@@ -19,6 +19,7 @@ import { Route as ApiRodinStatusRouteImport } from './routes/api/rodin/status'
 import { Route as ApiRodinProxyDownloadRouteImport } from './routes/api/rodin/proxy-download'
 import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/download'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
 import { Route as ApiAgentLeadsRouteImport } from './routes/api/agent/leads'
 import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
@@ -74,6 +75,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentVideoRoute = ApiAgentVideoRouteImport.update({
+  id: '/api/agent/video',
+  path: '/api/agent/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
   id: '/api/agent/session',
   path: '/api/agent/session',
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rodin/download': typeof ApiRodinDownloadRoute
   '/api/rodin/proxy-download': typeof ApiRodinProxyDownloadRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/api/agent/images'
     | '/api/agent/leads'
     | '/api/agent/session'
+    | '/api/agent/video'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/api/agent/images'
     | '/api/agent/leads'
     | '/api/agent/session'
+    | '/api/agent/video'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/api/agent/images'
     | '/api/agent/leads'
     | '/api/agent/session'
+    | '/api/agent/video'
     | '/api/auth/$'
     | '/api/rodin/download'
     | '/api/rodin/proxy-download'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   ApiAgentImagesRoute: typeof ApiAgentImagesRoute
   ApiAgentLeadsRoute: typeof ApiAgentLeadsRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
+  ApiAgentVideoRoute: typeof ApiAgentVideoRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRodinDownloadRoute: typeof ApiRodinDownloadRoute
   ApiRodinProxyDownloadRoute: typeof ApiRodinProxyDownloadRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/video': {
+      id: '/api/agent/video'
+      path: '/api/agent/video'
+      fullPath: '/api/agent/video'
+      preLoaderRoute: typeof ApiAgentVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/session': {
       id: '/api/agent/session'
       path: '/api/agent/session'
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentImagesRoute: ApiAgentImagesRoute,
   ApiAgentLeadsRoute: ApiAgentLeadsRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
+  ApiAgentVideoRoute: ApiAgentVideoRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRodinDownloadRoute: ApiRodinDownloadRoute,
   ApiRodinProxyDownloadRoute: ApiRodinProxyDownloadRoute,

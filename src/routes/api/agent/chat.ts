@@ -14,7 +14,11 @@ import {
 	toLangChainMessages,
 } from "#/lib/food-truck/graph";
 import { runStarterConcepts } from "#/lib/food-truck/images";
-import { creditsLeft, getOrCreateSession } from "#/lib/food-truck/session";
+import {
+	adoptMasterFromImages,
+	creditsLeft,
+	getOrCreateSession,
+} from "#/lib/food-truck/session";
 import { layoutFor } from "#/lib/food-truck/tools";
 
 interface ChatBody {
@@ -171,6 +175,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 									{
 										vehicleId: effectiveVehicleId,
 										inspirationImage: session.inspirationImage,
+										masterReference: session.masterImageUrl,
 										brand:
 											brain.brandName ?? body.context?.brandName?.trim() ?? "",
 										vehicleLabel,
@@ -206,6 +211,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 								);
 								session.creditsUsed = run.creditsUsed;
 								session.visualRounds += 1;
+								adoptMasterFromImages(session, run.images);
 							} catch (imgErr) {
 								console.warn("[food-truck] auto visuals failed:", imgErr);
 							}

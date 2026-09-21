@@ -1,5 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
+import {
+	pickApprovedReferences,
+	pickMasterReference,
+	type SalesVideoKind,
+} from "#/lib/food-truck/sales";
 
 export type MessageRole = "user" | "assistant";
 
@@ -20,6 +25,14 @@ export interface GeneratedImage {
 	url: string;
 	timestamp: Date;
 	favorite?: boolean;
+}
+
+export interface GeneratedVideo {
+	id: string;
+	kind: string;
+	status: "pending" | "ready" | "error";
+	url?: string | null;
+	error?: string | null;
 }
 
 export interface PipelineLead {
@@ -175,6 +188,8 @@ export function useChat() {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+	const [videos, setVideos] = useState<GeneratedVideo[]>([]);
+	const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
 	const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
 	const [leads, setLeads] = useState<PipelineLead[]>([]);
 	const [vehicleId, setVehicleId] = useState<string>("airstream-m");
@@ -507,6 +522,80 @@ export function useChat() {
 
 	const clearError = useCallback(() => setError(null), []);
 
+	// ── Sales video: master + starred stills in, Omni Flash video out ──
+	// Client sends the reference bytes (server keeps no image store); the
+	// route polls the provider, we poll the route.
+	const generateVideo = useCallback(
+		async (kind: SalesVideoKind = "hero-orbit") => {
+			if (isGeneratingVideo) return;
+			setError(null);
+			const master = pickMasterReference(images);
+			const refs = [
+				...(master ? [master] : []),
+				...pickApprovedReferences(images, master),
+			].slice(0, 3);
+			if (refs.length === 0) {
+				setError(
+					"Generate concepts first — video needs an approved still to film.",
+				);
+				return;
+			}
+			setIsGeneratingVideo(true);
+			try {
+				const sessionId = await ensureSession();
+				const started = await fetch("/api/agent/video", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						sessionId,
+						kind,
+						brand: brandName.trim() || undefined,
+						vibe: businessType,
+						references: refs,
+					}),
+				});
+				const startData = (await started.json().catch(() => ({}))) as {
+					video?: GeneratedVideo;
+					error?: string;
+				};
+				if (!started.ok || !startData.video) {
+					throw new Error(
+						startData.error || `Video start failed (${started.status})`,
+					);
+				}
+				const job = startData.video;
+				setVideos((prev) => [
+					{ ...job, kind },
+					...prev.filter((v) => v.id !== job.id),
+				]);
+				if (job.status !== "pending") return;
+				// Poll the route (which polls Omni) until ready/error.
+				for (let i = 0; i < 30; i++) {
+					await new Promise((r) => setTimeout(r, 4000));
+					const poll = await fetch(
+						`/api/agent/video?sessionId=${encodeURIComponent(sessionId)}&videoId=${encodeURIComponent(job.id)}`,
+					);
+					const pollData = (await poll.json().catch(() => ({}))) as {
+						video?: GeneratedVideo;
+					};
+					if (!poll.ok || !pollData.video) break;
+					const current = pollData.video;
+					setVideos((prev) =>
+						prev.map((v) => (v.id === current.id ? current : v)),
+					);
+					if (current.status !== "pending") break;
+				}
+			} catch (err) {
+				setError(
+					err instanceof Error ? err.message : "Video generation failed",
+				);
+			} finally {
+				setIsGeneratingVideo(false);
+			}
+		},
+		[isGeneratingVideo, images, ensureSession, brandName, businessType],
+	);
+
 	const guidedStep: "brand" | "vehicle" | "layout" | "wrap" | "review" = spec
 		? "review"
 		: estimate
@@ -520,6 +609,9 @@ export function useChat() {
 	return {
 		messages,
 		images,
+		videos,
+		isGeneratingVideo,
+		generateVideo,
 		brain,
 		layout,
 		estimate,

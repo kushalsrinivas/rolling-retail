@@ -5,7 +5,11 @@ import {
 	getVehicle,
 } from "#/lib/food-truck/constants";
 import { runStarterConcepts } from "#/lib/food-truck/images";
-import { creditsLeft, getOrCreateSession } from "#/lib/food-truck/session";
+import {
+	adoptMasterFromImages,
+	creditsLeft,
+	getOrCreateSession,
+} from "#/lib/food-truck/session";
 
 const LABELS = CONCEPT_VIEWS;
 
@@ -60,6 +64,7 @@ export const Route = createFileRoute("/api/agent/images")({
 					const run = await runStarterConcepts(session.creditsUsed, {
 						vehicleId: vehicle?.id ?? null,
 						inspirationImage: session.inspirationImage,
+						masterReference: session.masterImageUrl,
 						brand,
 						vehicleLabel,
 						vehicleBody: vehicle?.body ?? "square",
@@ -76,6 +81,7 @@ export const Route = createFileRoute("/api/agent/images")({
 					});
 					session.creditsUsed = run.creditsUsed;
 					session.visualRounds += 1;
+					adoptMasterFromImages(session, run.images);
 					return Response.json({
 						images: run.images,
 						creditsLeft: creditsLeft(session),

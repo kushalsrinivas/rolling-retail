@@ -61,6 +61,9 @@ export default function ChatLayout() {
 	const buildPanel = (
 		<BrandReportPanel
 			images={chat.images}
+			videos={chat.videos}
+			isGeneratingVideo={chat.isGeneratingVideo}
+			onGenerateVideo={(kind) => chat.generateVideo(kind)}
 			brain={chat.brain}
 			layout={chat.layout}
 			estimate={chat.estimate}

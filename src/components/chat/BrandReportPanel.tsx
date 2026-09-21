@@ -2,6 +2,7 @@ import {
 	BarChart3,
 	Box,
 	Brain,
+	Clapperboard,
 	ClipboardCopy,
 	Download,
 	FileJson,
@@ -20,6 +21,7 @@ import {
 import { lazy, Suspense, useEffect, useState } from "react";
 import type {
 	GeneratedImage,
+	GeneratedVideo,
 	PipelineLead,
 	TruckEstimate,
 	TruckLayout,
@@ -27,6 +29,11 @@ import type {
 } from "#/hooks/use-chat";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
 import { CONCEPT_VIEW_COUNT } from "#/lib/food-truck/constants";
+import {
+	SALES_VIDEO_PRESETS,
+	type SalesVideoKind,
+	salesSlideFor,
+} from "#/lib/food-truck/sales";
 import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
 
@@ -42,6 +49,9 @@ const LABEL_MAP: Record<string, string> = {
 
 interface BrandReportPanelProps {
 	images: GeneratedImage[];
+	videos: GeneratedVideo[];
+	isGeneratingVideo: boolean;
+	onGenerateVideo: (kind: SalesVideoKind) => void;
 	brain: ProjectBrain | null;
 	layout: TruckLayout | null;
 	estimate: TruckEstimate | null;
@@ -176,6 +186,9 @@ const ConceptToModel = lazy(() => import("#/components/truck/ConceptToModel"));
 
 export default function BrandReportPanel({
 	images,
+	videos,
+	isGeneratingVideo,
+	onGenerateVideo,
 	brain,
 	layout,
 	estimate,
@@ -284,8 +297,9 @@ export default function BrandReportPanel({
 									No concepts yet — start with {CONCEPT_VIEW_COUNT}
 								</p>
 								<p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-zinc-500">
-									One body, three consistent angles (exterior / hatch-open /
-									interior). Pick a direction, then refine — no 2D angle drift.
+									One master hero, nine deck-ready views off it (hero, overview,
+									feature, use-case, technical, vision). Star the ones to
+									approve for video — no angle drift.
 								</p>
 							</div>
 							<button
@@ -346,8 +360,8 @@ export default function BrandReportPanel({
 											onClick={() => onToggleFavorite(img.label)}
 											title={
 												img.favorite
-													? "Starred direction — click to unstar"
-													: "Star this direction"
+													? "Approved for deck + video — click to unstar"
+													: "Star to approve for deck + video"
 											}
 											className={cn(
 												"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-sm transition",
@@ -364,12 +378,15 @@ export default function BrandReportPanel({
 											/>
 										</button>
 										<div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition group-hover:opacity-100">
-											<div className="absolute bottom-0 left-0 right-0 flex items-end justify-between p-3">
+											<div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
 												<span className="text-xs font-medium text-white/90">
 													{LABEL_MAP[img.label] || img.label}
-													{img.favorite && " · starred"}
+													{img.favorite && " · approved"}
+													<span className="ml-1.5 rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-200">
+														{salesSlideFor(img.label)}
+													</span>
 												</span>
-												<Maximize2 className="h-4 w-4 text-white/70" />
+												<Maximize2 className="h-4 w-4 shrink-0 text-white/70" />
 											</div>
 										</div>
 									</div>
@@ -408,6 +425,82 @@ export default function BrandReportPanel({
 								>
 									<MessageCircle className="h-3 w-3" /> Refine in chat
 								</button>
+							</div>
+							{/* Sales video — Omni Flash films the master + starred
+							    stills, so the video shows the approved product. */}
+							<div className="mt-6">
+								<SectionHeader
+									icon={Clapperboard}
+									title="Sales video"
+									badge={
+										isGeneratingVideo
+											? "Generating…"
+											: videos.length
+												? `${videos.length} clip${videos.length === 1 ? "" : "s"}`
+												: undefined
+									}
+								/>
+								<p className="mt-2 mb-3 text-xs leading-relaxed text-zinc-500">
+									Star stills to approve them — the master hero plus up to two
+									starred views become the video's references. Drop the clip
+									straight into the deck.
+								</p>
+								<div className="flex flex-wrap gap-2">
+									{SALES_VIDEO_PRESETS.map((p) => (
+										<button
+											key={p.kind}
+											type="button"
+											onClick={() => onGenerateVideo(p.kind)}
+											disabled={isGeneratingVideo || images.length === 0}
+											title={p.blurb}
+											className="rounded-full border border-[rgba(163,130,255,0.2)] px-3 py-1.5 text-xs text-purple-300 hover:bg-purple-500/10 disabled:opacity-50"
+										>
+											{p.label}
+										</button>
+									))}
+								</div>
+								{videos.map((v) => (
+									<div
+										key={v.id}
+										className="mt-2.5 overflow-hidden rounded-xl border border-[rgba(163,130,255,0.1)] bg-[#111113]"
+									>
+										{v.status === "ready" && v.url ? (
+											<>
+												{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
+												<video
+													src={v.url}
+													controls
+													playsInline
+													className="aspect-video w-full bg-black"
+												/>
+												<div className="flex items-center justify-between px-3 py-2">
+													<span className="text-xs text-zinc-400">
+														{SALES_VIDEO_PRESETS.find((p) => p.kind === v.kind)
+															?.label ?? v.kind}
+													</span>
+													<a
+														href={v.url}
+														download={`${v.kind}.mp4`}
+														className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+													>
+														<Download className="h-3 w-3" /> Deck-ready MP4
+													</a>
+												</div>
+											</>
+										) : v.status === "error" ? (
+											<p className="px-3 py-2.5 text-xs text-red-400">
+												Video failed{v.error ? ` — ${v.error}` : ""}. Stills are
+												unaffected; try again.
+											</p>
+										) : (
+											<p className="flex items-center gap-2 px-3 py-2.5 text-xs text-amber-300">
+												<Loader2 className="h-3.5 w-3.5 animate-spin" />
+												Filming the approved stills — this takes a minute or
+												two.
+											</p>
+										)}
+									</div>
+								))}
 							</div>
 							{/* The trailer itself — built from the factory's dimensions,
 							    so it cannot disagree with the spec above. */}
