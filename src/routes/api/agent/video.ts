@@ -89,6 +89,10 @@ export const Route = createFileRoute("/api/agent/video")({
 						references: refs.slice(0, 3),
 					});
 					job.operationId = started.operationId;
+					if (started.readyUrl) {
+						job.status = "ready";
+						job.url = started.readyUrl;
+					}
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : "Video start failed";
 					job.status = "error";
