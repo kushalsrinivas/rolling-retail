@@ -21,6 +21,7 @@ import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/downloa
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
+import { Route as ApiAgentMenuRouteImport } from './routes/api/agent/menu'
 import { Route as ApiAgentLeadsRouteImport } from './routes/api/agent/leads'
 import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
 import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
@@ -85,6 +86,11 @@ const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
   path: '/api/agent/session',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentMenuRoute = ApiAgentMenuRouteImport.update({
+  id: '/api/agent/menu',
+  path: '/api/agent/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentLeadsRoute = ApiAgentLeadsRouteImport.update({
   id: '/api/agent/leads',
   path: '/api/agent/leads',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
+  '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
+  '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/images': typeof ApiAgentImagesRoute
   '/api/agent/leads': typeof ApiAgentLeadsRoute
+  '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/api/agent/chat'
     | '/api/agent/images'
     | '/api/agent/leads'
+    | '/api/agent/menu'
     | '/api/agent/session'
     | '/api/agent/video'
     | '/api/auth/$'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/api/agent/chat'
     | '/api/agent/images'
     | '/api/agent/leads'
+    | '/api/agent/menu'
     | '/api/agent/session'
     | '/api/agent/video'
     | '/api/auth/$'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/api/agent/chat'
     | '/api/agent/images'
     | '/api/agent/leads'
+    | '/api/agent/menu'
     | '/api/agent/session'
     | '/api/agent/video'
     | '/api/auth/$'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiAgentImagesRoute: typeof ApiAgentImagesRoute
   ApiAgentLeadsRoute: typeof ApiAgentLeadsRoute
+  ApiAgentMenuRoute: typeof ApiAgentMenuRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
   ApiAgentVideoRoute: typeof ApiAgentVideoRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/menu': {
+      id: '/api/agent/menu'
+      path: '/api/agent/menu'
+      fullPath: '/api/agent/menu'
+      preLoaderRoute: typeof ApiAgentMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/leads': {
       id: '/api/agent/leads'
       path: '/api/agent/leads'
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiAgentImagesRoute: ApiAgentImagesRoute,
   ApiAgentLeadsRoute: ApiAgentLeadsRoute,
+  ApiAgentMenuRoute: ApiAgentMenuRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
   ApiAgentVideoRoute: ApiAgentVideoRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

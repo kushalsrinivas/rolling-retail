@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
-import { CONCEPT_VIEW_COUNT, CONCEPT_VIEWS } from "#/lib/food-truck/constants";
+import {
+	CONCEPT_VIEW_COUNT,
+	CONCEPT_VIEWS,
+	RENDER_VIEWS,
+} from "#/lib/food-truck/constants";
+import type { MenuDesign } from "#/lib/food-truck/menu";
 import {
 	pickApprovedReferences,
 	pickMasterReference,
@@ -237,6 +242,9 @@ export function useChat() {
 	const [businessType, setBusinessType] = useState<string>("combined");
 	const [brandName, setBrandName] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
+	const [isRenderingMenu, setIsRenderingMenu] = useState(false);
+	// Held here, not in the tab, so switching tabs never loses a half-typed menu.
+	const [menuDraft, setMenuDraft] = useState<MenuDesign | null>(null);
 
 	const sessionIdRef = useRef<string | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
@@ -304,7 +312,7 @@ export function useChat() {
 						favorite: held?.favorite,
 					});
 				}
-				return CONCEPT_VIEWS.map((v) => byView.get(v)).filter(
+				return RENDER_VIEWS.map((v) => byView.get(v)).filter(
 					(v): v is GeneratedImage => Boolean(v),
 				);
 			});
@@ -329,7 +337,7 @@ export function useChat() {
 					favorite: held?.favorite,
 				});
 			}
-			return CONCEPT_VIEWS.map((view) => byView.get(view)).filter(
+			return RENDER_VIEWS.map((view) => byView.get(view)).filter(
 				(x): x is GeneratedImage => Boolean(x),
 			);
 		});
@@ -718,8 +726,13 @@ export function useChat() {
 
 	/** Re-render just the views that failed, keeping the rest as references. */
 	const retryFailedRenders = useCallback(async () => {
+		// The menu board is not part of a round; it retries from the Menu tab.
 		const failed = images
-			.filter((i) => i.status === "failed")
+			.filter(
+				(i) =>
+					i.status === "failed" &&
+					(CONCEPT_VIEWS as readonly string[]).includes(i.label),
+			)
 			.map((i) => i.label);
 		if (failed.length === 0) return;
 		await generateConcepts({ only: failed });
@@ -747,6 +760,65 @@ export function useChat() {
 	);
 
 	const clearError = useCallback(() => setError(null), []);
+
+	/*
+	 * ── Menu board ──
+	 *
+	 * The artwork is rendered in the browser from the exact SVG the buyer
+	 * previewed and sent as a PNG, so the board render is conditioned on the
+	 * pixels they approved. Costs one visual credit.
+	 */
+	const renderMenuBoard = useCallback(
+		async (menu: MenuDesign, artwork: string) => {
+			if (isRenderingMenu) return;
+			setError(null);
+			setIsRenderingMenu(true);
+			try {
+				const sessionId = await ensureSession();
+				const res = await fetch("/api/agent/menu", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						sessionId,
+						brand: brandName.trim() || undefined,
+						vehicleId,
+						menu,
+						artwork,
+						render: true,
+					}),
+				});
+				const data = (await res.json()) as {
+					image?: {
+						label: string;
+						url: string;
+						filename: string;
+						status?: string;
+						error?: string;
+						references?: string[];
+					};
+					creditsLeft?: number;
+					error?: string;
+				};
+				if (typeof data.creditsLeft === "number")
+					setCreditsLeft(data.creditsLeft);
+				if (!res.ok || !data.image) {
+					throw new Error(
+						res.status === 402
+							? "You have used your 5 complimentary visuals. Please top up or share your contact details and our sales team will unlock more."
+							: data.error || `Menu board render failed (${res.status})`,
+					);
+				}
+				mergeImages([data.image]);
+			} catch (err) {
+				setError(
+					err instanceof Error ? err.message : "Menu board render failed",
+				);
+			} finally {
+				setIsRenderingMenu(false);
+			}
+		},
+		[isRenderingMenu, ensureSession, brandName, vehicleId, mergeImages],
+	);
 
 	/*
 	 * ── Sales video ──
@@ -957,6 +1029,10 @@ export function useChat() {
 		sendMessage,
 		sendContextMessage,
 		generateConcepts,
+		renderMenuBoard,
+		isRenderingMenu,
+		menuDraft,
+		setMenuDraft,
 		clearError,
 	};
 }

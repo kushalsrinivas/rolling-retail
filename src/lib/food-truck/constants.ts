@@ -242,6 +242,15 @@ export type ConceptView = (typeof CONCEPT_VIEWS)[number];
 
 export const CONCEPT_VIEW_COUNT = CONCEPT_VIEWS.length;
 
+/**
+ * Rendered on demand from the Menu tab, never as part of a concept round —
+ * it needs the buyer's menu, which a round does not have.
+ */
+export const MENU_VIEW = "menu_board" as const;
+
+/** Every view a session can hold, in display order. */
+export const RENDER_VIEWS = [...CONCEPT_VIEWS, MENU_VIEW] as const;
+
 export const FREE_VISUAL_CREDITS = 5;
 
 /**

@@ -58,6 +58,7 @@ export const SALES_SLIDE_MAP: Record<string, string> = {
 	night_exterior: "Vision slide",
 	roof_plan: "Technical slide",
 	brand_mark: "Brand slide",
+	menu_board: "Menu slide",
 };
 
 export function salesSlideFor(label: string): string {
@@ -89,7 +90,7 @@ export const SALES_VIDEO_PRESETS: SalesVideoPreset[] = [
 	{
 		kind: "walkthrough",
 		label: "Serve-up walkthrough · 10s",
-		blurb: "Hatch to counter, food assembled and handed across.",
+		blurb: "Hatch to counter, the line cooking and an order ready to go.",
 	},
 	{
 		kind: "night-cinematic",
@@ -192,13 +193,13 @@ function lockFor(referenceViews: readonly string[] = []): string {
 			? `Reference ${named}. The space, objects and surfaces you can see in them are the set for this shot.`
 			: "Reference image 1 is the master.",
 		"Reproduce them precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography, and — inside — the layout, counters, equipment, materials, flooring, wall and ceiling finishes.",
-		"You are operating a camera inside a space that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and the people and food moving through the frame.",
+		"You are operating a camera inside a space that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and the steam, heat and food on the line. The scene is unoccupied — there are no people in it, and none may appear.",
 	].join(" ");
 }
 
 /** What generic video models add unprompted, and what ruins a sales asset. */
 const NEGATIVE =
-	"DO NOT: redesign, restyle or re-proportion the trailer; add, move or remove a door, hatch, window, vent or wheel; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld.";
+	"DO NOT: redesign, restyle or re-proportion the trailer; add, move or remove a door, hatch, window, vent or wheel; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld.";
 
 /** Grade and glass, held constant so a chained tour cuts together. */
 const CRAFT =
@@ -224,9 +225,9 @@ export function buildSalesVideoPrompt(
 		return [
 			"10-second product film: the serve-up.",
 			brief,
-			"SHOT LIST — 0.0–3.0s: start outside at the open service hatch, eye level, the counter filling the lower third; the camera pushes in slowly and steadily toward the hatch opening. 3.0–6.5s: continue the push through the hatch line and begin a smooth lateral dolly along the counter past the hot station, where a chef in black works the line — steam lifting off the griddle, a hand turning food, garnish pans bright under the sneeze-guard. 6.5–10.0s: the dolly settles as a finished, well-presented item is placed on the counter and handed across to a waiting customer; end on that hand-off, the branded counter front sharp behind it.",
+			"SHOT LIST — 0.0–3.0s: start outside at the open service hatch, eye level, the counter filling the lower third; the camera pushes in slowly and steadily toward the hatch opening. 3.0–6.5s: continue the push through the hatch line and begin a smooth lateral dolly along the counter past the hot station — food sizzling on the griddle, steam lifting off it, garnish pans bright under the sneeze-guard. 6.5–10.0s: the dolly settles on a finished, well-presented item sitting ready on the counter; end on it, the branded counter front sharp behind it.",
 			"LIGHT: late-afternoon daylight outside, warm 4000K task light inside the canopy spilling onto the food. Appetising, high-contrast on the product, no blown highlights.",
-			"ACTION: two staff working, unhurried and competent; two or three customers waiting, out of focus. Everyone stays clear of the trailer's signage.",
+			"ACTION: no people anywhere in frame — the food, the steam and the equipment carry the motion.",
 			CRAFT,
 			LOCK,
 			NEGATIVE,
@@ -237,9 +238,9 @@ export function buildSalesVideoPrompt(
 		return [
 			"10-second cinematic film: the trailer at night.",
 			brief,
-			"SHOT LIST — 0.0–3.5s: open wide on a three-quarter front angle across wet pavement, the trailer's lit reflection stretching toward camera, street bokeh behind. 3.5–7.5s: a slow, continuous push-in toward the glowing service hatch while the camera drifts a few degrees around the front corner, so the wrap and the illuminated roof blade sign both read. 7.5–10.0s: settle on a medium of the hatch, warm interior light spilling out, a customer silhouetted at the counter collecting an order.",
+			"SHOT LIST — 0.0–3.5s: open wide on a three-quarter front angle across wet pavement, the trailer's lit reflection stretching toward camera, street bokeh behind. 3.5–7.5s: a slow, continuous push-in toward the glowing service hatch while the camera drifts a few degrees around the front corner, so the wrap and the illuminated roof blade sign both read. 7.5–10.0s: settle on a medium of the hatch, warm interior light spilling out across an empty counter with a finished order waiting on it.",
 			"LIGHT: blue-hour-to-night ambient, the hatch and blade sign as the only warm sources, accent-coloured hatch frame catching interior light, practical streetlights far behind as bokeh. Moody and premium, never murky — the wrap colours must still be identifiable.",
-			"ACTION: two or three customers in silhouette, minimal movement; a single car light passing far behind.",
+			"ACTION: no people in frame; a single car light passing far behind is the only movement besides the camera.",
 			CRAFT,
 			LOCK,
 			NEGATIVE,
@@ -254,7 +255,7 @@ export function buildSalesVideoPrompt(
 			brief,
 			"SHOT LIST — 0.0–3.5s: open wide on the branded exterior at a three-quarter front angle, the full length of the trailer in frame, stabiliser jacks down and the roof blade sign lit. 3.5–7.0s: the camera tracks slowly right along the livery side at a steady walking pace, letting the wrap artwork and signage pass through frame. 7.0–10.0s: arrive at the open service hatch and begin easing in toward it; END THE SHOT framed square on the open hatch with the serve line just becoming visible inside — the next part continues from exactly this framing.",
 			"LIGHT: golden hour, low warm sun raking across the livery side, long soft shadows, clear sky. Hold this exact time of day; the following parts must match it.",
-			"ACTION: a small queue forming at the hatch, staff visible inside. Nobody crosses in front of the signage.",
+			"ACTION: none — no people at the hatch, inside or crossing frame; the trailer is the subject.",
 			CRAFT,
 			LOCK,
 			NEGATIVE,
@@ -266,7 +267,7 @@ export function buildSalesVideoPrompt(
 		brief,
 		"SHOT LIST — one continuous 180° orbit at a constant rate, camera at chest height on a level path, the trailer held dead centre and the same size in frame throughout. 0.0–3.5s: begin at the three-quarter front, nose toward camera. 3.5–7.0s: pass the full livery side, wrap artwork and roof blade sign square to camera at the midpoint. 7.0–10.0s: continue to the three-quarter rear and decelerate to a stop with the trailer still fully in frame.",
 		"LIGHT: golden hour, low warm sun, long soft shadows, clean ground plane, uncluttered background that never competes with the trailer.",
-		"ACTION: none — the product is the subject. No people crossing frame.",
+		"ACTION: none — the product is the subject. No people anywhere in frame.",
 		CRAFT,
 		LOCK,
 		NEGATIVE,
@@ -300,7 +301,7 @@ export function tourContinuationPrompt(
 			"10-second film — PART 3 OF 3, the closing beat of the guided tour.",
 			continuity,
 			brief,
-			"SHOT LIST — 0.0–3.0s: the last item on the line is finished and handed across the counter to a waiting customer; hold on the hand-off. 3.0–6.5s: the camera pulls back out through the service hatch in one smooth continuous move, the counter and canopy passing out of frame. 6.5–10.0s: keep retreating and arc gently left to settle on the wide three-quarter hero angle the tour opened on — full trailer in frame, blade sign lit, a small queue at the hatch — and come to rest there. This is the final frame of the deck's video.",
+			"SHOT LIST — 0.0–3.0s: hold on the finished order sitting ready on the counter, steam still lifting off it. 3.0–6.5s: the camera pulls back out through the service hatch in one smooth continuous move, the counter and canopy passing out of frame. 6.5–10.0s: keep retreating and arc gently left to settle on the wide three-quarter hero angle the tour opened on — full trailer in frame, blade sign lit, the hatch open and the forecourt empty — and come to rest there. This is the final frame of the deck's video.",
 			"LIGHT: the same golden hour as parts 1 and 2, a few minutes later — very slightly warmer and lower, never a different time of day.",
 			CRAFT,
 			LOCK,
@@ -312,9 +313,9 @@ export function tourContinuationPrompt(
 		"10-second film — PART 2 OF 3, the interior leg of the guided tour.",
 		continuity,
 		brief,
-		"SHOT LIST — 0.0–2.5s: continue in through the open hatch and settle onto the serve line, the counter running left to right through frame. 2.5–5.0s: lateral dolly along the hot station — burners or griddle working, steam lifting, a chef in black plating up under the stainless extraction canopy. 5.0–7.5s: continue past the refrigerated make-rail, garnish pans and prep boards bright beneath the sneeze-guard, a second pair of hands assembling an order. 7.5–10.0s: reach the drinks end-cap — ice well, chilled display, a drink being poured — and slow to a near stop there. END on the finished order sitting ready on the counter; part 3 picks up from this frame.",
+		"SHOT LIST — 0.0–2.5s: continue in through the open hatch and settle onto the serve line, the counter running left to right through frame. 2.5–5.0s: lateral dolly along the hot station — burners or griddle working, steam lifting, plated food waiting under the stainless extraction canopy. 5.0–7.5s: continue past the refrigerated make-rail, garnish pans and prep boards bright beneath the sneeze-guard, an order half-assembled on the board. 7.5–10.0s: reach the drinks end-cap — ice well, chilled display, a freshly poured drink beading with condensation — and slow to a near stop there. END on the finished order sitting ready on the counter; part 3 picks up from this frame.",
 		"LIGHT: warm 4000K task light under the canopy, cool golden-hour daylight through the open hatch behind the line. Interior clearly readable, no blown highlights on the stainless.",
-		"ACTION: two staff working the line, calm and competent. Camera never doubles back over ground part 1 already covered.",
+		"ACTION: no people — the line reads as mid-service with the cooks just out of frame. Camera never doubles back over ground part 1 already covered.",
 		CRAFT,
 		LOCK,
 		NEGATIVE,

@@ -78,6 +78,11 @@ export default function ChatLayout() {
 			onGenerateConcepts={() => chat.generateConcepts()}
 			onToggleFavorite={(label) => chat.toggleFavorite(label)}
 			onRefreshLeads={() => chat.refreshLeads()}
+			brandName={chat.brain?.brandName || chat.brandName}
+			menu={chat.menuDraft}
+			onMenuChange={chat.setMenuDraft}
+			isRenderingMenu={chat.isRenderingMenu}
+			onRenderMenuBoard={(menu, artwork) => chat.renderMenuBoard(menu, artwork)}
 		/>
 	);
 

@@ -33,7 +33,9 @@ export type ReferenceRole =
 	/** An earlier render of the same space, from another angle. */
 	| "spatial"
 	/** A buyer's photo. Styling direction only — never a body to copy. */
-	| "inspiration";
+	| "inspiration"
+	/** The buyer's menu artwork. Goes on the menu board and nowhere else. */
+	| "menu";
 
 export interface RenderReference {
 	url: string;
@@ -206,6 +208,30 @@ export function buildReferences(args: BuildReferenceArgs): RenderReference[] {
 }
 
 /**
+ * References for the on-demand `menu_board` render: the approved exterior
+ * (this round's hero, else the session master) so the truck is the same one,
+ * then the menu artwork it has to carry. Deliberately no body photo — the
+ * hero already fixes the shell, and the artwork needs the slot.
+ */
+export function menuBoardReferences(args: {
+	completed: Partial<Record<string, string>>;
+	masterPhoto?: string | null;
+	artwork: string;
+}): RenderReference[] {
+	const out: RenderReference[] = [];
+	const hero = args.completed[ANCHOR_VIEW];
+	if (isPhoto(hero)) out.push({ url: hero, role: "anchor", from: ANCHOR_VIEW });
+	else if (isPhoto(args.masterPhoto))
+		out.push({ url: args.masterPhoto, role: "anchor", from: "previous round" });
+	const side = args.completed.side_elevation;
+	if (isPhoto(side))
+		out.push({ url: side, role: "spatial", from: "side_elevation" });
+	if (isPhoto(args.artwork))
+		out.push({ url: args.artwork, role: "menu", from: "menu artwork" });
+	return out;
+}
+
+/**
  * The instruction block that turns references into a constraint.
  *
  * Written as an explicit inventory ("image 2 is the same galley from the
@@ -241,6 +267,10 @@ export function continuityLock(
 			lines.push(
 				`Reference image ${n} is the same truck already rendered from another viewpoint (${pretty(r.from)}). Everything visible in both views must match: layout and position of every unit, counter heights and runs, equipment, materials, flooring, wall and ceiling finishes, window and hatch placement, colour palette and spatial proportions.`,
 			);
+		} else if (r.role === "menu") {
+			lines.push(
+				`Reference image ${n} is the buyer's finished MENU ARTWORK. It appears on the menu board's face and nowhere else. Reproduce it exactly as a flat printed insert: same layout, words, prices and colours. This is the one place new text is allowed, and it must be copied, never invented.`,
+			);
 		} else {
 			lines.push(
 				`Reference image ${n} is a mood photo the buyer shared. Borrow only its palette, typography feel and finish. Do NOT copy its body shape, layout or fittings — they belong to somebody else's truck.`,
@@ -252,6 +282,11 @@ export function continuityLock(
 		`CONTINUITY LOCK — ${refs.length} reference image${refs.length === 1 ? "" : "s"} attached.`,
 		...lines,
 		"Preserve the exact visual identity and architectural context established by these references. You are photographing a vehicle that already exists; the ONLY thing this view changes is the camera position and, where the brief says so, the time of day.",
+		...(refs.some((r) => r.role === "menu")
+			? [
+					"The one permitted addition is the menu board carrying the menu artwork, exactly as the brief places it; the rules below apply to everything else.",
+				]
+			: []),
 		DRIFT_NEGATIVES,
 	].join(" ");
 }
@@ -261,7 +296,7 @@ export function continuityLock(
  * produced, so it is worth the tokens to name each one.
  */
 export const DRIFT_NEGATIVES =
-	"DO NOT: redesign, reinterpret, replace or reinvent any element; change the body shape, length or proportions; add, remove or move furniture, counters, appliances or fittings; change the floor plan or room dimensions; change materials, flooring, wall colours, ceilings or splashbacks; move, add or remove windows, doors, hatches or vents; alter architectural details; change the interior design language or the overall aesthetic; change the wrap artwork or brand colours; add decoration, props, plants or objects that are not in the references; invent text, lettering, slogans, prices or gibberish; change the lighting design (a stated time-of-day change may alter the light, never the fixtures).";
+	"DO NOT: redesign, reinterpret, replace or reinvent any element; change the body shape, length or proportions; add, remove or move furniture, counters, appliances or fittings; change the floor plan or room dimensions; change materials, flooring, wall colours, ceilings or splashbacks; move, add or remove windows, doors, hatches or vents; alter architectural details; change the interior design language or the overall aesthetic; change the wrap artwork or brand colours; add decoration, props, plants or objects that are not in the references; invent text, lettering, slogans, prices or gibberish; add people of any kind — customers, staff, chefs, passers-by, silhouettes or hands; change the lighting design (a stated time-of-day change may alter the light, never the fixtures).";
 
 /**
  * Which render a sales clip should be filmed from.

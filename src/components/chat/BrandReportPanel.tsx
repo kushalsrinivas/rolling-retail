@@ -19,6 +19,7 @@ import {
 	Star,
 	Truck,
 	Users,
+	UtensilsCrossed,
 	X,
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
@@ -34,7 +35,12 @@ import {
 	type TruckSpec,
 } from "#/hooks/use-chat";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
-import { CONCEPT_VIEW_COUNT } from "#/lib/food-truck/constants";
+import {
+	CONCEPT_VIEW_COUNT,
+	CONCEPT_VIEWS,
+	MENU_VIEW,
+} from "#/lib/food-truck/constants";
+import type { MenuDesign } from "#/lib/food-truck/menu";
 import {
 	SALES_VIDEO_PRESETS,
 	type SalesVideoKind,
@@ -43,6 +49,7 @@ import {
 } from "#/lib/food-truck/sales";
 import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
+import MenuBuilder from "./MenuBuilder";
 
 const LABEL_MAP: Record<string, string> = {
 	exterior: "Exterior hero",
@@ -73,9 +80,14 @@ interface BrandReportPanelProps {
 	onGenerateConcepts: () => void;
 	onToggleFavorite: (label: string) => void;
 	onRefreshLeads: () => void;
+	brandName: string;
+	menu: MenuDesign | null;
+	onMenuChange: (menu: MenuDesign) => void;
+	isRenderingMenu: boolean;
+	onRenderMenuBoard: (menu: MenuDesign, artwork: string) => void;
 }
 
-type TabId = "visuals" | "build";
+type TabId = "visuals" | "menu" | "build";
 
 /* ── Shared primitives ─────────────────────────────────────────────────── */
 
@@ -638,7 +650,7 @@ const TruckConfigurator = lazy(
 const ConceptToModel = lazy(() => import("#/components/truck/ConceptToModel"));
 
 export default function BrandReportPanel({
-	images,
+	images: allImages,
 	videos,
 	isGeneratingVideo,
 	onGenerateVideo,
@@ -656,6 +668,11 @@ export default function BrandReportPanel({
 	onGenerateConcepts,
 	onToggleFavorite,
 	onRefreshLeads,
+	brandName,
+	menu,
+	onMenuChange,
+	isRenderingMenu,
+	onRenderMenuBoard,
 }: BrandReportPanelProps) {
 	const [tab, setTab] = useState<TabId>("visuals");
 	// Keyed by view, not index: the grid reorders as slots settle, and an
@@ -670,7 +687,19 @@ export default function BrandReportPanel({
 		if (tab === "build") onRefreshLeads();
 	}, [tab, onRefreshLeads]);
 
+	// The menu board lives in the round's grid only once it exists; its
+	// progress and failures belong to the Menu tab, which can retry it.
+	const board = allImages.find((i) => i.label === MENU_VIEW);
+	const images = allImages.filter(
+		(i) =>
+			(CONCEPT_VIEWS as readonly string[]).includes(i.label) ||
+			i.status === "ready",
+	);
+	const hasHero = allImages.some(
+		(i) => i.label === "exterior_hero" && i.status === "ready",
+	);
 	const readyImages = images.filter((i) => i.status === "ready");
+	const readyConcepts = readyImages.filter((i) => i.label !== MENU_VIEW);
 	const failedImages = images.filter((i) => i.status === "failed");
 	const hasFailures = failedImages.length > 0;
 	const lightboxIndex = readyImages.findIndex((i) => i.label === lightbox);
@@ -727,6 +756,7 @@ export default function BrandReportPanel({
 			<div className="flex shrink-0 items-center gap-1 border-b border-[var(--ftf-line)] bg-white px-4">
 				{[
 					{ id: "visuals" as TabId, label: "Visuals", icon: Truck },
+					{ id: "menu" as TabId, label: "Menu", icon: UtensilsCrossed },
 					{ id: "build" as TabId, label: "Build & spec", icon: BarChart3 },
 				].map((t) => (
 					<button
@@ -772,8 +802,8 @@ export default function BrandReportPanel({
 						badge={
 							isGenerating
 								? "Rendering"
-								: readyImages.length
-									? `${readyImages.length} of ${CONCEPT_VIEW_COUNT} views`
+								: readyConcepts.length
+									? `${readyConcepts.length} of ${CONCEPT_VIEW_COUNT} views`
 									: undefined
 						}
 					/>
@@ -1152,6 +1182,39 @@ export default function BrandReportPanel({
 							)}
 						</>
 					)}
+				</div>
+			) : tab === "menu" ? (
+				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
+					<SectionHeader
+						icon={UtensilsCrossed}
+						title="Menu board"
+						tone={
+							isRenderingMenu
+								? "working"
+								: board?.status === "ready"
+									? "live"
+									: "neutral"
+						}
+						badge={
+							isRenderingMenu
+								? "Rendering"
+								: board?.status === "ready"
+									? "On render"
+									: undefined
+						}
+					/>
+					<MenuBuilder
+						menu={menu}
+						onChange={onMenuChange}
+						brand={brandName}
+						colors={brain?.colors ?? []}
+						menuKeywords={brain?.menuKeywords ?? []}
+						board={board}
+						hasHero={hasHero}
+						isRendering={isRenderingMenu}
+						creditsLeft={creditsLeft}
+						onRender={onRenderMenuBoard}
+					/>
 				</div>
 			) : (
 				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">

@@ -1,10 +1,17 @@
-import { CONCEPT_VIEWS, type ConceptView, geometryFor } from "./constants";
+import {
+	CONCEPT_VIEWS,
+	type ConceptView,
+	geometryFor,
+	MENU_VIEW,
+} from "./constants";
 import {
 	buildReferences,
 	conceptStages,
 	continuityLock,
+	menuBoardReferences,
 	type RenderReference,
 } from "./continuity";
+import { type MenuDesign, menuBoardPrompt } from "./menu";
 import { factoryReference } from "./references";
 
 /**
@@ -207,17 +214,34 @@ export function equipmentPhrase(equipment: readonly string[]): string {
 	return out.slice(0, 6).join(", ") || "commercial kitchen equipment";
 }
 
-function iconFor(businessType: string): string {
+/**
+ * The illustrated mark at the centre of the brand. Each entry describes a real,
+ * detailed object — texture, construction, the small things you would only
+ * notice up close — because that is what separates a logo that reads as
+ * designed from a flat clip-art glyph. The Scoops cone (waffle lattice,
+ * visible mix-ins) is the benchmark the buyers pointed at.
+ */
+export function emblemFor(businessType: string): string {
 	const t = businessType.toLowerCase();
-	if (t.includes("coffee")) return "coffee cup";
-	if (t.includes("ice")) return "ice cream cone";
-	if (t.includes("bakery") || t.includes("dessert")) return "croissant";
-	if (t.includes("bar")) return "cocktail glass";
-	if (t.includes("retail")) return "shopping bag";
-	if (t.includes("pizza")) return "pizza slice";
-	if (t.includes("asian")) return "bowl";
-	if (t.includes("cold") || t.includes("drink")) return "drink cup";
-	return "burger";
+	if (t.includes("coffee"))
+		return "a ceramic cup of coffee seen at a slight angle, a fine rosetta of latte art in the crema, a curl of steam, and two roasted beans with their centre creases beside the saucer";
+	if (t.includes("ice"))
+		return "a waffle cone with a crisp, deeply embossed lattice pattern and a rolled rim, topped with two scoops showing their ridged scooped texture, visible mix-ins (chocolate chunks, cookie crumbs, a ribbon of sauce) and a single melting drip down the cone";
+	if (t.includes("bakery") || t.includes("dessert"))
+		return "a flaky croissant with clearly layered, laminated pastry, a glossy egg-washed crust and a scatter of crumbs";
+	if (t.includes("bar"))
+		return "a coupe cocktail glass with a citrus twist, fine condensation beads on the bowl and an etched stem";
+	if (t.includes("retail"))
+		return "a structured paper shopping bag with twisted rope handles, a folded top edge and a tag hanging from one handle";
+	if (t.includes("pizza"))
+		return "a slice of pizza lifting away with a stretched cheese pull, a blistered, charred crust edge, basil leaves and cupped pepperoni";
+	if (t.includes("asian"))
+		return "a bowl of noodles with chopsticks lifting a twist of noodles, a halved soft egg, sliced spring onion and a wisp of steam";
+	if (t.includes("cold") || t.includes("drink"))
+		return "a tall cup with a domed lid and straw, visible tapioca pearls and ice through the side, and beads of condensation";
+	if (t.includes("fried"))
+		return "a paper cone of golden fries with crisp ridged edges and a flake of sea salt, beside a crumb-coated fried piece";
+	return "a stacked burger with a glossy sesame bun, a seared patty with a caramelised crust, melting cheese draping over the edge, and a crisp lettuce leaf";
 }
 
 function bodyPhrase(body: VehicleBody): string {
@@ -265,7 +289,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 			: "house menu";
 	const equip = equipmentPhrase(equipment);
 	const serve = servePhrase(serveMode);
-	const icon = iconFor(businessType);
+	const emblem = emblemFor(businessType);
 
 	const hasBrand = Boolean(args.hasBrand ?? true);
 	// Signage phrasing, so an unnamed business gets blank panels rather than a
@@ -281,7 +305,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		? `An illuminated "${brand}" badge mounted on the counter front.`
 		: "An illuminated blank badge panel on the counter front, awaiting branding.";
 
-	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
+	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. The livery carries the brand's illustrated emblem — ${emblem} — drawn with genuine texture and detail like a sign-painter's artwork, not a flat clip-art icon. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
 		hasBrand
 			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
 			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
@@ -290,7 +314,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	return [
 		{
 			label: "exterior_hero",
-			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle at golden hour. Full wrap livery visible, service hatch open showing a warm glimpse of the cooking line and stainless counter inside, ${roofSign}, a few stylish customers waiting at the counter. Urban street-food setting, shallow depth of field.`,
+			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle at golden hour. Full wrap livery visible, service hatch open showing a warm glimpse of the cooking line and stainless counter inside, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, shallow depth of field.`,
 		},
 		{
 			label: "exterior_rear",
@@ -302,7 +326,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "interior_layout",
-			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC KITCHEN OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted kitchen, showing the FULL linear galley end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: (1) POS order station with compact till screen and ticket rail, (2) hot station (${equip}) under a stainless extraction canopy with visible Ansul nozzles and duct riser, (3) refrigerated make-rail with 6+ garnish pans of fresh ingredients under a hinged glass sneeze-guard, burger assembly boards and heat gantry, (4) hand basin with knee-operated taps and soap dispenser at the line entry, (5) drinks end-cap with ice well, under-counter refrigeration and shake prep. Back wall: matte black easy-clean panels, warm cream ceramic tile splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting under the canopy, cool daylight through the open hatch. Every appliance hard up against the walls with 800mm clear chef aisle, power trunking and fresh/grey water tanks visible below counter. No customers inside, one chef in blacks at the griddle for scale.`,
+			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC KITCHEN OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted kitchen, showing the FULL linear galley end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: (1) POS order station with compact till screen and ticket rail, (2) hot station (${equip}) under a stainless extraction canopy with visible Ansul nozzles and duct riser, (3) refrigerated make-rail with 6+ garnish pans of fresh ingredients under a hinged glass sneeze-guard, burger assembly boards and heat gantry, (4) hand basin with knee-operated taps and soap dispenser at the line entry, (5) drinks end-cap with ice well, under-counter refrigeration and shake prep. Back wall: matte black easy-clean panels, warm cream ceramic tile splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting under the canopy, cool daylight through the open hatch. Every appliance hard up against the walls with 800mm clear chef aisle, power trunking and fresh/grey water tanks visible below counter. Nobody inside — an empty, ready-to-trade kitchen with food prepped in the pans.`,
 		},
 		{
 			label: "front_elevation",
@@ -310,11 +334,11 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "assembly_theater",
-			prompt: `${ctx} ASSEMBLY THEATER: first-person customer POV looking through the open service hatch, watching staff cook and assemble food on the hot station and prep rail. Steam rising, fresh ingredients visible in the make-rail, a finished item being handed across the counter. Warm appetizing lighting on the food, shallow depth of field, golden-hour ambiance.`,
+			prompt: `${ctx} ASSEMBLY THEATER: eye-level POV from the counter looking through the open service hatch at the working line — food mid-preparation on the hot station and prep rail, steam rising, fresh ingredients visible in the make-rail, a finished item sitting ready on the counter. No staff and no hands in frame; the line reads as if the cook just stepped away. Warm appetizing lighting on the food, shallow depth of field, golden-hour ambiance.`,
 		},
 		{
 			label: "night_exterior",
-			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light. A few customers silhouetted in the warm glow. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights.`,
+			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light, the forecourt empty. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights.`,
 		},
 		{
 			label: "roof_plan",
@@ -323,8 +347,8 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		{
 			label: "brand_mark",
 			prompt: hasBrand
-				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: bold geometric sans-serif wordmark "${brand}" in ${colors} on a matte black background, with a small minimalist ${icon} icon above the wordmark in an accent color, and a thin accent-colored underline below. Minimal, premium, street-food-meets-design-studio aesthetic. Flat vector style, high contrast, crisp edges. No extra text.`
-				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a minimalist ${icon} icon mark centred above them in an accent colour, and a blank rectangular panel where a wordmark would sit. Matte black background. Minimal, premium, street-food-meets-design-studio aesthetic. Flat vector style, crisp edges. Absolutely no text or lettering anywhere.`,
+				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a detailed illustrated emblem of ${emblem}, rendered with real texture, shading and highlights in the style of a premium hand-painted food sign, sitting above a bold wordmark "${brand}" in ${colors} on a matte black background, the emblem and wordmark locked up as one badge. The emblem should reward a close look — every construction detail described is visible. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
+				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a detailed illustrated emblem of ${emblem} centred above them — real texture, shading and highlights, like a hand-painted food sign — and a blank rectangular panel where a wordmark would sit. Matte black background. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
 		},
 	];
 }
@@ -561,4 +585,76 @@ export async function runStarterConcepts(
 	}
 
 	return { images, creditsUsed: creditsUsed + 1, brainNoteUsed: brainNote };
+}
+
+export interface MenuBoardArgs {
+	brand: string;
+	hasBrand: boolean;
+	vehicleLabel: string;
+	vehicleBody: VehicleBody;
+	menu: MenuDesign;
+	/** PNG of the menu artwork, rasterised client-side from `menuArtworkSvg`. */
+	artwork: string;
+	/** This session's ready renders by view — the hero is the anchor. */
+	completed: Partial<Record<string, string>>;
+	masterReference?: string | null;
+}
+
+/**
+ * The menu board view: the approved truck, plus the stand carrying the
+ * buyer's menu artwork. Refuses to run without a real exterior to anchor to —
+ * a board beside an invented truck is a render of somebody else's product.
+ */
+export async function runMenuBoard(
+	args: MenuBoardArgs,
+): Promise<StarterConcept> {
+	const references = menuBoardReferences({
+		completed: args.completed,
+		masterPhoto: args.masterReference,
+		artwork: args.artwork,
+	});
+	const base = {
+		label: MENU_VIEW,
+		filename: `${MENU_VIEW}.png`,
+		references: references.map((r) => r.from),
+	};
+	if (!references.some((r) => r.role === "anchor")) {
+		return {
+			...base,
+			url: placeholderImage(MENU_VIEW, args.brand),
+			model: "placeholder (no anchor)",
+			status: "failed",
+			error: "Render the truck first — the menu board is placed beside it.",
+		};
+	}
+	if (!references.some((r) => r.role === "menu")) {
+		return {
+			...base,
+			url: placeholderImage(MENU_VIEW, args.brand),
+			model: "placeholder (no artwork)",
+			status: "failed",
+			error: "The menu artwork did not arrive.",
+		};
+	}
+	const r = await generateTruckImage({
+		brand: args.brand,
+		vehicleLabel: args.vehicleLabel,
+		label: MENU_VIEW,
+		prompt: menuBoardPrompt({
+			brand: args.brand,
+			hasBrand: args.hasBrand,
+			vehicleLabel: args.vehicleLabel,
+			menu: args.menu,
+		}),
+		references,
+		geometry: geometryFor(args.vehicleBody),
+	});
+	const failed = r.model.startsWith("placeholder");
+	return {
+		...base,
+		url: r.url,
+		model: r.model,
+		status: failed ? "failed" : "ready",
+		error: failed ? "The image model did not return a render." : undefined,
+	};
 }

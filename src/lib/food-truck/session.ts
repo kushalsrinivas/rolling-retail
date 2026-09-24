@@ -1,6 +1,7 @@
 import type { ProjectBrain } from "./brain";
-import { CONCEPT_VIEWS, FREE_VISUAL_CREDITS } from "./constants";
+import { FREE_VISUAL_CREDITS, RENDER_VIEWS } from "./constants";
 import type { StarterConcept } from "./images";
+import type { MenuDesign } from "./menu";
 
 export interface VideoJob {
 	id: string;
@@ -61,6 +62,8 @@ export interface TruckSession {
 	 * references from here rather than trusting whatever the client still has.
 	 */
 	images: Record<string, StarterConcept>;
+	/** The buyer's menu, as last sent from the Menu tab. */
+	menu: MenuDesign | null;
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -86,6 +89,7 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			masterImageUrl: null,
 			videos: [],
 			images: {},
+			menu: null,
 		};
 		sessions.set(id, s);
 	}
@@ -145,8 +149,8 @@ export function putConcepts(s: TruckSession, images: StarterConcept[]) {
 
 /** The round as the panel should see it, in canonical view order. */
 export function listConcepts(s: TruckSession): StarterConcept[] {
-	return CONCEPT_VIEWS.map((v) => s.images[v]).filter(
-		(c): c is StarterConcept => Boolean(c),
+	return RENDER_VIEWS.map((v) => s.images[v]).filter((c): c is StarterConcept =>
+		Boolean(c),
 	);
 }
 
