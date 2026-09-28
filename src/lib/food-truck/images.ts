@@ -223,25 +223,40 @@ export function equipmentPhrase(equipment: readonly string[]): string {
  */
 export function emblemFor(businessType: string): string {
 	const t = businessType.toLowerCase();
-	if (t.includes("coffee"))
+	if (/coffee|espresso/.test(t))
 		return "a ceramic cup of coffee seen at a slight angle, a fine rosetta of latte art in the crema, a curl of steam, and two roasted beans with their centre creases beside the saucer";
-	if (t.includes("ice"))
+	if (/tea|matcha|boba|bubble/.test(t))
+		return "a glass cup of matcha tea with a delicate froth, a bamboo whisk resting beside a heap of vivid green powder, and two floating jasmine blossoms";
+	if (/ice/.test(t))
 		return "a waffle cone with a crisp, deeply embossed lattice pattern and a rolled rim, topped with two scoops showing their ridged scooped texture, visible mix-ins (chocolate chunks, cookie crumbs, a ribbon of sauce) and a single melting drip down the cone";
-	if (t.includes("bakery") || t.includes("dessert"))
+	if (/bakery|dessert|patisserie/.test(t))
 		return "a flaky croissant with clearly layered, laminated pastry, a glossy egg-washed crust and a scatter of crumbs";
-	if (t.includes("bar"))
-		return "a coupe cocktail glass with a citrus twist, fine condensation beads on the bowl and an etched stem";
-	if (t.includes("retail"))
-		return "a structured paper shopping bag with twisted rope handles, a folded top edge and a tag hanging from one handle";
-	if (t.includes("pizza"))
+	if (/pizza|italian|pasta/.test(t))
 		return "a slice of pizza lifting away with a stretched cheese pull, a blistered, charred crust edge, basil leaves and cupped pepperoni";
-	if (t.includes("asian"))
+	if (/asian|noodle|ramen|sushi/.test(t))
 		return "a bowl of noodles with chopsticks lifting a twist of noodles, a halved soft egg, sliced spring onion and a wisp of steam";
-	if (t.includes("cold") || t.includes("drink"))
-		return "a tall cup with a domed lid and straw, visible tapioca pearls and ice through the side, and beads of condensation";
-	if (t.includes("fried"))
+	if (/taco|mexican/.test(t))
+		return "a street taco on a small corn tortilla, charred around the edge, topped with diced onion, coriander and a lime wedge, a drizzle of salsa running down the side";
+	if (/bar|cocktail/.test(t))
+		return "a coupe cocktail glass with a citrus twist, fine condensation beads on the bowl and an etched stem";
+	if (/retail/.test(t))
+		return "a structured paper shopping bag with twisted rope handles, a folded top edge and a tag hanging from one handle";
+	if (/fried|fries|chips|fish/.test(t))
 		return "a paper cone of golden fries with crisp ridged edges and a flake of sea salt, beside a crumb-coated fried piece";
-	return "a stacked burger with a glossy sesame bun, a seared patty with a caramelised crust, melting cheese draping over the edge, and a crisp lettuce leaf";
+	if (/breakfast|brunch/.test(t))
+		return "a stack of fluffy buttermilk pancakes with butter pat melting down the layers, a drift of powdered sugar and two strips of crisp striped bacon";
+	if (/cold|drink|juice|smoothie|soda/.test(t))
+		return "a tall cup with a domed lid and straw, visible tapioca pearls and ice through the side, and beads of condensation";
+	if (/combined/.test(t))
+		return "a cast-iron skillet holding a sizzling medley — a grilled piece of protein, charred corn, blistered peppers and a fold of tortilla — steam lifting off the pan";
+	if (/grill|bbq|barbecue|smash|hot dog|sandwich/.test(t))
+		return "a stacked burger with a glossy sesame bun, a seared patty with a caramelised crust, melting cheese draping over the edge, and a crisp lettuce leaf";
+	// Last resort, but nothing anonymous: echo what the buyer actually
+	// typed, or fall back to a serving/hatch motif — anything but a burger
+	// stamped onto a coffee, tea or dessert concept they never asked for.
+	return businessType.trim()
+		? `a hand-painted street-food emblem inspired by ${businessType.trim()}, layering its signature colours and motifs into a badge`
+		: "a stylized chef's hat with clean lines and a hand-painted brushstroke underline";
 }
 
 function bodyPhrase(body: VehicleBody): string {
@@ -326,7 +341,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		},
 		{
 			label: "interior_layout",
-			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC KITCHEN OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted kitchen, showing the FULL linear galley end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: (1) POS order station with compact till screen and ticket rail, (2) hot station (${equip}) under a stainless extraction canopy with visible Ansul nozzles and duct riser, (3) refrigerated make-rail with 6+ garnish pans of fresh ingredients under a hinged glass sneeze-guard, burger assembly boards and heat gantry, (4) hand basin with knee-operated taps and soap dispenser at the line entry, (5) drinks end-cap with ice well, under-counter refrigeration and shake prep. Back wall: matte black easy-clean panels, warm cream ceramic tile splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting under the canopy, cool daylight through the open hatch. Every appliance hard up against the walls with 800mm clear chef aisle, power trunking and fresh/grey water tanks visible below counter. Nobody inside — an empty, ready-to-trade kitchen with food prepped in the pans.`,
+			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC KITCHEN OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted kitchen, showing the FULL linear galley end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: (1) POS order station with compact till screen and ticket rail, (2) hot station (${equip}) under a stainless extraction canopy with visible Ansul nozzles and duct riser, (3) refrigerated make-rail with 6+ garnish pans of fresh ingredients under a hinged glass sneeze-guard, order assembly boards and heat gantry matching this truck's menu, (4) hand basin with knee-operated taps and soap dispenser at the line entry, (5) drinks end-cap with ice well, under-counter refrigeration and shake prep. Back wall: matte black easy-clean panels, warm cream ceramic tile splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting under the canopy, cool daylight through the open hatch. Every appliance hard up against the walls with 800mm clear chef aisle, power trunking and fresh/grey water tanks visible below counter. Nobody inside — an empty, ready-to-trade kitchen with food prepped in the pans.`,
 		},
 		{
 			label: "front_elevation",

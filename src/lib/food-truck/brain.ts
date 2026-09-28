@@ -611,8 +611,21 @@ export function updateBrain(
 	)
 		.map((cat) => ({ cat, found: hasAny(lower, BUSINESS_KEYWORDS[cat]) }))
 		.filter((h) => h.found.length > 0);
-	if (hits.length >= 2) {
-		brain.businessType = "combined";
+	if (hits.length > 1) {
+		// "coffee + pastries" or "japanese matcha boba" is one street stand
+		// whose menu straddles two keyword lists — not a food hall. Collapsing
+		// every overlap to `combined` used to hand the render pipeline a
+		// generic type, and the emblem defaulted to the burger. The category
+		// the buyer stacked the most words into wins; ties go to whichever
+		// category shows up first in the sentence, because that is where the
+		// subject of the brief lives.
+		const ranked = hits
+			.map((h) => ({
+				...h,
+				at: Math.min(...h.found.map((n) => lower.indexOf(n))),
+			}))
+			.sort((a, b) => b.found.length - a.found.length || a.at - b.at);
+		brain.businessType = ranked[0].cat;
 	} else if (hits.length === 1) {
 		const cat = hits[0].cat;
 		// A lone drinks mention next to food usually means a combined offer — resolved on next signal.

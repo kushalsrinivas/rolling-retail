@@ -102,4 +102,35 @@ describe("composeBrief", () => {
 		});
 		expect(updateBrain(null, brief).vehicleId).toBe("square-5m");
 	});
+
+	describe("project brain business classification", () => {
+		// Buyers whose brief straddles two keyword lists keep hitting a bug
+		// where the brain collapsed the whole thing to `combined`, and the
+		// render pipeline stamped a burger emblem onto concepts that had
+		// nothing to do with burgers. These two are real briefs that misfired
+		// in production on /chat.
+		it("classifies a coffee and tea concept as coffee, not combined", async () => {
+			const { updateBrain } = await import("./brain");
+			const brief =
+				"I'm building a coffee and tea truck. The menu is coffee, espresso, teas, matcha. Customers order at the hatch.";
+			const brain = updateBrain(null, brief);
+			expect(brain.businessType).toBe("coffee");
+		});
+
+		it("classifies a japanese matcha boba truck as cold-drinks, not combined", async () => {
+			const { updateBrain } = await import("./brain");
+			const brief =
+				"I'm building a Japanese matcha and boba truck. The menu is iced matcha lattes, boba teas, mochi. Customers order at the hatch.";
+			const brain = updateBrain(null, brief);
+			expect(brain.businessType).toBe("cold-drinks");
+		});
+
+		it("resolves the food category when the buyer stacks food words and only names a drink in passing", async () => {
+			const { updateBrain } = await import("./brain");
+			const brief =
+				"I'm doing smash burgers with lemonade at the hatch, grill focus.";
+			const brain = updateBrain(null, brief);
+			expect(brain.businessType).toBe("grill");
+		});
+	});
 });

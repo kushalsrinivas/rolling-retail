@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BUSINESS_TYPES } from "./constants";
 import { continuityLock, menuBoardReferences } from "./continuity";
 import { conceptPrompts, emblemFor } from "./images";
 import {
@@ -224,5 +225,74 @@ describe("brand emblem", () => {
 		const mark = prompts.find((p) => p.label === "brand_mark")?.prompt ?? "";
 		expect(mark).not.toMatch(/minimalist/i);
 		expect(mark).toMatch(/lattice/);
+	});
+
+	/**
+	 * The burger emblem was the silent default for anything emblemFor did not
+	 * recognise, so a generic businessType — most often `combined`, which the
+	 * brain used to hand out on any two-category brief — painted a burger livery
+	 * onto coffee, tea and dessert concepts. Both these cases shipped to
+	 * buyers on /chat.
+	 */
+	it("never puts a burger emblem on the reported coffee-and-tea truck", () => {
+		const prompts = conceptPrompts({
+			brand: "Odd Life Coffee",
+			vehicleLabel: "Square Trailer · 13 ft",
+			vehicleBody: "square",
+			lengthM: 4,
+			widthM: 2.1,
+			heightM: 2.6,
+			colors: "cream, walnut, stainless steel",
+			vibe: "minimal, premium",
+			businessType: "coffee",
+			menuKeywords: ["coffee", "espresso", "flat white", "barista"],
+			equipment: ["espresso-machine", "grinder", "hand-basin", "till"],
+			serveMode: "hatch-serve",
+		});
+		for (const p of prompts) {
+			expect(p.prompt, p.label).not.toMatch(/burger/i);
+			expect(p.prompt, p.label).not.toMatch(/sesame bun/i);
+		}
+	});
+
+	it("never puts a burger emblem on a japanese matcha boba truck", () => {
+		const prompts = conceptPrompts({
+			brand: "Matcha Boba",
+			vehicleLabel: "Square Trailer · 13 ft",
+			vehicleBody: "square",
+			lengthM: 4,
+			widthM: 2.1,
+			heightM: 2.6,
+			colors: "green, cream",
+			vibe: "playful",
+			businessType: "cold-drinks",
+			menuKeywords: ["boba", "matcha"],
+			equipment: ["ice", "refrigeration", "prep-counter", "hand-basin", "till"],
+			serveMode: "hatch-serve",
+		});
+		for (const p of prompts) {
+			expect(p.prompt, p.label).not.toMatch(/burger|patty|sesame/i);
+		}
+	});
+
+	it("resolves tea and boba menus to a tea emblem, not the burger default", () => {
+		expect(emblemFor("matcha boba tea bar")).toMatch(/matcha tea|tapioca/i);
+		expect(emblemFor("cold-drinks")).toMatch(/tapioca/);
+	});
+
+	it("covers every factory business type without defaulting to a burger", () => {
+		// grill legitimately IS the burger emblem; everything else must not be.
+		for (const b of BUSINESS_TYPES.filter((x) => x.id !== "grill")) {
+			const emblem = emblemFor(b.id).toLowerCase();
+			expect(emblem, b.id).not.toMatch(/stacked burger/);
+		}
+	});
+
+	it("echoes the buyer's words for an unknown type instead of guessing", () => {
+		expect(emblemFor(" Kenyan street food ")).toMatch(/kenyan/i);
+	});
+
+	it("stays generic-safe when the buyer has not chosen anything", () => {
+		expect(emblemFor("")).toMatch(/chef|hat|brushstroke/i);
 	});
 });
