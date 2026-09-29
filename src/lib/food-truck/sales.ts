@@ -193,17 +193,46 @@ function lockFor(referenceViews: readonly string[] = []): string {
 			? `Reference ${named}. The space, objects and surfaces you can see in them are the set for this shot.`
 			: "Reference image 1 is the master.",
 		"Reproduce them precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography, and — inside — the layout, counters, equipment, materials, flooring, wall and ceiling finishes.",
+		"GEOMETRY IS FIXED for the whole clip: the number and position of doors, windows, hatches, panels and vents never changes. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.",
 		"You are operating a camera inside a space that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and the steam, heat and food on the line. The scene is unoccupied — there are no people in it, and none may appear.",
 	].join(" ");
 }
 
 /** What generic video models add unprompted, and what ruins a sales asset. */
 const NEGATIVE =
-	"DO NOT: redesign, restyle or re-proportion the trailer; add, move or remove a door, hatch, window, vent or wheel; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld.";
+	"DO NOT: redesign, restyle or re-proportion the trailer; add, move, remove, merge or repurpose a door, hatch, window, vent or wheel, or let any opening change shape or function mid-clip; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld.";
 
 /** Grade and glass, held constant so a chained tour cuts together. */
 const CRAFT =
 	"CRAFT: shot on a cinema camera, 35mm equivalent, shallow depth of field on close shots and deep focus on wides, smooth motorised camera movement (gimbal or dolly, never handheld), 24fps cinematic motion blur, natural colour grade with clean whites and no crushed blacks, photoreal product-commercial quality. No dialogue, no on-screen text.";
+
+/**
+ * The serve line the camera passes, per business type.
+ *
+ * The walkthrough and tour-interior shot lists used to name a griddle,
+ * burners and plated hot food regardless of what the truck sells — a boba
+ * Airstream filmed with a fryer and a grill, which reads as a render of
+ * somebody else's product. This picks the line the buyer actually runs.
+ * equipmentPhrase output can be empty, so `equipment` is the fallback.
+ */
+function serveLineFor(ctx: SalesVideoContext): string {
+	const label = (ctx.businessLabel ?? "").toLowerCase();
+	const menu = (ctx.menu ?? "").toLowerCase();
+	const equip = ctx.equipment ?? "";
+	const boba =
+		/boba|bubble tea/.test(menu) ||
+		/bubble tea|cold drinks/.test(label) ||
+		/boba|bubble/.test(equip);
+	const coffee = /coffee|espresso/.test(label) || /espresso/.test(equip);
+	if (boba)
+		return "boba prep line — the tea brewers and shakers working, pearls tumbling from the cooker into the topping station, finished cups building in the chilled display under the sneeze-guard";
+	if (coffee)
+		return "espresso bar — the grinder dosing, the machine pulling shots with steam lifting off the wand, milk pitchers and cups staged on the bar";
+	// Every other category works from whatever the buyer's own equipment
+	// line says, so the camera never invents a fryer the build does not have.
+	if (equip) return equip;
+	return "the hot station — burners or griddle working, steam lifting, plated food waiting under the stainless extraction canopy";
+}
 
 /**
  * Reference-locked shot lists. Each is written the way a director writes a
@@ -225,7 +254,7 @@ export function buildSalesVideoPrompt(
 		return [
 			"10-second product film: the serve-up.",
 			brief,
-			"SHOT LIST — 0.0–3.0s: start outside at the open service hatch, eye level, the counter filling the lower third; the camera pushes in slowly and steadily toward the hatch opening. 3.0–6.5s: continue the push through the hatch line and begin a smooth lateral dolly along the counter past the hot station — food sizzling on the griddle, steam lifting off it, garnish pans bright under the sneeze-guard. 6.5–10.0s: the dolly settles on a finished, well-presented item sitting ready on the counter; end on it, the branded counter front sharp behind it.",
+			`SHOT LIST — 0.0–3.0s: start outside at the open service hatch, eye level, the counter filling the lower third; the camera pushes in slowly and steadily toward the hatch opening. 3.0–6.5s: continue the push through the hatch line and begin a smooth lateral dolly along the counter and its ${serveLineFor(ctx)}, garnish pans bright under the sneeze-guard. 6.5–10.0s: the dolly settles on a finished, well-presented signature item sitting ready on the counter; end on it, the branded counter front sharp behind it. Only food and drink this truck actually sells appears in frame.`,
 			"LIGHT: late-afternoon daylight outside, warm 4000K task light inside the canopy spilling onto the food. Appetising, high-contrast on the product, no blown highlights.",
 			"ACTION: no people anywhere in frame — the food, the steam and the equipment carry the motion.",
 			CRAFT,
@@ -313,7 +342,8 @@ export function tourContinuationPrompt(
 		"10-second film — PART 2 OF 3, the interior leg of the guided tour.",
 		continuity,
 		brief,
-		"SHOT LIST — 0.0–2.5s: continue in through the open hatch and settle onto the serve line, the counter running left to right through frame. 2.5–5.0s: lateral dolly along the hot station — burners or griddle working, steam lifting, plated food waiting under the stainless extraction canopy. 5.0–7.5s: continue past the refrigerated make-rail, garnish pans and prep boards bright beneath the sneeze-guard, an order half-assembled on the board. 7.5–10.0s: reach the drinks end-cap — ice well, chilled display, a freshly poured drink beading with condensation — and slow to a near stop there. END on the finished order sitting ready on the counter; part 3 picks up from this frame.",
+		`SHOT LIST — 0.0–2.5s: continue in through the open hatch and settle onto the serve line, the counter running left to right through frame. 2.5–7.5s: lateral dolly along the serve line past ${serveLineFor(ctx)}, continuing past the refrigerated make-rail, garnish pans and prep boards bright beneath the sneeze-guard, an order half-assembled on the board. 7.5–10.0s: reach the drinks end-cap — ice well, chilled display, a freshly poured drink beading with condensation — and slow to a near stop there. END on the finished order sitting ready on the counter; part 3 picks up from this frame.`,
+		`THE LINE: ${serveLineFor(ctx)}. Only food and drink this truck actually sells appears in frame.`,
 		"LIGHT: warm 4000K task light under the canopy, cool golden-hour daylight through the open hatch behind the line. Interior clearly readable, no blown highlights on the stainless.",
 		"ACTION: no people — the line reads as mid-service with the cooks just out of frame. Camera never doubles back over ground part 1 already covered.",
 		CRAFT,

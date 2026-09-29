@@ -210,30 +210,52 @@ function serveryFor(businessType: string): {
 					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
-		default:
+		default: {
+			const isDrinks = businessType === "cold-drinks";
 			return {
-				layoutName: "Cold drinks servery",
-				stations: [
-					"Serve hatch with flip-up awning and fold-down counter",
-					"Ice and under-counter refrigeration directly under the hatch",
-					"Prep run with hand basin at the end of the line",
-					"Menu board above the hatch, fascia sign on the roof edge",
-				],
-				equipment: [
-					"ice",
-					"under-counter-refrigeration",
-					"prep-counter",
-					"hand-basin",
-					"fresh-grey-water-tanks",
-					"till",
-					"digital-menu-board",
-				],
+				layoutName: isDrinks ? "Cold drinks servery" : "Beverage servery",
+				stations: isDrinks
+					? [
+							"Serve hatch with flip-up awning and fold-down counter",
+							"Ice and under-counter refrigeration directly under the hatch",
+							"Prep run with hand basin at the end of the line",
+							"Menu board above the hatch, fascia sign on the roof edge",
+						]
+					: [
+							"Serve hatch with flip-up awning and fold-down counter",
+							"Tea and syrup prep with topping station directly under the hatch",
+							"Cup sealer and ice well on the finishing end of the line",
+							"Hand basin at the end of the prep run",
+							"Menu board above the hatch, fascia sign on the roof edge",
+						],
+				equipment: isDrinks
+					? [
+							"ice",
+							"under-counter-refrigeration",
+							"prep-counter",
+							"hand-basin",
+							"fresh-grey-water-tanks",
+							"till",
+							"digital-menu-board",
+						]
+					: [
+							"boba-tea-brewers",
+							"sealing-machine",
+							"ice",
+							"under-counter-refrigeration",
+							"prep-counter",
+							"hand-basin",
+							"fresh-grey-water-tanks",
+							"till",
+							"digital-menu-board",
+						],
 				power:
 					"Ice and refrigeration need mains hook-up with generator provision. Battery alone will not carry a full trading day.",
 				compliance: [
 					"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
 				],
 			};
+		}
 	}
 }
 

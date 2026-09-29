@@ -199,6 +199,8 @@ export function equipmentPhrase(equipment: readonly string[]): string {
 		"hvac-optional": "rooftop HVAC",
 		"hot-station": "hot station",
 		"drinks-station": "drinks station",
+		"boba-tea-brewers": "tea brewers and shaker station",
+		"sealing-machine": "cup sealing machine",
 		"rear-walk-in-door": "rear walk-in door",
 		"water-filtration": "water filtration",
 	};
@@ -215,48 +217,54 @@ export function equipmentPhrase(equipment: readonly string[]): string {
 }
 
 /**
- * The illustrated mark at the centre of the brand. Each entry describes a real,
- * detailed object — texture, construction, the small things you would only
- * notice up close — because that is what separates a logo that reads as
- * designed from a flat clip-art glyph. The Scoops cone (waffle lattice,
- * visible mix-ins) is the benchmark the buyers pointed at.
+ * The badge at the centre of the brand, or rather: the badge a wrap shop can
+ * actually produce. Every entry names one recognizable object, then the last
+ * mile is always the same craft spec — flat vector shapes, 2-3 spot colors,
+ *
+ * Why flat: this livery gets printed, cut and weeded by a vinyl shop. A
+ * detailed painterly emblem can't be cut from	real vinyl (it becomes a
+ * huge multi-layer print job), it fades/holds dirt in its crevices under
+ * commercial vehicle wash cycles, and photos of weathered intricate decals
+ * read badly in the sales deck. Flat = cheap to produce, durable, and the
+ * deck stays honest about what a vinyl printer can deliver.
  */
 export function emblemFor(businessType: string): string {
 	const t = businessType.toLowerCase();
 	if (/coffee|espresso/.test(t))
-		return "a ceramic cup of coffee seen at a slight angle, a fine rosetta of latte art in the crema, a curl of steam, and two roasted beans with their centre creases beside the saucer";
+		return "a takeaway coffee cup seen from a 3/4 angle with a clean silhouette, sleeve band, lid and a simple curl of steam, in flat vector shapes — two or three spot colors, sharp edges, no gradients";
 	if (/tea|matcha|boba|bubble/.test(t))
-		return "a glass cup of matcha tea with a delicate froth, a bamboo whisk resting beside a heap of vivid green powder, and two floating jasmine blossoms";
+		return "a dome-lid boba cup with a wide straw and bold silhouettes of tapioca pearls visible through the cup wall, plus two simple flying tea leaves, in flat vector shapes — two or three spot colors, sharp edges, no gradients, no photorealism";
 	if (/ice/.test(t))
-		return "a waffle cone with a crisp, deeply embossed lattice pattern and a rolled rim, topped with two scoops showing their ridged scooped texture, visible mix-ins (chocolate chunks, cookie crumbs, a ribbon of sauce) and a single melting drip down the cone";
+		return "a flat vector ice cream cone — crisp triangular waffle lattice reduced to clean line work, two scoops as smooth solid silhouettes, one small melting drip — in two or three spot colors, sharp edges, no gradients";
 	if (/bakery|dessert|patisserie/.test(t))
-		return "a flaky croissant with clearly layered, laminated pastry, a glossy egg-washed crust and a scatter of crumbs";
+		return "a croissant in flat vector shapes — clean crescent silhouette with three simple laminated-layer lines and a scatter of dot crumbs — in two or three spot colors, sharp edges, no gradients";
 	if (/pizza|italian|pasta/.test(t))
-		return "a slice of pizza lifting away with a stretched cheese pull, a blistered, charred crust edge, basil leaves and cupped pepperoni";
+		return "a triangular pizza slice in flat vector shapes — clean crust edge with three small char marks, two pepperoni circles, three short cheese-pull lines — in two or three spot colors, sharp edges, no gradients";
 	if (/asian|noodle|ramen|sushi/.test(t))
-		return "a bowl of noodles with chopsticks lifting a twist of noodles, a halved soft egg, sliced spring onion and a wisp of steam";
+		return "a noodle bowl seen 3/4 in flat vector shapes — steam as two simple curls, chopsticks resting at an angle, one egg and fresh onion lines — in two or three spot colors, sharp edges, no gradients";
 	if (/taco|mexican/.test(t))
-		return "a street taco on a small corn tortilla, charred around the edge, topped with diced onion, coriander and a lime wedge, a drizzle of salsa running down the side";
+		return "a taco in flat vector shapes — simple folded-tortilla silhouette, three dots of salsa, one lime wedge, a simple coriander sprig — in two or three spot colors, sharp edges, no gradients";
 	if (/bar|cocktail/.test(t))
-		return "a coupe cocktail glass with a citrus twist, fine condensation beads on the bowl and an etched stem";
+		return "a coupe cocktail glass in flat vector shapes — clean silhouette, one citrus wedge on the rim, three tiny bubbles — in two or three spot colors, sharp edges, no gradients";
 	if (/retail/.test(t))
-		return "a structured paper shopping bag with twisted rope handles, a folded top edge and a tag hanging from one handle";
+		return "a paper shopping bag in flat vector shapes — clean silhouette, folded top edge, twisted rope handles, a swing tag — in two or three spot colors, sharp edges, no gradients";
 	if (/fried|fries|chips|fish/.test(t))
-		return "a paper cone of golden fries with crisp ridged edges and a flake of sea salt, beside a crumb-coated fried piece";
+		return "a paper fry cone in flat vector shapes — crisp geometric fry shapes standing tall, one salt flake — in two or three spot colors, sharp edges, no gradients";
 	if (/breakfast|brunch/.test(t))
-		return "a stack of fluffy buttermilk pancakes with butter pat melting down the layers, a drift of powdered sugar and two strips of crisp striped bacon";
+		return "a pancake stack in flat vector shapes — three simple discs + butter square + two syrup lines — in two or three spot colors, sharp edges, no gradients";
 	if (/cold|drink|juice|smoothie|soda/.test(t))
-		return "a tall cup with a domed lid and straw, visible tapioca pearls and ice through the side, and beads of condensation";
+		return "a domed-lid drink cup with a fat straw in flat vector shapes — boba silhouettes and bubbles visible through the cup wall — in two or three spot colors, sharp edges, no gradients";
 	if (/combined/.test(t))
-		return "a cast-iron skillet holding a sizzling medley — a grilled piece of protein, charred corn, blistered peppers and a fold of tortilla — steam lifting off the pan";
+		return "a cast-iron skillet in flat vector shapes holding a simple sizzling medley — protein chunk, corn dots, pepper wedges, a folded tortilla — in two or three flat spot colors, sharp edges, no gradients";
 	if (/grill|bbq|barbecue|smash|hot dog|sandwich/.test(t))
-		return "a stacked burger with a glossy sesame bun, a seared patty with a caramelised crust, melting cheese draping over the edge, and a crisp lettuce leaf";
+		return "a stacked burger in flat vector shapes — sesame bun dots as clean circles, one cheese fold, three lettuce zigzags — in two or three spot colors, sharp edges, no gradients";
 	// Last resort, but nothing anonymous: echo what the buyer actually
-	// typed, or fall back to a serving/hatch motif — anything but a burger
-	// stamped onto a coffee, tea or dessert concept they never asked for.
+	// typed, or fall back to a clean universal motif — emoji-clean, poster
+	// clean, sticker-clean — anything but a detailed emblem printed by a
+	// special vinyl printer.
 	return businessType.trim()
-		? `a hand-painted street-food emblem inspired by ${businessType.trim()}, layering its signature colours and motifs into a badge`
-		: "a stylized chef's hat with clean lines and a hand-painted brushstroke underline";
+		? `a bold flat vector badge inspired by the signature ${businessType.trim()}, reduced to one recognizable silhouette in two or three flat spot colors, sharp edges, no gradients, no photorealism`
+		: "a stylized chef's hat with clean lines and a folded silhouette, in two or three flat spot colors, sharp edges, no gradients";
 }
 
 function bodyPhrase(body: VehicleBody): string {
@@ -320,7 +328,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		? `An illuminated "${brand}" badge mounted on the counter front.`
 		: "An illuminated blank badge panel on the counter front, awaiting branding.";
 
-	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. The livery carries the brand's illustrated emblem — ${emblem} — drawn with genuine texture and detail like a sign-painter's artwork, not a flat clip-art icon. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
+	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
 		hasBrand
 			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
 			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
@@ -362,8 +370,8 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		{
 			label: "brand_mark",
 			prompt: hasBrand
-				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a detailed illustrated emblem of ${emblem}, rendered with real texture, shading and highlights in the style of a premium hand-painted food sign, sitting above a bold wordmark "${brand}" in ${colors} on a matte black background, the emblem and wordmark locked up as one badge. The emblem should reward a close look — every construction detail described is visible. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
-				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a detailed illustrated emblem of ${emblem} centred above them — real texture, shading and highlights, like a hand-painted food sign — and a blank rectangular panel where a wordmark would sit. Matte black background. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
+				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a matte black background, the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
+				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Matte black background. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
 		},
 	];
 }

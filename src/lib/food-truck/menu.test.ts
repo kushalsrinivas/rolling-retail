@@ -205,9 +205,9 @@ describe("no people in generated imagery", () => {
 });
 
 describe("brand emblem", () => {
-	it("describes a detailed object, not a minimalist icon", () => {
+	it("renders as flat cut-vinyl art, not a painterly illustration", () => {
 		expect(emblemFor("ice-cream")).toMatch(/lattice/);
-		expect(emblemFor("ice-cream")).toMatch(/mix-ins/);
+		expect(emblemFor("ice-cream")).toMatch(/flat vector/);
 		const prompts = conceptPrompts({
 			brand: "Scoops",
 			vehicleLabel: "Square",
@@ -276,8 +276,8 @@ describe("brand emblem", () => {
 	});
 
 	it("resolves tea and boba menus to a tea emblem, not the burger default", () => {
-		expect(emblemFor("matcha boba tea bar")).toMatch(/matcha tea|tapioca/i);
-		expect(emblemFor("cold-drinks")).toMatch(/tapioca/);
+		expect(emblemFor("matcha boba tea bar")).toMatch(/boba cup|tea leaves/i);
+		expect(emblemFor("cold-drinks")).toMatch(/boba/);
 	});
 
 	it("covers every factory business type without defaulting to a burger", () => {
