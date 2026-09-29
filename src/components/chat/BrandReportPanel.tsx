@@ -493,15 +493,19 @@ function downloadJson(filename: string, data: unknown) {
 	URL.revokeObjectURL(url);
 }
 
-/** Chained tour parts played as one ~30s walkthrough. */
+/**
+ * Chained tour parts. Each extension returns the whole video so far (10s →
+ * 20s → 30s), so only the latest ready part is shown — part 3 is the full tour.
+ */
 function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
-	const ready = parts
+	const clip = parts
 		.filter((p) => p.status === "ready" && p.url)
-		.sort((a, b) => (a.part ?? 1) - (b.part ?? 1));
+		.reduce<GeneratedVideo | undefined>(
+			(best, p) => (!best || (p.part ?? 1) > (best.part ?? 1) ? p : best),
+			undefined,
+		);
 	const pending = parts.some((p) => p.status === "pending");
 	const failed = parts.find((p) => p.status === "error");
-	const [idx, setIdx] = useState(0);
-	const clip = ready[Math.min(idx, ready.length - 1)];
 	if (!clip) {
 		if (failed && !pending) {
 			return (
@@ -519,6 +523,8 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 			</p>
 		);
 	}
+	const part = clip.part ?? 1;
+	const complete = part >= TOUR_PARTS;
 	return (
 		<>
 			{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
@@ -527,33 +533,21 @@ function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
 				src={clip.url ?? undefined}
 				controls
 				playsInline
-				autoPlay
 				className="aspect-video w-full bg-[var(--ftf-well)]"
-				onEnded={() => {
-					if (idx < ready.length - 1) setIdx(idx + 1);
-				}}
 			/>
 			<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
 				<span className="text-[11px] text-[var(--ftf-ink-2)]">
-					Full tour · part {clip.part ?? 1} of {TOUR_PARTS}
-					{pending
-						? " · filming next…"
-						: ready.length < TOUR_PARTS
-							? " · filming…"
-							: " · ~30s"}
+					{complete
+						? `Full tour · ~${TOUR_PARTS * 10}s`
+						: `Tour · part ${part} of ${TOUR_PARTS}${pending ? " · filming next…" : ""}`}
 				</span>
-				<div className="flex gap-2">
-					{ready.map((p) => (
-						<a
-							key={p.id}
-							href={p.url ?? undefined}
-							download={`tour-part-${p.part ?? 1}.mp4`}
-							className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
-						>
-							<Download className="h-3 w-3" /> Pt{p.part ?? 1}
-						</a>
-					))}
-				</div>
+				<a
+					href={clip.url ?? undefined}
+					download="tour.mp4"
+					className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
+				>
+					<Download className="h-3 w-3" /> Deck-ready MP4
+				</a>
 			</div>
 		</>
 	);

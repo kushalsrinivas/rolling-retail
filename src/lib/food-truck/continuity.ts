@@ -273,7 +273,7 @@ export function continuityLock(
 			);
 		} else {
 			lines.push(
-				`Reference image ${n} is a mood photo the buyer shared. Borrow only its palette, typography feel and finish. Do NOT copy its body shape, layout or fittings — they belong to somebody else's truck.`,
+				`Reference image ${n} is a mood photo the buyer shared. Borrow only its palette, typography feel and finish. Do NOT copy its body shape, layout or fittings — they belong to somebody else's truck. NEVER paste this photo, or any object in it (a drink, cup, food item, product shot, logo or character), onto the vehicle as a sticker, decal, cut-out or oversized graphic. If it shows the product, let it inform the wrap's colours and illustration style only; the wrap must read as one professionally designed vinyl livery that follows the body's curves, not a photo stuck on the side.`,
 			);
 		}
 	});
