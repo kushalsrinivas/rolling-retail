@@ -162,7 +162,7 @@ export default function TruckConfigurator({
 
 				<p className="pointer-events-none absolute inset-x-0 bottom-0 p-2.5 text-center text-[10px] text-white/50">
 					{selectedSpec
-						? `${selectedSpec.label} · ${ft(selectedSpec.widthM)} wide · ${selectedSpec.watts > 0 ? `${selectedSpec.watts.toLocaleString()} W` : "no power"}`
+						? `${selectedSpec.label} · ${ft(selectedSpec.widthM)} wide · ${selectedSpec.fuel === "propane" ? "propane-fired, 0 W electric" : selectedSpec.watts > 0 ? `${selectedSpec.watts.toLocaleString()} W` : "no power"}`
 						: "Drag to orbit · tap a unit to inspect it"}
 				</p>
 			</div>
@@ -196,6 +196,12 @@ export default function TruckConfigurator({
 					</p>
 					<p className="mt-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 						{power.ampsAt240V}A · {power.supply}
+						{power.propaneUnits.length > 0 && (
+							<>
+								{" "}
+								· heat on propane ({power.propaneUnits.join(", ")})
+							</>
+						)}
 					</p>
 				</div>
 				<div className="rounded border border-[var(--ftf-line)] bg-white p-3">
@@ -223,8 +229,9 @@ export default function TruckConfigurator({
 					{power.overShore && (
 						<li className="border-l-2 border-[var(--ftf-amber-500)] bg-[var(--ftf-amber-100)] px-2.5 py-1.5 text-[11px] leading-relaxed text-[var(--ftf-amber-600)]">
 							{(power.designWatts / 1000).toFixed(1)} kW exceeds a 50A shore
-							supply — this build needs a generator or a second feed. Swapping
-							the fryer to gas is the usual fix.
+							supply — and heat already runs on propane, so this is pure
+							electrics. Drop an electric unit (steam wells, glass washer,
+							HVAC), never add power.
 						</li>
 					)}
 					{layout.overflow.length > 0 && (

@@ -36,7 +36,7 @@ export const VEHICLES = [
 		widthM: 2.4,
 		heightM: 2.8,
 		wrapSqm: 48,
-		blurb: "Flagship footprint. Full line + merch wall.",
+		blurb: "Walk-in merch and brand experience. Not a hot kitchen.",
 	},
 	{
 		id: "square-3m",

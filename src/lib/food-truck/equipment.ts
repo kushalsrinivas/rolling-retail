@@ -30,7 +30,18 @@ export interface EquipmentSpec {
 	/** Wall to aisle. */
 	depthM: number;
 	heightM: number;
+	/**
+	 * Electrical nameplate draw. Cooking heat is propane-fired, so hot units
+	 * carry 0W here — their draw never lands on the battery bank or the shore
+	 * feed, and the budget below is the electrics (cold chain, water, till,
+	 * lights, extraction fan) only.
+	 */
 	watts: number;
+	/**
+	 * What fires the unit. Omitted = electric. Propane units are vented under
+	 * extraction and excluded from the electrical budget by construction.
+	 */
+	fuel?: "propane" | "electric";
 	/**
 	 * Where the unit lives. Only "floor" consumes galley run — a canopy hangs
 	 * over the line, a till sits on the counter, and water tanks live under the
@@ -95,60 +106,65 @@ const SPECS: EquipmentSpec[] = [
 		watts: 0,
 	},
 
-	// ── Hot line ──
+	// ── Hot line: propane-fired, vented under extraction. ──
 	{
 		id: "fryer",
-		label: "Twin-basket fryer",
+		label: "Twin-basket fryer (propane)",
 		zone: "hot",
 		widthM: 0.4,
 		depthM: 0.7,
 		heightM: 0.9,
-		watts: 14000,
+		watts: 0,
+		fuel: "propane",
 	},
 	{
 		id: "griddle",
-		label: "Flat-top griddle",
+		label: "Flat-top griddle (propane)",
 		zone: "hot",
 		widthM: 0.9,
 		depthM: 0.7,
 		heightM: 0.9,
-		watts: 7200,
+		watts: 0,
+		fuel: "propane",
 	},
 	{
 		id: "griddle-chargrill",
-		label: "Griddle + chargrill",
+		label: "Griddle + chargrill (propane)",
 		zone: "hot",
 		widthM: 1.2,
 		depthM: 0.7,
 		heightM: 0.9,
-		watts: 10800,
+		watts: 0,
+		fuel: "propane",
 	},
 	{
 		id: "pizza-oven",
-		label: "Deck pizza oven",
+		label: "Deck pizza oven (propane)",
 		zone: "hot",
 		widthM: 1.1,
 		depthM: 0.85,
 		heightM: 1.4,
-		watts: 6600,
+		watts: 0,
+		fuel: "propane",
 	},
 	{
 		id: "wok-rice-station",
-		label: "Wok + rice station",
+		label: "Wok + rice station (propane)",
 		zone: "hot",
 		widthM: 1.0,
 		depthM: 0.75,
 		heightM: 0.9,
-		watts: 8000,
+		watts: 0,
+		fuel: "propane",
 	},
 	{
 		id: "hot-station",
-		label: "Hot station",
+		label: "Hot station (electric steam wells)",
 		zone: "hot",
 		widthM: 1.1,
 		depthM: 0.7,
 		heightM: 0.9,
-		watts: 9000,
+		watts: 2400,
 	},
 	{
 		id: "extraction-hood",
@@ -633,6 +649,8 @@ export interface PowerBudget {
 	supply: "30A / 240V" | "50A / 240V" | "generator or dual feed";
 	overShore: boolean;
 	byUnit: Array<{ label: string; watts: number }>;
+	/** Heat sources carried on propane — excluded from the electrical budget. */
+	propaneUnits: string[];
 }
 
 /**
@@ -674,5 +692,8 @@ export function powerBudget(equipmentIds: string[]): PowerBudget {
 		supply,
 		overShore: designWatts > SHORE_50A_WATTS,
 		byUnit,
+		propaneUnits: specs
+			.filter((s) => s.fuel === "propane")
+			.map((s) => s.label),
 	};
 }

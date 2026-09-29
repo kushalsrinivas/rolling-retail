@@ -159,10 +159,17 @@ describe("planGalley", () => {
 
 describe("powerBudget", () => {
 	it("sums nameplate load and applies a diversity factor", () => {
-		const b = powerBudget(["fryer", "refrigeration"]);
-		expect(b.totalWatts).toBe(14400);
-		expect(b.designWatts).toBe(Math.round(14400 * 0.7));
+		const b = powerBudget(["hot-station", "refrigeration"]);
+		expect(b.totalWatts).toBe(2800);
+		expect(b.designWatts).toBe(Math.round(2800 * 0.7));
 		expect(b.designWatts).toBeLessThan(b.totalWatts);
+	});
+
+	it("keeps propane heat off the electrical budget", () => {
+		const b = powerBudget(["fryer", "griddle-chargrill", "refrigeration"]);
+		expect(b.totalWatts).toBe(400);
+		expect(b.propaneUnits).toContain("Twin-basket fryer (propane)");
+		expect(b.propaneUnits).toContain("Griddle + chargrill (propane)");
 	});
 
 	it("puts a coffee bar on a 30A supply", () => {
@@ -170,28 +177,35 @@ describe("powerBudget", () => {
 		expect(powerBudget([...coffee.needs]).supply).toBe("30A / 240V");
 	});
 
-	it("puts a fryer line on 50A, not 30A", () => {
+	it("puts a fryer line's electrics on 30A — heat is propane", () => {
 		const fried = BUSINESS_TYPES.find((b) => b.id === "fried")!;
 		const b = powerBudget([...fried.needs]);
-		expect(b.supply).toBe("50A / 240V");
+		expect(b.supply).toBe("30A / 240V");
 		expect(b.overShore).toBe(false);
+		expect(b.propaneUnits).toContain("Twin-basket fryer (propane)");
 	});
 
-	it("pushes a fryer plus a chargrill past any shore supply", () => {
+	it("still trips past any shore supply when the electrics overload", () => {
 		const b = powerBudget([
-			"fryer",
-			"griddle-chargrill",
+			"hot-station",
+			"espresso-machine",
+			"glass-wash",
+			"coffee-machine",
+			"boba-tea-brewers",
+			"hvac",
+			"drinks-station",
+			"ice",
 			"extraction-hood",
-			"refrigeration",
 		]);
 		expect(b.overShore).toBe(true);
 		expect(b.supply).toBe("generator or dual feed");
 	});
 
-	it("ranks the biggest draw first so the trade-off is obvious", () => {
+	it("ranks the biggest electric draw first; propane sits outside the table", () => {
 		const grill = BUSINESS_TYPES.find((b) => b.id === "grill")!;
 		const b = powerBudget([...grill.needs]);
-		expect(b.byUnit[0].label).toContain("chargrill");
+		expect(b.byUnit[0].label).toContain("Extraction");
+		expect(b.propaneUnits).toContain("Griddle + chargrill (propane)");
 		for (let i = 1; i < b.byUnit.length; i++) {
 			expect(b.byUnit[i].watts).toBeLessThanOrEqual(b.byUnit[i - 1].watts);
 		}
@@ -202,7 +216,7 @@ describe("powerBudget", () => {
 	});
 
 	it("converts the design load to amps", () => {
-		const b = powerBudget(["fryer"]);
-		expect(b.ampsAt240V).toBeCloseTo((14000 * 0.7) / 240, 1);
+		const b = powerBudget(["hot-station"]);
+		expect(b.ampsAt240V).toBeCloseTo((2400 * 0.7) / 240, 1);
 	});
 });

@@ -20,6 +20,14 @@ export interface LayoutResult {
 	powerNotes: string;
 	complianceNotes: string[];
 	why: string[];
+	/**
+	 * Whether the body fits the business. A hot cooking line on the Large is
+	 * "wrong" — the Large is a walk-in merch/experience body, never a hot
+	 * F&B kitchen — so the agent steers the menu to a smaller body instead
+	 * of briefing an unbuildable kitchen.
+	 */
+	vehicleFit: "fit" | "stretch" | "wrong";
+	vehicleNote: string | null;
 }
 
 export interface EstimateResult {
@@ -327,10 +335,33 @@ export function layoutFor(
 	const body = vehicle?.body ?? "square";
 	const long = (vehicle?.lengthM ?? 4) >= 5;
 
+	// Builder rule, enforced not suggested: hot food lives on Small/Mid
+	// hatch-serve or a square; the Large is walk-in merch/experience. A hot
+	// line briefed on the Large is unbuildable on power and weight, so it is
+	// flagged wrong here rather than rendered.
+	const isFood = !RETAIL_TYPES.has(normalised);
+	let vehicleFit: LayoutResult["vehicleFit"] = "fit";
+	let vehicleNote: string | null = null;
+	if (isFood && vehicle?.id === "airstream-l") {
+		vehicleFit = "wrong";
+		vehicleNote =
+			"The Large Airstream is a walk-in merch/experience body — customers come inside, no cooking line. Brief this menu on the Small/Mid or a square hatch-serve instead: compact is the point (less weight, more energy margin).";
+	} else if (
+		walkIn &&
+		normalised === "retail" &&
+		(vehicle?.lengthM ?? 4) < 4
+	) {
+		vehicleFit = "stretch";
+		vehicleNote =
+			"Walk-in retail wants 4m+ of body for an aisle plus display; this unit will be tight.";
+	}
+
 	if (RETAIL_TYPES.has(normalised)) {
 		return {
 			layoutName: walkIn ? "Walk-in boutique" : "Hybrid serve with step-in",
 			serveMode: walkIn ? "walk-in" : "hybrid",
+			vehicleFit,
+			vehicleNote,
 			zones: [
 				"Entry and queue outside with A-board menu",
 				"Display wall with lockable overnight storage",
@@ -367,6 +398,8 @@ export function layoutFor(
 					? "Airstream espresso bar"
 					: servery.layoutName,
 			serveMode: walkIn ? "hybrid" : "hatch-serve",
+			vehicleFit,
+			vehicleNote,
 			zones: servery.stations,
 			equipment: servery.equipment,
 			powerNotes: servery.power,
@@ -385,6 +418,8 @@ export function layoutFor(
 	return {
 		layoutName: long ? "Full hot line with drinks station" : "Compact hot line",
 		serveMode: walkIn ? "hybrid" : "hatch-serve",
+		vehicleFit,
+		vehicleNote,
 		zones: [
 			"Serve hatch centred on the long wall",
 			hot.station,
@@ -403,7 +438,7 @@ export function layoutFor(
 			...(walkIn ? ["rear-walk-in-door", "hvac"] : ["hvac-optional"]),
 		],
 		powerNotes:
-			"A hot line needs mains power. Extraction, cooking equipment and climate control rarely coexist on battery — plan mains hook-up with a generator inlet from day one.",
+			"Cooking heat is propane-fired under extraction — it never sits on the battery bank or the shore feed. The electrics (cold chain, water, till, lights, extraction fan) plan mains hook-up with a generator inlet from day one.",
 		complianceNotes: [
 			`${business?.label ?? "Hot food"} requires extraction, fire suppression and a hand basin in the factory base build.`,
 			"Buyer-supplied appliance models must be confirmed before cut-outs — no on-site cutting.",
@@ -488,7 +523,7 @@ export function createFoodTruckTools() {
 	const recommendLayout = new DynamicStructuredTool({
 		name: "recommend_layout",
 		description:
-			"Recommend a factory-buildable interior layout. Call once business type + vehicle + walk-in preference are known. Encodes hot-line, servery and walk-in retail rules.",
+			"Recommend a factory-buildable interior layout. Call once business type + vehicle + walk-in preference are known. Encodes hot-line, servery and walk-in retail rules. One hot station per compact unit, cooking heat on propane. Hot F&B is briefed on Small/Mid/square bodies only — the Large Airstream is walk-in merch/experience, never a hot kitchen (the tool flags that combination as vehicleFit wrong).",
 		schema: z.object({
 			businessType: z
 				.enum([

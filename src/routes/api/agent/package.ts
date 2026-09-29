@@ -128,7 +128,7 @@ export const Route = createFileRoute("/api/agent/package")({
 					`<h2>Livery zones</h2><ul>${livery.zones.map((z) => `<li><b>${esc(z.label)}</b> — ${esc(z.brief)}</li>`).join("")}</ul><p><i>Keep-outs: ${esc(livery.keepOuts.join("; "))}.</i></p>` +
 					`<h2>Plan (deterministic — real dimensions)</h2>${planSvg(spec, current.version)}` +
 					`<h2>Curbside elevation (deterministic)</h2>${elevationSvg(spec, current.version)}` +
-					`<h2>Equipment + power</h2><ul>${spec.equipment.map((e) => `<li>${esc(e)}</li>`).join("")}</ul><p>Design load ~${budget.designWatts}W (${budget.ampsAt240V}A @ 240V) — supply: <b>${esc(budget.supply)}</b>${budget.overShore ? " — exceeds single shore feed, plan generator or dual feed." : ""}</p>` +
+					`<h2>Equipment + power</h2><ul>${spec.equipment.map((e) => `<li>${esc(e)}</li>`).join("")}</ul><p>Design load ~${budget.designWatts}W (${budget.ampsAt240V}A @ 240V) — supply: <b>${esc(budget.supply)}</b>${budget.overShore ? " — exceeds single shore feed, plan generator or dual feed." : ""}</p>${budget.propaneUnits.length > 0 ? `<p>Cooking heat is propane-fired under extraction, never on the battery or the shore feed: ${esc(budget.propaneUnits.join(", "))}.</p>` : ""}` +
 					`<h2>Revision history</h2><ol>${s.designVersions.map((d) => `<li>v${d.version} (${esc(d.state)}) — ${esc(d.changeSummary ?? "initial")} — ${new Date(d.createdAt).toISOString()}</li>`).join("")}</ol>` +
 					`<h2>Fabrication notes — open questions for the shop</h2><ol>${openQuestions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>` +
 					`<div style="background:#0c1424;color:#fff;padding:8px 12px;font-weight:800;margin-top:24px">CONCEPT — REQUIRES FABRICATOR VALIDATION · ${esc(stamp)}</div>` +
