@@ -453,6 +453,13 @@ export interface StarterConceptArgs {
 	only?: readonly ConceptView[];
 	/** Renders already in hand (a retry, or an earlier round) by view. */
 	completed?: Partial<Record<ConceptView, string>>;
+	/**
+	 * Whether this round spends a credit. Default: a round with no `only`
+	 * list charges a fresh generation; `only` is a retry until the caller
+	 * explicitly says otherwise (the auto first round and the 3-starter
+	 * button both pass a view list but must still charge).
+	 */
+	charge?: boolean;
 }
 
 export interface StageProgress {
@@ -645,9 +652,10 @@ export async function runStarterConcepts(
 	}
 
 	// A credit buys a round. Retrying views that failed re-delivers what was
-	// already paid for, and a round where nothing rendered delivered nothing.
+	// already paid for (and works with no credits left), and a round where
+	// nothing rendered delivered nothing.
 	const charged =
-		!args.only?.length && images.some((i) => i.status === "ready");
+		(args.charge ?? !args.only?.length) && images.some((i) => i.status === "ready");
 	return {
 		images,
 		creditsUsed: creditsUsed + (charged ? 1 : 0),

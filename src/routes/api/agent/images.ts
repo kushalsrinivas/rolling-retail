@@ -36,12 +36,19 @@ export const Route = createFileRoute("/api/agent/images")({
 						brainNote?: string;
 						/** Retry just these views, inheriting the round's references. */
 						only?: string[];
+						/**
+						 * Charge a credit even though a view list was passed — the
+						 * auto first round and the 3-starter button both send one.
+						 * Default: a view list is a free retry of failed views.
+						 */
+						charge?: boolean;
 					};
 					const session = getOrCreateSession(body.sessionId);
 					await restoreSession(session.sessionId);
 					// Retrying failed views is free, so it works with no credits left.
-					const isRetry = Array.isArray(body.only) && body.only.length > 0;
-					if (creditsLeft(session) <= 0 && !isRetry) {
+					const isRetry =
+						Array.isArray(body.only) && body.only.length > 0 && !body.charge;
+					if (creditsLeft(session) <= 0 && isRetry) {
 						return Response.json(
 							{
 								error: "Visual credits exhausted",
@@ -116,6 +123,7 @@ export const Route = createFileRoute("/api/agent/images")({
 						).equipment,
 						serveMode,
 						brainNote: body.brainNote,
+						charge: !isRetry,
 					});
 					session.creditsUsed = run.creditsUsed;
 					session.visualRounds += 1;

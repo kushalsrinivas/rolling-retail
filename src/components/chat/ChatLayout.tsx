@@ -1,4 +1,9 @@
-import { GripVertical, LayoutPanelLeft, MessageSquare } from "lucide-react";
+import {
+	GripVertical,
+	LayoutPanelLeft,
+	Loader2,
+	MessageSquare,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useChat } from "#/hooks/use-chat";
 import { useMediaQuery } from "#/hooks/use-media-query";
@@ -55,8 +60,11 @@ export default function ChatLayout() {
 	}, []);
 
 	// The intake stands in front of the chat until the buyer has said something
-	// — a blank prompt box is the point most people bounce at.
-	const showIntake = !intakeDone && chat.messages.length <= 1;
+	// — a blank prompt box is the point most people bounce at. It waits for
+	// rehydration first, so a returning buyer is not shown intake they have
+	// already completed just because the messages are still loading.
+	const showIntake =
+		chat.hydrated && !intakeDone && chat.messages.length <= 1;
 
 	const buildPanel = (
 		<BrandReportPanel
@@ -75,7 +83,7 @@ export default function ChatLayout() {
 			progress={chat.progress}
 			onRetryFailed={() => chat.retryFailedRenders()}
 			onAskAbout={(label, value) => chat.sendContextMessage(label, value)}
-			onGenerateConcepts={() => chat.generateConcepts()}
+			onGenerateConcepts={(opts) => chat.generateConcepts(opts)}
 			onToggleFavorite={(label) => chat.toggleFavorite(label)}
 			design={chat.design}
 			onApproveVersion={(v) => chat.approveVersion(v)}
@@ -97,6 +105,21 @@ export default function ChatLayout() {
 			onRenderMenuBoard={(menu, artwork) => chat.renderMenuBoard(menu, artwork)}
 		/>
 	);
+
+	// Rehydrate first: a reload must not flash intake/starter states over a
+	// session that is about to be restored from the server.
+	if (!chat.hydrated) {
+		return (
+			<div className="ftf chat-layout grid h-dvh w-full place-items-center bg-[var(--ftf-paper-2)]">
+				<div className="flex flex-col items-center gap-3">
+					<Loader2 className="h-6 w-6 animate-spin text-[var(--ftf-blue-800)]" />
+					<p className="text-xs text-[var(--ftf-ink-2)]">
+						Restoring your design…
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (showIntake) {
 		return (
@@ -138,7 +161,17 @@ export default function ChatLayout() {
 		return (
 			<div className="ftf chat-layout flex h-dvh w-full flex-col overflow-hidden">
 				<div className="min-h-0 flex-1 overflow-hidden">
-					{pane === "design" ? <ChatPanel chat={chat} /> : buildPanel}
+					{/* Both panes stay mounted and one is hidden by CSS: unmounting
+					    the chat or the build panel on every toggle reset the panel's
+					    tab, scroll positions and the half-typed chat draft, and the
+					    work simply disappeared whenever the buyer peeked at another
+					    pane mid-generation. */}
+					<div className={cn("h-full", pane === "design" ? null : "hidden")}>
+						<ChatPanel chat={chat} />
+					</div>
+					<div className={cn("h-full", pane === "build" ? null : "hidden")}>
+						{buildPanel}
+					</div>
 				</div>
 
 				{/* Bottom bar keeps the switch under the thumb, clear of the keyboard. */}

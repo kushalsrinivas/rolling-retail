@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
 import {
 	CONCEPT_VIEW_COUNT,
@@ -11,6 +11,16 @@ import {
 	pickMasterReference,
 	type SalesVideoKind,
 } from "#/lib/food-truck/sales";
+
+/**
+ * The session id and the in-progress menu live on the client, so they also
+ * die with the page: a phone refresh or a backgrounded tab the OS reclaims
+ * used to land the buyer back on the empty intake with their whole design
+ * invisible. The id is kept in localStorage and the design is re-hydrated
+ * from GET /api/agent/state on mount.
+ */
+const SESSION_KEY = "ftf_sessionId";
+const MENU_DRAFT_KEY = "ftf_menuDraft";
 
 export type MessageRole = "user" | "assistant";
 
@@ -265,6 +275,8 @@ export function useChat() {
 		stamp?: string | null;
 	} | null>(null);
 	const [isApproving, setIsApproving] = useState(false);
+	/** Server snapshot shape returned by /api/agent/state. */
+	const [hydrated, setHydrated] = useState(false);
 
 	const sessionIdRef = useRef<string | null>(null);
 	const [sessionId, setSessionId] = useState<string | null>(null);
@@ -317,6 +329,12 @@ export function useChat() {
 		};
 		sessionIdRef.current = data.sessionId;
 		setSessionId(data.sessionId);
+		// Reload-proof: the id is what the next mount re-hydrates from.
+		try {
+			localStorage.setItem(SESSION_KEY, data.sessionId);
+		} catch {
+			/* storage disabled — rehydrate just won't work */
+		}
 		if (typeof data.credits?.left === "number")
 			setCreditsLeft(data.credits.left);
 		void refreshDesign();
@@ -375,6 +393,113 @@ export function useChat() {
 		},
 		[],
 	);
+
+	/*
+	 * ── Session rehydrate ──
+	 *
+	 * On mount, a saved session id is used to re-read the server snapshot:
+	 * messages, brain, credits, design record, renders, clips and the menu
+	 * draft. Without this, every reload was a new session from the buyer's
+	 * point of view — the previous read design stayed on the server but the
+	 * panel went back to fresh-empty.
+	 */
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const savedId = localStorage.getItem(SESSION_KEY);
+				if (savedId) {
+					sessionIdRef.current = savedId;
+					setSessionId(savedId);
+					const res = await fetch(
+						`/api/agent/state?sessionId=${encodeURIComponent(savedId)}`,
+					);
+					if (res.ok && !cancelled) {
+						const data = (await res.json()) as {
+							history?: Array<{ role: "user" | "assistant"; content: string }>;
+							brain?: ProjectBrain;
+							credits?: { left: number };
+							images?: Array<{
+								label: string;
+								url: string;
+								status?: string;
+								error?: string;
+								references?: string[];
+							}>;
+							videos?: GeneratedVideo[];
+							design?: {
+								current?: {
+									version: number;
+									state: string;
+									changeSummary?: string | null;
+									spec?: Record<string, unknown>;
+								} | null;
+								versions?: Array<{
+									version: number;
+									state: string;
+									changeSummary?: string | null;
+								}>;
+								approvals?: Array<{
+									version: number;
+									by?: string | null;
+									createdAt: number;
+								}>;
+								stamp?: string | null;
+							};
+							lead?: Record<string, unknown>;
+						};
+						if (Array.isArray(data.history) && data.history.length > 0) {
+							setMessages([
+								{
+									id: "welcome",
+									role: "assistant",
+									content: WELCOME,
+									timestamp: new Date(),
+								},
+								...data.history.map((h) => ({
+									id: `restored-${generateId()}`,
+									role: h.role,
+									content: String(h.content ?? ""),
+									timestamp: new Date(),
+								})),
+							]);
+						}
+						if (data.brain) {
+							setBrain(data.brain);
+							if (data.brain.brandName) setBrandName(data.brain.brandName);
+							if (data.brain.vehicleId) setVehicleId(data.brain.vehicleId);
+							if (data.brain.businessType)
+								setBusinessType(data.brain.businessType);
+						}
+						if (typeof data.credits?.left === "number")
+							setCreditsLeft(data.credits.left);
+						if (Array.isArray(data.images)) mergeImages(data.images);
+						if (Array.isArray(data.videos)) setVideos(data.videos);
+						if (data.design?.current) setDesign(data.design);
+						if (data.lead) setLead(data.lead);
+					}
+				}
+				const menuJson = localStorage.getItem(MENU_DRAFT_KEY);
+				if (menuJson && !cancelled)
+					setMenuDraft(JSON.parse(menuJson) as MenuDesign);
+			} catch {
+				/* rehydration is best-effort — a fresh start still works */
+			} finally {
+				if (!cancelled) setHydrated(true);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+		// mergeImages is the only dependency that is callable; it is memoized
+		// with stable deps, so the effect still runs exactly once on mount.
+	}, [mergeImages]);
+
+	// The half-built menu survives reloads too — losing a typed menu was the
+	// second-most-restart-frustration after losing the design itself.
+	useEffect(() => {
+		if (menuDraft) localStorage.setItem(MENU_DRAFT_KEY, JSON.stringify(menuDraft));
+	}, [menuDraft]);
 
 	/** Open a slot per view so the grid shows the whole round immediately. */
 	const openRenderSlots = useCallback(() => {
@@ -727,12 +852,19 @@ export function useChat() {
 	/**
 	 * One visual round.
 	 *
-	 * `only` retries a subset of views; the server reuses the round's existing
-	 * renders as their references, so a retried view rejoins the same visual
-	 * world instead of starting a new one.
+	 * `only` retries a subset of views (`charge:true` keeps a fresh round
+	 * charged even with a view list, so starter rounds cost what they say);
+	 * the server reuses the round's existing renders as references, so a
+	 * retried view rejoins the same visual world instead of starting a new
+	 * one.
 	 */
 	const generateConcepts = useCallback(
-		async (opts?: { colors?: string; vibe?: string; only?: string[] }) => {
+		async (opts?: {
+			colors?: string;
+			vibe?: string;
+			only?: string[];
+			charge?: boolean;
+		}) => {
 			if (isGeneratingImages) return;
 			setError(null);
 			setIsGeneratingImages(true);
@@ -762,6 +894,7 @@ export function useChat() {
 						colors: opts?.colors || undefined,
 						vibe: opts?.vibe || undefined,
 						only: opts?.only,
+						charge: opts?.charge,
 					}),
 				});
 				const data = (await res.json()) as {
@@ -1048,6 +1181,7 @@ export function useChat() {
 		isApproving,
 		ensureSession,
 		sessionId,
+		hydrated,
 		metrics,
 		events,
 		analytics,

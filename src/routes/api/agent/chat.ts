@@ -190,8 +190,11 @@ export const Route = createFileRoute("/api/agent/chat")({
 										inspirationImage: session.inspirationImage,
 										masterReference: session.masterImageUrl,
 										// First generation proves the concept: hero, curbside,
-										// interior. The rest are offered on request.
+										// interior. The rest are offered on request. It is a
+										// fresh round with a view list, not a retry — the
+										// explicit charge flag keeps a credit being spent.
 										only: [...STARTER_AUTO_VIEWS] as ConceptView[],
+										charge: true,
 										brand:
 											brain.brandName ?? body.context?.brandName?.trim() ?? "",
 										vehicleLabel,

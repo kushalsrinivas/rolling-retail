@@ -39,6 +39,7 @@ import {
 	CONCEPT_VIEW_COUNT,
 	CONCEPT_VIEWS,
 	MENU_VIEW,
+	STARTER_AUTO_VIEWS,
 } from "#/lib/food-truck/constants";
 import type { MenuDesign } from "#/lib/food-truck/menu";
 import {
@@ -77,7 +78,11 @@ interface BrandReportPanelProps {
 	progress: PipelineProgress;
 	onRetryFailed: () => void;
 	onAskAbout: (label: string, value: string) => void;
-	onGenerateConcepts: () => void;
+	/** `only` + `charge` flow through; the empty state passes the 3 starters. */
+	onGenerateConcepts: (opts?: {
+		only?: string[];
+		charge?: boolean;
+	}) => void;
 	onToggleFavorite: (label: string) => void;
 	/** Bring the chat into view with its input focused. */
 	onOpenChat: () => void;
@@ -767,6 +772,19 @@ export default function BrandReportPanel({
 				</div>
 			</div>
 
+			{/* Work in flight is visible from every tab — an owner who flips to
+			    Menu while renders or a clip are running must still see progress
+			    (and not conclude it died silently). The Visuals tab shows the
+			    detailed block further down instead. */}
+			{(isGenerating || isGeneratingVideo) && tab !== "visuals" && (
+				<div className="flex shrink-0 items-center gap-2 border-b border-[var(--ftf-line)] bg-[var(--ftf-amber-100)] px-4 py-2 text-[11px] font-medium text-[var(--ftf-amber-600)]">
+					<Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+					{isGeneratingVideo
+						? "Filming a clip — progress continues while you are here."
+						: "Rendering concepts — progress continues while you are here."}
+				</div>
+			)}
+
 			{tab === "visuals" ? (
 				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
 					<SectionHeader
@@ -858,10 +876,16 @@ export default function BrandReportPanel({
 							icon={Truck}
 							title="No concepts yet — start with 3 starter views"
 							body="Hero, curbside and interior prove the concept from the same truck. Rear, night, assembly and brand views follow on request once the direction is confirmed."
-							action={{
-								label: "Generate 3 starter concepts",
-								onClick: onGenerateConcepts,
-							}}
+						action={{
+							label: "Generate 3 starter concepts",
+							onClick: () =>
+								onGenerateConcepts({
+									only: [...STARTER_AUTO_VIEWS],
+									// A fresh round with a view list still spends the credit
+									// it says it spends.
+									charge: true,
+								}),
+						}}
 							footnote={
 								<>
 									<Lock className="h-3 w-3" /> Included with this customer ·
@@ -1020,15 +1044,15 @@ export default function BrandReportPanel({
 								})}
 							</div>
 							<div className="mt-3 flex flex-wrap gap-2">
-								<button
-									type="button"
-									onClick={onGenerateConcepts}
-									disabled={isGenerating}
-									className={GHOST_BTN}
-								>
-									<RefreshCw className="h-3 w-3" />
-									Regenerate · 1 credit
-								</button>
+							<button
+								type="button"
+								onClick={() => onGenerateConcepts({ charge: true })}
+								disabled={isGenerating}
+								className={GHOST_BTN}
+							>
+								<RefreshCw className="h-3 w-3" />
+								Regenerate · 1 credit
+							</button>
 								<button
 									type="button"
 									onClick={onOpenChat}

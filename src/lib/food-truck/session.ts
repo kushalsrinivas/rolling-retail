@@ -141,34 +141,72 @@ export function persistSession(s: TruckSession): void {
 			saveSessionSnapshot(s.sessionId, {
 				...s,
 				// Cap snapshot size: keep latest 20 history turns; images stay
-				// (they are the design) but videos keep metadata only.
+				// (they are the design). Videos keep metadata with their served
+				// file URL (clips live as /api/assets files) — only data URLs are
+				// dropped, or every snapshot re-embeds the 24MB payload.
 				history: s.history.slice(-20),
-				videos: s.videos.map((v) => ({ ...v, url: null })),
+				videos: s.videos.map((v) => ({
+					...v,
+					url: v.url && !v.url.startsWith("data:") ? v.url : null,
+				})),
 			}),
 		)
 		.catch(() => {});
 }
 
-/** Load the disk snapshot back into the memory map (serverless/restart). */
+/**
+ * Sessions whose disk snapshot has been adopted this process. A route that
+ * calls getOrCreateSession (which creates a blank stub) and then
+ * restoreSession must not silently end up with that stub: the stub is
+ * virgin, so the snapshot replaces it. Once adopted, memory wins — a second
+ * restore must never clobber state the request has already mutated.
+ */
+const restored = new WeakSet<TruckSession>();
+
+/** In-flight loads, keyed by session id, so two concurrent restore calls
+ * share one snapshot object instead of racing two copies into the map. */
+const pendingRestores = new Map<string, Promise<TruckSession | null>>();
+
+function normalizeSnapshot(snap: TruckSession): TruckSession {
+	// Old snapshots predate these arrays.
+	snap.designVersions = Array.isArray(snap.designVersions)
+		? snap.designVersions
+		: [];
+	snap.approvals = Array.isArray(snap.approvals) ? snap.approvals : [];
+	snap.images = snap.images ?? {};
+	snap.videos = snap.videos ?? [];
+	restored.add(snap);
+	return snap;
+}
+
 export async function restoreSession(
 	sessionId: string,
 ): Promise<TruckSession | null> {
-	if (sessions.has(sessionId)) return sessions.get(sessionId) ?? null;
-	try {
-		const { loadSessionSnapshot } = await import("./store");
-		const snap = await loadSessionSnapshot<TruckSession>(sessionId);
-		if (!snap) return null;
-		snap.designVersions = Array.isArray(snap.designVersions)
-			? snap.designVersions
-			: [];
-		snap.approvals = Array.isArray(snap.approvals) ? snap.approvals : [];
-		snap.images = snap.images ?? {};
-		snap.videos = snap.videos ?? [];
-		sessions.set(sessionId, snap);
-		return snap;
-	} catch {
-		return null;
+	const inMemory = sessions.get(sessionId);
+	if (inMemory && restored.has(inMemory)) return inMemory;
+
+	let load = pendingRestores.get(sessionId);
+	if (!load) {
+		load = (async () => {
+			try {
+				const { loadSessionSnapshot } = await import("./store");
+				const snap = await loadSessionSnapshot<TruckSession>(sessionId);
+				if (snap) {
+					sessions.set(sessionId, normalizeSnapshot(snap));
+					return snap;
+				}
+			} catch {
+				/* no snapshot — memory stands */
+			}
+			return null;
+		})().finally(() => pendingRestores.delete(sessionId));
+		pendingRestores.set(sessionId, load);
 	}
+	const snap = await load;
+	if (snap) return snap;
+	// Nothing on disk (or unreadable): anything already in memory stays.
+	if (inMemory) restored.add(inMemory);
+	return inMemory ?? null;
 }
 
 export function creditsLeft(s: TruckSession) {

@@ -271,6 +271,9 @@ export const Route = createFileRoute("/api/agent/video")({
 					if (s.status === "ready") {
 						job.status = "ready";
 						job.url = await storeUrl(s.videoDataUrl);
+						// The file URL the client plays must survive a reload, so
+						// the snapshot carries it (persistSession keeps file URLs).
+						persistSession(session);
 					} else if (s.status === "error") {
 						job.status = "error";
 						job.error = s.error;

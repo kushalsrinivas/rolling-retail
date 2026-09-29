@@ -21,6 +21,7 @@ import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/downloa
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsFilenameRouteImport } from './routes/api/assets.$filename'
 import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
+import { Route as ApiAgentStateRouteImport } from './routes/api/agent/state'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
 import { Route as ApiAgentPlanRouteImport } from './routes/api/agent/plan'
 import { Route as ApiAgentPackageRouteImport } from './routes/api/agent/package'
@@ -91,6 +92,11 @@ const ApiAssetsFilenameRoute = ApiAssetsFilenameRouteImport.update({
 const ApiAgentVideoRoute = ApiAgentVideoRouteImport.update({
   id: '/api/agent/video',
   path: '/api/agent/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentStateRoute = ApiAgentStateRouteImport.update({
+  id: '/api/agent/state',
+  path: '/api/agent/state',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
+  '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/session'
+    | '/api/agent/state'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/session'
+    | '/api/agent/state'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/session'
+    | '/api/agent/state'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   ApiAgentPackageRoute: typeof ApiAgentPackageRoute
   ApiAgentPlanRoute: typeof ApiAgentPlanRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
+  ApiAgentStateRoute: typeof ApiAgentStateRoute
   ApiAgentVideoRoute: typeof ApiAgentVideoRoute
   ApiAssetsFilenameRoute: typeof ApiAssetsFilenameRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/api/agent/video'
       fullPath: '/api/agent/video'
       preLoaderRoute: typeof ApiAgentVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/state': {
+      id: '/api/agent/state'
+      path: '/api/agent/state'
+      fullPath: '/api/agent/state'
+      preLoaderRoute: typeof ApiAgentStateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent/session': {
@@ -511,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentPackageRoute: ApiAgentPackageRoute,
   ApiAgentPlanRoute: ApiAgentPlanRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
+  ApiAgentStateRoute: ApiAgentStateRoute,
   ApiAgentVideoRoute: ApiAgentVideoRoute,
   ApiAssetsFilenameRoute: ApiAssetsFilenameRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
