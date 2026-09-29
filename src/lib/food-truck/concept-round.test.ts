@@ -120,6 +120,20 @@ describe("concept round", () => {
 		expect(run.creditsUsed).toBe(1);
 	});
 
+	it("does not charge for retrying failed views or for a round that delivered nothing", async () => {
+		stubModel();
+		const retry = await runStarterConcepts(2, {
+			...ARGS,
+			only: ["night_exterior"],
+		});
+		expect(retry.creditsUsed).toBe(2);
+
+		stubModel({ failOn: [...CONCEPT_VIEWS] });
+		const empty = await runStarterConcepts(2, ARGS);
+		expect(empty.images.every((i) => i.status === "failed")).toBe(true);
+		expect(empty.creditsUsed).toBe(2);
+	});
+
 	it("generates the anchor from text and every other view from references", async () => {
 		stubModel();
 		await runStarterConcepts(0, ARGS);
@@ -168,10 +182,10 @@ describe("concept round", () => {
 	it("survives a throw without losing the rest of the stage", async () => {
 		// A throw inside Promise.all used to reject the whole wave and discard
 		// every sibling render with it.
-		stubModel({ throwOn: ["roof_plan"] });
+		stubModel({ throwOn: ["front_elevation"] });
 		const run = await runStarterConcepts(0, ARGS);
 		expect(run.images).toHaveLength(CONCEPT_VIEWS.length);
-		expect(run.images.find((i) => i.label === "roof_plan")?.status).toBe(
+		expect(run.images.find((i) => i.label === "front_elevation")?.status).toBe(
 			"failed",
 		);
 		expect(run.images.find((i) => i.label === "night_exterior")?.status).toBe(

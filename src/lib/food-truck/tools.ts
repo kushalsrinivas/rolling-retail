@@ -10,6 +10,7 @@ import {
 	toSqft,
 	VEHICLES,
 } from "./constants";
+import { lineProfileFor } from "./line-profile";
 
 export interface LayoutResult {
 	layoutName: string;
@@ -48,6 +49,7 @@ const HOT_TYPES = new Set([
 	"grill",
 	"pizza",
 	"asian",
+	"mexican",
 	"breakfast",
 	"combined",
 ]);
@@ -81,6 +83,17 @@ function hotStationFor(businessType: string): {
 					"Wok and rice station under extraction (left), rapid servery pass (right)",
 				equipment: ["wok-rice-station", "extraction-hood", "fire-suppression"],
 			};
+		case "mexican":
+			return {
+				station:
+					"Plancha and steam wells under extraction (left), salsa rail and tortilla warmer by the pass (right)",
+				equipment: [
+					"griddle",
+					"hot-station",
+					"extraction-hood",
+					"fire-suppression",
+				],
+			};
 		case "breakfast":
 			return {
 				station:
@@ -106,7 +119,10 @@ function hotStationFor(businessType: string): {
 	}
 }
 
-function serveryFor(businessType: string): {
+function serveryFor(
+	businessType: string,
+	menu: readonly string[] = [],
+): {
 	layoutName: string;
 	stations: string[];
 	equipment: string[];
@@ -140,6 +156,37 @@ function serveryFor(businessType: string): {
 				],
 			};
 		case "bakery":
+			// Churros and doughnuts are fried to order: a fryer line, not a
+			// pastry case, and the extraction and suppression that come with it.
+			if (lineProfileFor(businessType, menu).id === "fried-dessert") {
+				return {
+					layoutName: "Fried dessert line",
+					stations: [
+						"Serve hatch with flip-up awning and fold-down counter",
+						"Countertop fryer under extraction, sugar and topping station beside it",
+						"Hot chocolate and drinks at the finishing end of the line",
+						"Hand basin at the line entry",
+						"Menu board above the hatch, fascia sign on the roof edge",
+					],
+					equipment: [
+						"fryer",
+						"extraction-hood",
+						"fire-suppression",
+						"prep-counter",
+						"hand-basin",
+						"under-counter-refrigeration",
+						"fresh-grey-water-tanks",
+						"till",
+						"digital-menu-board",
+					],
+					power:
+						"Fryers need mains hook-up with generator provision. Battery alone will not carry frying.",
+					compliance: [
+						"Frying requires extraction and fire suppression in the factory base build.",
+						"Hand sink and enclosed fresh/grey water tanks are required for health department plan review in most US counties.",
+					],
+				};
+			}
 			return {
 				layoutName: "Patisserie servery",
 				stations: [
@@ -211,14 +258,19 @@ function serveryFor(businessType: string): {
 				],
 			};
 		default: {
-			const isDrinks = businessType === "cold-drinks";
+			// Cold drinks covers two different lines. The menu decides which;
+			// with no menu yet the category's lead (bubble tea) wins. This
+			// branch used to key on businessType === "cold-drinks", which is
+			// the only type that reaches it, so the boba line never appeared.
+			const isJuice = lineProfileFor(businessType, menu).id === "juice";
 			return {
-				layoutName: isDrinks ? "Cold drinks servery" : "Beverage servery",
-				stations: isDrinks
+				layoutName: isJuice ? "Juice and smoothie bar" : "Bubble tea bar",
+				stations: isJuice
 					? [
 							"Serve hatch with flip-up awning and fold-down counter",
+							"Juicer and blenders on the prep run, fresh fruit display facing the hatch",
 							"Ice and under-counter refrigeration directly under the hatch",
-							"Prep run with hand basin at the end of the line",
+							"Hand basin at the end of the prep run",
 							"Menu board above the hatch, fascia sign on the roof edge",
 						]
 					: [
@@ -228,8 +280,9 @@ function serveryFor(businessType: string): {
 							"Hand basin at the end of the prep run",
 							"Menu board above the hatch, fascia sign on the roof edge",
 						],
-				equipment: isDrinks
+				equipment: isJuice
 					? [
+							"drinks-station",
 							"ice",
 							"under-counter-refrigeration",
 							"prep-counter",
@@ -263,6 +316,8 @@ export function layoutFor(
 	businessType: string,
 	vehicleId: string,
 	walkIn: boolean,
+	/** Menu items — splits lines one business type covers (boba vs juice). */
+	menu: readonly string[] = [],
 ): LayoutResult {
 	const normalised =
 		(LEGACY_BUSINESS_ALIASES[businessType] as string | undefined) ??
@@ -305,7 +360,7 @@ export function layoutFor(
 	}
 
 	if (SERVE_OVER_COUNTER_TYPES.has(normalised)) {
-		const servery = serveryFor(normalised);
+		const servery = serveryFor(normalised, menu);
 		return {
 			layoutName:
 				body === "airstream" && normalised === "coffee"
@@ -441,6 +496,7 @@ export function createFoodTruckTools() {
 					"grill",
 					"pizza",
 					"asian",
+					"mexican",
 					"breakfast",
 					"coffee",
 					"cold-drinks",
@@ -457,9 +513,15 @@ export function createFoodTruckTools() {
 			walkIn: z
 				.boolean()
 				.describe("True if the public walks inside the vehicle"),
+			menuItems: z
+				.array(z.string())
+				.optional()
+				.describe(
+					"Signature menu items as the buyer said them, e.g. ['brown sugar boba', 'taro milk tea']. Decides between lines one business type covers, such as boba vs juice.",
+				),
 		}),
-		func: async ({ businessType, vehicleId, walkIn }) => {
-			const result = layoutFor(businessType, vehicleId, walkIn);
+		func: async ({ businessType, vehicleId, walkIn, menuItems }) => {
+			const result = layoutFor(businessType, vehicleId, walkIn, menuItems);
 			return JSON.stringify(result);
 		},
 	});
@@ -565,7 +627,69 @@ export function createFoodTruckTools() {
 		},
 	});
 
-	return { recommendLayout, estimateBuild, buildSpecSheet, saveLead };
+	const proposeChange = new DynamicStructuredTool({
+		name: "propose_change",
+		description:
+			"Turn a revision request ('make it cream', 'remove red', 'add a fryer') into a structured patch against the versioned design record. Call BEFORE re-rendering so the customer confirms the patch — revisions change only the patched fields, everything else stays locked. Returns the patch + changed fields for the customer to confirm.",
+		schema: z.object({
+			colors: z
+				.array(z.string())
+				.optional()
+				.describe(
+					"Full replacement palette in sentence order, e.g. ['cream','sage green']",
+				),
+			removeColors: z
+				.array(z.string())
+				.optional()
+				.describe("Colors to drop, e.g. ['red']"),
+			brandName: z.string().optional().describe("New brand name, if renaming"),
+			businessType: z
+				.string()
+				.optional()
+				.describe(
+					`New category if the buyer corrected it: ${BUSINESS_TYPES.map((b) => b.id).join(", ")}`,
+				),
+			menuItems: z
+				.array(z.string())
+				.optional()
+				.describe("Replacement menu items, if the offer changed"),
+			vibe: z.array(z.string()).optional().describe("Replacement vibe words"),
+			vehicleId: z
+				.string()
+				.optional()
+				.describe(`New body, one of: ${VEHICLES.map((v) => v.id).join(", ")}`),
+			changeSummary: z
+				.string()
+				.describe(
+					"One line for the version timeline, e.g. 'Palette → cream + sage green.'",
+				),
+		}),
+		func: async (args) => {
+			// The route commits the patch after customer confirmation; the
+			// tool's job is to make the request explicit and reviewable.
+			const patch: Record<string, unknown> = {};
+			if (args.colors) patch.colors = args.colors;
+			if (args.brandName) patch.brand = args.brandName;
+			if (args.businessType) patch.businessType = args.businessType;
+			if (args.menuItems) patch.menu = args.menuItems;
+			if (args.vibe) patch.vibe = args.vibe;
+			if (args.vehicleId) patch.vehicleId = args.vehicleId;
+			return JSON.stringify({
+				patch,
+				removeColors: args.removeColors ?? [],
+				changeSummary: args.changeSummary,
+				note: "Show the customer this patch and confirm before re-rendering. Only patched fields change.",
+			});
+		},
+	});
+
+	return {
+		recommendLayout,
+		estimateBuild,
+		buildSpecSheet,
+		saveLead,
+		proposeChange,
+	};
 }
 
-export const TOOL_LIST_HINT = `Available tools: recommend_layout, estimate_build, build_spec_sheet, save_lead. Business types: ${BUSINESS_TYPES.map((b) => b.id).join(", ")}. Vehicles: ${VEHICLES.map((v) => v.id).join(", ")}.`;
+export const TOOL_LIST_HINT = `Available tools: recommend_layout, estimate_build, build_spec_sheet, save_lead, propose_change. Business types: ${BUSINESS_TYPES.map((b) => b.id).join(", ")}. Vehicles: ${VEHICLES.map((v) => v.id).join(", ")}.`;

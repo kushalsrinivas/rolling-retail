@@ -7,8 +7,6 @@ import {
 	pickMasterReference,
 	SALES_VIDEO_PRESETS,
 	salesSlideFor,
-	TOUR_PARTS,
-	tourContinuationPrompt,
 } from "./sales";
 
 const PHOTO = (s: string) => `data:image/png;base64,${s}`;
@@ -75,6 +73,7 @@ describe("sales asset pipeline", () => {
 			buildSalesVideoPrompt(p.kind, CTX),
 		);
 		expect(new Set(prompts).size).toBe(SALES_VIDEO_PRESETS.length);
+		expect(SALES_VIDEO_PRESETS.length).toBe(3);
 		for (const p of prompts) {
 			expect(p).toContain("BIB Burgers");
 			// Locked to the approved stills, and told what not to invent.
@@ -123,40 +122,33 @@ describe("sales asset pipeline", () => {
 		expect(p).not.toMatch(/Equipment visible/);
 	});
 
-	it("chains a 30s tour from three parts that each advance the take", () => {
-		expect(TOUR_PARTS).toBe(3);
-		const part1 = buildSalesVideoPrompt("tour", CTX);
-		const beats = [2, 3].map((part) => tourContinuationPrompt(part, CTX));
-		const all = [part1, ...beats];
-
-		// Three genuinely different beats — the old parts 2 and 3 were near-copies.
-		expect(new Set(all).size).toBe(3);
-		expect(part1).toMatch(/PART 1 OF 3/);
-		expect(beats[0]).toMatch(/PART 2 OF 3/);
-		expect(beats[1]).toMatch(/PART 3 OF 3/);
-
-		for (const b of beats) {
-			expect(b).toContain("BIB Burgers");
-			// Each continuation says where the previous part left off.
-			expect(b).toMatch(/CONTINUITY:/);
-			expect(b).toMatch(/exact frame the previous part ended on/);
-			expect(b).toMatch(/REFERENCE LOCK/);
-		}
-
-		// Part 1 hands off at the hatch, part 2 works the line, part 3 closes wide.
-		expect(part1).toMatch(/END THE SHOT framed square on the open hatch/);
-		expect(beats[0]).toMatch(/serve line/);
-		expect(beats[0]).toMatch(/part 3 picks up from this frame/);
-		expect(beats[1]).toMatch(/final frame/);
-		expect(beats[1]).toMatch(/hero angle the tour opened on/);
+	it("the walkthrough is filmed from inside the galley", () => {
+		const p = buildSalesVideoPrompt("walkthrough", CTX, [
+			"interior_layout",
+			"front_elevation",
+			"exterior_hero",
+		]);
+		expect(p).toMatch(/INSIDE WALKTHROUGH/);
+		expect(p).toMatch(/camera stands INSIDE/);
+		// Its own camera rule, not the outside one.
+		expect(p).toMatch(/THE CAMERA IS INSIDE/);
+		expect(p).not.toMatch(/stays outside the trailer and looks in/);
+		// The interior reference is named as the galley it is filming.
+		expect(p).toMatch(/image 1 is the approved interior layout/);
+		// The wide-angle brief sells the size without inventing space.
+		expect(p).toMatch(/24mm/);
+		expect(p).toMatch(/bigger than the trailer's footprint/);
+		// The line passes in the profile's order.
+		expect(p).toMatch(/griddle and chargrill under the canopy/);
 	});
 
-	it("holds one time of day across the whole tour so parts cut together", () => {
-		const all = [
-			buildSalesVideoPrompt("tour", CTX),
-			tourContinuationPrompt(2, CTX),
-			tourContinuationPrompt(3, CTX),
-		];
-		for (const p of all) expect(p).toMatch(/golden.hour/i);
+	it("the 360 orbit completes a full circle", () => {
+		const p = buildSalesVideoPrompt("hero-orbit", CTX);
+		expect(p).toMatch(/full 360° orbit/);
+		expect(p).toMatch(/back to the opening angle/);
+		// A genuine orbit, not a half turn.
+		expect(p).not.toMatch(/180°/);
+		// Still locked to the outside camera rule.
+		expect(p).toMatch(/stays outside the trailer and looks in/);
 	});
 });

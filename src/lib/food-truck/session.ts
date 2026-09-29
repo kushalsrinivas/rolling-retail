@@ -1,5 +1,10 @@
 import type { ProjectBrain } from "./brain";
 import { FREE_VISUAL_CREDITS, RENDER_VIEWS } from "./constants";
+import type {
+	DesignSpec,
+	DesignState,
+	DesignVersionRecord,
+} from "./design-record";
 import type { StarterConcept } from "./images";
 import type { MenuDesign } from "./menu";
 
@@ -26,6 +31,15 @@ export interface ChatTurn {
 	content: string;
 }
 
+export interface DesignApproval {
+	id: string;
+	version: number;
+	/** Who approved — buyer name/contact when known. */
+	by: string | null;
+	state: DesignState;
+	createdAt: number;
+}
+
 export interface TruckSession {
 	sessionId: string;
 	createdAt: number;
@@ -45,9 +59,8 @@ export interface TruckSession {
 	 */
 	inspirationImage: string | null;
 	/**
-	 * Auto-hero master: the first real (non-placeholder) exterior_hero render.
-	 * Every later round chains off it so regenerations stay the same product
-	 * instead of drifting into a new generation.
+	 * Anchor: the current approved version's hero, falling back to the first
+	 * real render. Replaced on approval — never locked to a rejected draft.
 	 */
 	masterImageUrl: string | null;
 	/** Sales-video jobs (Omni Flash interactions), newest first, capped at 10. */
@@ -64,6 +77,17 @@ export interface TruckSession {
 	images: Record<string, StarterConcept>;
 	/** The buyer's menu, as last sent from the Menu tab. */
 	menu: MenuDesign | null;
+	/**
+	 * Versioned design record — the source of truth renders, video and the
+	 * PDF all read. v1 on first commit, immutable thereafter; revisions
+	 * append children. Empty until intake or the first visuals commit one.
+	 */
+	designVersions: DesignVersionRecord[];
+	/**
+	 * Server-side approvals. "Favorite" is browser state; approval freezes a
+	 * version here with who/when, and a regenerate can never overwrite it.
+	 */
+	approvals: DesignApproval[];
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -90,11 +114,61 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			videos: [],
 			images: {},
 			menu: null,
+			designVersions: [],
+			approvals: [],
 		};
 		sessions.set(id, s);
+		// Best-effort restore from disk — a restart must not lose the design.
+		// Sync path can't await; routes call restoreSession() after this.
+		void restoreSession(id).catch(() => {});
+		// Old snapshots predate designVersions/approvals.
+		if (!Array.isArray((s as { designVersions?: unknown }).designVersions)) {
+			s.designVersions = [];
+		}
+		if (!Array.isArray((s as { approvals?: unknown }).approvals)) {
+			s.approvals = [];
+		}
 	}
 	s.lastSeen = Date.now();
 	return s;
+}
+
+/** Persist to disk (fire-and-forget from routes — never blocks generation). */
+export function persistSession(s: TruckSession): void {
+	// Dynamic import avoids pulling node:fs into client bundles.
+	void import("./store")
+		.then(({ saveSessionSnapshot }) =>
+			saveSessionSnapshot(s.sessionId, {
+				...s,
+				// Cap snapshot size: keep latest 20 history turns; images stay
+				// (they are the design) but videos keep metadata only.
+				history: s.history.slice(-20),
+				videos: s.videos.map((v) => ({ ...v, url: null })),
+			}),
+		)
+		.catch(() => {});
+}
+
+/** Load the disk snapshot back into the memory map (serverless/restart). */
+export async function restoreSession(
+	sessionId: string,
+): Promise<TruckSession | null> {
+	if (sessions.has(sessionId)) return sessions.get(sessionId) ?? null;
+	try {
+		const { loadSessionSnapshot } = await import("./store");
+		const snap = await loadSessionSnapshot<TruckSession>(sessionId);
+		if (!snap) return null;
+		snap.designVersions = Array.isArray(snap.designVersions)
+			? snap.designVersions
+			: [];
+		snap.approvals = Array.isArray(snap.approvals) ? snap.approvals : [];
+		snap.images = snap.images ?? {};
+		snap.videos = snap.videos ?? [];
+		sessions.set(sessionId, snap);
+		return snap;
+	} catch {
+		return null;
+	}
 }
 
 export function creditsLeft(s: TruckSession) {
@@ -158,15 +232,22 @@ export function listConcepts(s: TruckSession): StarterConcept[] {
 export function conceptsByView(s: TruckSession): Record<string, string> {
 	const out: Record<string, string> = {};
 	for (const [view, c] of Object.entries(s.images)) {
-		if (c.status === "ready" && c.url.startsWith("data:image/")) {
+		if (
+			c.status === "ready" &&
+			typeof c.url === "string" &&
+			(c.url.startsWith("data:image/") ||
+				c.url.startsWith("/api/assets/") ||
+				c.url.startsWith("http"))
+		) {
 			out[view] = c.url;
 		}
 	}
 	return out;
 }
 
-/** First real exterior_hero wins and never changes — it is the visual truth
- * later rounds and videos inherit. Placeholders (no-key fallbacks) never count. */
+/** First real exterior_hero wins — until an approved version replaces it.
+ * The anchor is the current approved version, never a rejected first draft.
+ * Placeholders (no-key fallbacks) never count. */
 export function adoptMasterFromImages(
 	s: TruckSession,
 	images: Array<{ label: string; url: string; model: string }>,
@@ -180,6 +261,79 @@ export function adoptMasterFromImages(
 			!i.url.startsWith("data:image/svg"),
 	);
 	if (hero) s.masterImageUrl = hero.url;
+}
+
+/**
+ * Point the anchor at the version the customer actually approved.
+ * A rejected first hero must never hold later rounds hostage.
+ */
+export function replaceMasterImage(s: TruckSession, url: string | null) {
+	if (
+		typeof url === "string" &&
+		url.startsWith("data:image/") &&
+		!url.startsWith("data:image/svg")
+	) {
+		s.masterImageUrl = url;
+	}
+}
+
+/** Current design version — the source of truth renders read. */
+export function currentDesign(s: TruckSession): DesignVersionRecord | null {
+	if (s.designVersions.length === 0) return null;
+	return s.designVersions[s.designVersions.length - 1];
+}
+
+/** Append an immutable version. Never mutates — revisions are children. */
+export function commitDesignVersion(
+	s: TruckSession,
+	spec: DesignSpec,
+	opts?: { changeSummary?: string | null; state?: DesignState },
+): DesignVersionRecord {
+	const parent = currentDesign(s);
+	const rec: DesignVersionRecord = {
+		version: (parent?.version ?? 0) + 1,
+		parentVersion: parent?.version ?? null,
+		changeSummary: opts?.changeSummary ?? null,
+		spec,
+		state: opts?.state ?? "concept",
+		createdAt: Date.now(),
+	};
+	s.designVersions.push(rec);
+	persistSession(s);
+	return rec;
+}
+
+/**
+ * Separate "favorite" from "approve". Approval freezes a version
+ * server-side with who/when, moves the anchor to it, and can never be
+ * overwritten by a regenerate.
+ */
+export function approveDesignVersion(
+	s: TruckSession,
+	version: number,
+	by?: string | null,
+): DesignApproval | null {
+	const rec = s.designVersions.find((d) => d.version === version);
+	if (!rec) return null;
+	rec.state = "approved";
+	const approval: DesignApproval = {
+		id: `a_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+		version,
+		by: by?.trim() || null,
+		state: "approved",
+		createdAt: Date.now(),
+	};
+	// Keep one approval per version — re-approving updates who/when.
+	s.approvals = [...s.approvals.filter((a) => a.version !== version), approval];
+	// The anchor follows approval, not the first render.
+	const hero = s.images["exterior_hero"];
+	if (hero?.status === "ready") replaceMasterImage(s, hero.url);
+	persistSession(s);
+	return approval;
+}
+
+export function approvalsFor(s: TruckSession): DesignApproval[] {
+	return [...s.approvals].sort((a, b) => b.createdAt - a.createdAt);
 }
 
 // Best-effort cap so a hung dev server doesn't grow forever.

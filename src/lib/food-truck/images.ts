@@ -11,7 +11,10 @@ import {
 	menuBoardReferences,
 	type RenderReference,
 } from "./continuity";
+import { lineProfileFor } from "./line-profile";
+import { liveryPhrase } from "./livery";
 import { type MenuDesign, menuBoardPrompt } from "./menu";
+import { defaultOpenings, openingsPhrase } from "./openings";
 import { factoryReference } from "./references";
 
 /**
@@ -66,6 +69,8 @@ export interface TruckImageArgs {
 	references?: readonly RenderReference[];
 	/** Fixed geometry of this body, from VEHICLE_GEOMETRY. */
 	geometry?: string | null;
+	/** Fields the customer asked to change — named in the lock, rest frozen. */
+	allowedChanges?: readonly string[] | null;
 }
 
 export async function generateTruckImage(
@@ -99,7 +104,7 @@ export async function generateTruckImage(
 		attached.push(ref);
 	}
 
-	const lock = continuityLock(attached, args.geometry);
+	const lock = continuityLock(attached, args.geometry, args.allowedChanges);
 	const text = lock ? `${args.prompt} ${lock}` : args.prompt;
 	try {
 		const res = await fetch(
@@ -159,6 +164,12 @@ export interface ConceptPromptArgs {
 	brainNote?: string;
 	/** False when the buyer has not named the business, so nothing is lettered. */
 	hasBrand?: boolean;
+	/** Version stamp, e.g. "CONCEPT · v4 · not for construction". */
+	versionStamp?: string | null;
+	/** Explicit openings — defaults to the body template when omitted. */
+	openingsPhrase?: string | null;
+	/** Livery template brief — defaults to the body template when omitted. */
+	liveryPhrase?: string | null;
 }
 
 /** Turn raw equipment ids (e.g. "griddle-chargrill") into readable phrases. */
@@ -228,8 +239,19 @@ export function equipmentPhrase(equipment: readonly string[]): string {
  * read badly in the sales deck. Flat = cheap to produce, durable, and the
  * deck stays honest about what a vinyl printer can deliver.
  */
-export function emblemFor(businessType: string): string {
+export function emblemFor(
+	businessType: string,
+	menu: readonly string[] = [],
+): string {
 	const t = businessType.toLowerCase();
+	// One business type can cover two different products; the menu decides.
+	const line = lineProfileFor(t, menu).id;
+	if (line === "juice")
+		return "a tall juice cup with a straw beside a simple halved orange and a leaf, in flat vector shapes — two or three spot colors, sharp edges, no gradients, no photorealism";
+	if (line === "fried-dessert" && !menu.some((m) => /churro/i.test(m)))
+		return "a ring doughnut with a simple icing drip and a few sprinkle dashes, in flat vector shapes — two or three spot colors, sharp edges, no gradients";
+	if (line === "fried-dessert")
+		return "three ridged churros in a paper cone with a small dip pot, in flat vector shapes — two or three spot colors, sharp edges, no gradients";
 	if (/coffee|espresso/.test(t))
 		return "a takeaway coffee cup seen from a 3/4 angle with a clean silhouette, sleeve band, lid and a simple curl of steam, in flat vector shapes — two or three spot colors, sharp edges, no gradients";
 	if (/tea|matcha|boba|bubble/.test(t))
@@ -312,7 +334,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 			: "house menu";
 	const equip = equipmentPhrase(equipment);
 	const serve = servePhrase(serveMode);
-	const emblem = emblemFor(businessType);
+	const emblem = emblemFor(businessType, menuKeywords);
+	const line = lineProfileFor(businessType, menuKeywords);
+	const openings =
+		args.openingsPhrase ??
+		openingsPhrase(defaultOpenings(vehicleBody, lengthM));
+	const livery = args.liveryPhrase ?? liveryPhrase(vehicleBody);
+	const stamp = args.versionStamp ?? "CONCEPT · not for construction";
 
 	const hasBrand = Boolean(args.hasBrand ?? true);
 	// Signage phrasing, so an unnamed business gets blank panels rather than a
@@ -328,7 +356,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		? `An illuminated "${brand}" badge mounted on the counter front.`
 		: "An illuminated blank badge panel on the counter front, awaiting branding.";
 
-	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
+	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. EXACT GEOMETRY — style it, don't change it: ${openings}. LIVERY TEMPLATE: ${livery}. Status: ${stamp}. THE LINE: ${line.forbid} SIDES: the curbside is the side with the service hatch and the entry door; the roadside wall has no hatch and no door. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
 		hasBrand
 			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
 			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
@@ -337,41 +365,45 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	return [
 		{
 			label: "exterior_hero",
-			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle at golden hour. Full wrap livery visible, service hatch open showing a warm glimpse of the cooking line and stainless counter inside, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, shallow depth of field.`,
+			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle of the CURBSIDE at golden hour, so the service hatch and the entry door are both in view. Full wrap livery visible, service hatch open showing a glimpse of ${line.heroGlimpse}, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, shallow depth of field.`,
 		},
 		{
 			label: "exterior_rear",
-			prompt: `${ctx} EXTERIOR REAR: three-quarter rear angle. Show the heavy-duty shore power camlock inlet mounted low on the back, a rear service door, the roof-mounted commercial HVAC unit, and the back of the illuminated roof blade sign. Stabilizer jacks deployed, clean pavement, late afternoon light.`,
+			prompt: `${ctx} EXTERIOR REAR: three-quarter rear angle from the ROADSIDE, so the curbside hatch and entry door are hidden — this wall has no hatch and no door. ${
+				vehicleBody === "airstream"
+					? "The rounded rear end cap is a solid curved panel with no door in it."
+					: "The rear wall carries the single rear door described in the body lock, and nothing else."
+			} Show the heavy-duty shore power camlock inlet mounted low on the back, the roof-mounted commercial HVAC unit, and the back of the illuminated roof blade sign. Stabilizer jacks deployed, clean pavement, late afternoon light.`,
 		},
 		{
 			label: "side_elevation",
-			prompt: `${ctx} SIDE ELEVATION: flat orthographic side view, no perspective, like an architectural elevation drawing. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, technical illustration style, sharp edges, no shadows, no people.`,
+			prompt: `${ctx} CURBSIDE VIEW: flat side-on concept illustration of the curbside, no perspective. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame and the entry door behind it, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, clean illustration style, sharp edges, no shadows, no people. This is a presentation illustration, not a drawing: no dimension lines, no measurements, no callouts, no labels, no title block.`,
 		},
 		{
 			label: "interior_layout",
-			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC KITCHEN OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted kitchen, showing the FULL linear galley end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: (1) POS order station with compact till screen and ticket rail, (2) hot station (${equip}) under a stainless extraction canopy with visible Ansul nozzles and duct riser, (3) refrigerated make-rail with 6+ garnish pans of fresh ingredients under a hinged glass sneeze-guard, order assembly boards and heat gantry matching this truck's menu, (4) hand basin with knee-operated taps and soap dispenser at the line entry, (5) drinks end-cap with ice well, under-counter refrigeration and shake prep. Back wall: matte black easy-clean panels, warm cream ceramic tile splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting under the canopy, cool daylight through the open hatch. Every appliance hard up against the walls with 800mm clear chef aisle, power trunking and fresh/grey water tanks visible below counter. Nobody inside — an empty, ready-to-trade kitchen with food prepped in the pans.`,
+			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted interior, showing the FULL linear run end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: ${line.galley}. ${
+				line.hot
+					? "Only the cooking equipment named here sits under a stainless extraction canopy; nothing else is under it."
+					: "There is no extraction canopy, hood or cooking equipment anywhere in this interior."
+			} Back wall: easy-clean panels, tiled splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting, cool daylight through the open hatch. Every unit hard up against the walls with a clear 800mm working aisle, fresh/grey water tanks below counter. Nobody inside — an empty, ready-to-trade interior with product prepped.`,
 		},
 		{
 			label: "front_elevation",
-			prompt: `${ctx} FRONT ELEVATION: dead-on straight view from outside the open service hatch at eye level. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: POS, hot station, make-rail, drinks station. ${counterBadge} Symmetrical, dead-on composition.`,
+			prompt: `${ctx} FRONT ELEVATION: dead-on straight view from outside the open service hatch at eye level. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: ${line.frontRun}. ${counterBadge} Symmetrical, dead-on composition.`,
 		},
 		{
 			label: "assembly_theater",
-			prompt: `${ctx} ASSEMBLY THEATER: eye-level POV from the counter looking through the open service hatch at the working line — food mid-preparation on the hot station and prep rail, steam rising, fresh ingredients visible in the make-rail, a finished item sitting ready on the counter. No staff and no hands in frame; the line reads as if the cook just stepped away. Warm appetizing lighting on the food, shallow depth of field, golden-hour ambiance.`,
+			prompt: `${ctx} ASSEMBLY THEATER: eye-level POV from the counter looking through the open service hatch at the working line — ${line.counterMoment}, and ${line.signature} sitting ready on the counter. No staff and no hands in frame; the line reads as if the team just stepped away. Warm appetizing lighting on the product, shallow depth of field, golden-hour ambiance.`,
 		},
 		{
 			label: "night_exterior",
 			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light, the forecourt empty. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights.`,
 		},
 		{
-			label: "roof_plan",
-			prompt: `${ctx} ROOF PLAN + FLOOR LAYOUT — TECHNICAL TOP-DOWN ARCHITECTURAL DRAWING: perfectly vertical bird's-eye orthographic plan of the whole ${lengthM}m × ${widthM}m unit on a clean white sheet with a thin dimension outline showing overall length and width. Roof layer: commercial rooftop HVAC unit centred over the hot station, ${roofSign} mounted fore-aft, two mushroom vents over the drinks end, shore-power camlock hatch marked at the rear corner, stabilizer jacks at all four corners. Ghosted beneath the roof outline, the interior floor layout in lighter linework: linear galley left to right — POS zone, hot station footprint (${equip}), make-rail rectangle, hand-basin square at line entry, drinks end-cap rectangle — with a hatched 800mm clear aisle, door swing arcs, and tiny zone labels. Flat vector-technical style, subtle drop shadows only, sharp 90-degree geometry, no perspective, no people, no sky.`,
-		},
-		{
 			label: "brand_mark",
 			prompt: hasBrand
-				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a matte black background, the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
-				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Matte black background. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
+				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a deep neutral background drawn from the palette (${colors}), the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
+				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Deep neutral background drawn from the palette (${colors}). Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
 		},
 	];
 }
@@ -470,9 +502,7 @@ export async function runStarterConcepts(
 	const menuKeywords = args.menuKeywords ?? [];
 	const equipment = args.equipment ?? [];
 	const serveMode: ServeMode = args.serveMode ?? "hatch-serve";
-	const brainNote =
-		args.brainNote ||
-		`${serveMode} food truck for ${brand}, drinks end-cap carries margin`;
+	const brainNote = args.brainNote || `${serveMode} food truck for ${brand}`;
 
 	const prompts = conceptPrompts({
 		brand,
@@ -496,6 +526,13 @@ export async function runStarterConcepts(
 	// fixed geometry. Together these anchor the whole round to a trailer that
 	// exists, instead of one the model invents afresh for every view.
 	const bodyPhoto = await factoryReference(args.vehicleId, vehicleBody);
+	if (!bodyPhoto) {
+		// Without the factory's photo the hero is drawn from text alone, and
+		// every later view inherits whatever shell it invented.
+		console.warn(
+			`[food-truck] no factory reference photo for ${args.vehicleId ?? vehicleBody} — add one under references/${vehicleBody}/ or set REFERENCES_DIR`,
+		);
+	}
 	const geometry = geometryFor(vehicleBody);
 
 	const photoOrNull = (u: string | null | undefined): string | null =>
@@ -607,7 +644,15 @@ export async function runStarterConcepts(
 		});
 	}
 
-	return { images, creditsUsed: creditsUsed + 1, brainNoteUsed: brainNote };
+	// A credit buys a round. Retrying views that failed re-delivers what was
+	// already paid for, and a round where nothing rendered delivered nothing.
+	const charged =
+		!args.only?.length && images.some((i) => i.status === "ready");
+	return {
+		images,
+		creditsUsed: creditsUsed + (charged ? 1 : 0),
+		brainNoteUsed: brainNote,
+	};
 }
 
 export interface MenuBoardArgs {

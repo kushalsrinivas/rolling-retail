@@ -91,10 +91,6 @@ export const REFERENCE_PLAN: Record<ConceptView, ViewPlan> = {
 	// Same truck after dark: the livery has to survive the lighting change.
 	night_exterior: { body: false, spatial: ["exterior_hero", "side_elevation"] },
 
-	// A technical plan, but of a real footprint — the elevation fixes the
-	// length and the roof furniture.
-	roof_plan: { body: true, spatial: ["side_elevation", "exterior_hero"] },
-
 	// Identity board. Needs the livery's palette and wordmark, nothing else.
 	brand_mark: { body: false, spatial: ["exterior_hero"] },
 };
@@ -241,6 +237,8 @@ export function menuBoardReferences(args: {
 export function continuityLock(
 	refs: RenderReference[],
 	geometry: string | null | undefined,
+	/** Fields the customer explicitly asked to change — everything else stays locked. */
+	allowedChanges?: readonly string[] | null,
 ): string {
 	if (refs.length === 0) {
 		return geometry
@@ -281,7 +279,9 @@ export function continuityLock(
 	return [
 		`CONTINUITY LOCK — ${refs.length} reference image${refs.length === 1 ? "" : "s"} attached.`,
 		...lines,
-		"Preserve the exact visual identity and architectural context established by these references. You are photographing a vehicle that already exists; the ONLY thing this view changes is the camera position and, where the brief says so, the time of day.",
+		allowedChanges?.length
+			? `This is a targeted revision: you MAY change only ${allowedChanges.join(", ")}. Everything else — body shape, openings, equipment, wrap artwork, brand colours, logo placement, materials — must match the references exactly. You are photographing a vehicle that already exists; the ONLY other thing this view changes is the camera position and, where the brief says so, the time of day.`
+			: "Preserve the exact visual identity and architectural context established by these references. You are photographing a vehicle that already exists; the ONLY thing this view changes is the camera position and, where the brief says so, the time of day.",
 		...(refs.some((r) => r.role === "menu")
 			? [
 					"The one permitted addition is the menu board carrying the menu artwork, exactly as the brief places it; the rules below apply to everything else.",
@@ -307,10 +307,14 @@ export const DRIFT_NEGATIVES =
  * first; the caller keeps the anchor in the set so identity survives.
  */
 export function videoReferenceViews(kind: string): ConceptView[] {
+	// The walkthrough stands INSIDE the galley, so it is briefed on the
+	// interior render first — the overhead 3/4 view of the full equipment
+	// run — then the eye-level line and the identity anchor.
 	if (kind === "walkthrough")
-		return ["assembly_theater", "front_elevation", "interior_layout"];
+		return ["interior_layout", "front_elevation", "exterior_hero"];
+	// Clips otherwise stay outside the trailer and look in through the hatch,
+	// so the hatch-view still (front_elevation) is the interior reference,
+	// never the overhead render the camera could not reach.
 	if (kind === "night-cinematic") return ["night_exterior", "exterior_hero"];
-	if (kind === "tour")
-		return ["exterior_hero", "interior_layout", "front_elevation"];
 	return ["exterior_hero", "side_elevation", "exterior_rear"];
 }

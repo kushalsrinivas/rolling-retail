@@ -74,7 +74,6 @@ const BUSINESS_KEYWORDS: Record<
 		"kebab",
 		"steak",
 		"cheesesteak",
-		"burrito",
 		"sandwich",
 		"meat",
 	],
@@ -102,14 +101,27 @@ const BUSINESS_KEYWORDS: Record<
 		"korean",
 		"vietnamese",
 		"wok",
-		"tacos",
-		"taco",
-		"mexican",
 		"rice",
 		"dumplings",
 		"gyoza",
 		"sushi",
 		"katsu",
+	],
+	mexican: [
+		"taco",
+		"tacos",
+		"taqueria",
+		"mexican",
+		"birria",
+		"burrito",
+		"burritos",
+		"quesadilla",
+		"quesadillas",
+		"nachos",
+		"elote",
+		"tamales",
+		"carnitas",
+		"al pastor",
 	],
 	breakfast: [
 		"breakfast",
@@ -275,6 +287,8 @@ const WALKIN_FALSE = [
 const COLOR_WORDS = [
 	"matte black",
 	"stainless steel",
+	"sage green",
+	"sage",
 	"red",
 	"blue",
 	"green",
@@ -301,6 +315,40 @@ const COLOR_WORDS = [
 	"gray",
 	"grey",
 ];
+
+/**
+ * Food phrases that contain a color word but are not a color choice.
+ * "ice cream" is not cream, "wood-fired" is not wood. Stripped before
+ * color search so the food name never becomes the palette.
+ */
+const FOOD_COLOR_MASKS = ["ice cream", "ice-cream", "wood-fired", "wood fired"];
+
+function stripFoodMasks(lower: string): string {
+	let out = lower;
+	for (const m of FOOD_COLOR_MASKS) {
+		out = out.split(m).join(" ");
+	}
+	return out;
+}
+
+/** Colors the buyer explicitly rejected: "no red", "don't like red". */
+function deniedWords(lower: string, words: string[]): Set<string> {
+	const denied = new Set<string>();
+	const NEG =
+		"(?:no|not|without|don't|dont|doesn't|doesnt|dislike|hate|remove|lose|drop|avoid|get rid of|less)";
+	for (const w of words) {
+		try {
+			const re = new RegExp(
+				`${NEG}\\s+(?:\\w+\\s+){0,3}?\\b${escapeRegExp(w)}\\b`,
+				"i",
+			);
+			if (re.test(lower)) denied.add(w);
+		} catch {
+			/* ignore */
+		}
+	}
+	return denied;
+}
 
 const VIBE_WORDS = [
 	"premium",
@@ -380,13 +428,33 @@ function escapeRegExp(s: string): string {
 }
 
 function hasAny(hay: string, needles: string[]): string[] {
-	return needles.filter((n) => {
+	const found: Array<{ n: string; at: number }> = [];
+	for (const n of needles) {
 		try {
-			return new RegExp(`\\b${escapeRegExp(n)}\\b`, "i").test(hay);
+			const m = new RegExp(`\\b${escapeRegExp(n)}\\b`, "i").exec(hay);
+			if (m?.index !== undefined) found.push({ n, at: m.index });
 		} catch {
-			return hay.includes(n);
+			const at = hay.indexOf(n);
+			if (at >= 0) found.push({ n, at });
 		}
-	});
+	}
+	// Sentence order, not list order — the first color named stays first.
+	// Dedupe overlapping matches ("sage green" also matches "green"/"sage"):
+	// keep the longest match at each position.
+	found.sort((a, b) => a.at - b.at || b.n.length - a.n.length);
+	const out: string[] = [];
+	for (const f of found) {
+		if (out.some((kept) => f.n.includes(kept) || kept.includes(f.n))) {
+			// Prefer the longer, more specific name.
+			const idx = out.findIndex(
+				(kept) => f.n.includes(kept) || kept.includes(f.n),
+			);
+			if (idx >= 0 && f.n.length > out[idx].length) out[idx] = f.n;
+			continue;
+		}
+		out.push(f.n);
+	}
+	return out;
 }
 
 function uniq<T>(arr: T[]): T[] {
@@ -601,8 +669,21 @@ export function updateBrain(
 			brain.brandName = extractTruckMention(lower);
 		}
 	}
-	brain.colors = uniq([...brain.colors, ...hasAny(lower, COLOR_WORDS)]);
-	brain.vibeWords = uniq([...brain.vibeWords, ...hasAny(lower, VIBE_WORDS)]);
+	brain.colors = (() => {
+		// Colors accumulate, but a rejection removes: "no red" / "don't like
+		// red" must never become the first palette entry.
+		const searchable = stripFoodMasks(lower);
+		const denied = deniedWords(lower, COLOR_WORDS);
+		const fresh = hasAny(searchable, COLOR_WORDS).filter((c) => !denied.has(c));
+		const kept = brain.colors.filter((c) => !denied.has(c.toLowerCase()));
+		return uniq([...kept, ...fresh]);
+	})();
+	brain.vibeWords = (() => {
+		const denied = deniedWords(lower, VIBE_WORDS);
+		const fresh = hasAny(lower, VIBE_WORDS).filter((v) => !denied.has(v));
+		const kept = brain.vibeWords.filter((v) => !denied.has(v.toLowerCase()));
+		return uniq([...kept, ...fresh]);
+	})();
 
 	// ── Business ──
 	type BizCat = Exclude<BusinessTypeId, "combined">;

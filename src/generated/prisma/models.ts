@@ -9,6 +9,10 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/Todo.ts'
+export type * from './models/Project.ts'
+export type * from './models/DesignVersion.ts'
+export type * from './models/Asset.ts'
+export type * from './models/Approval.ts'
 export type * from './models/BlockGroup.ts'
 export type * from './models/Brand.ts'
 export type * from './models/Report.ts'

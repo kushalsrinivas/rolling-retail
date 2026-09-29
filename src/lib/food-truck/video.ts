@@ -48,6 +48,17 @@ function splitDataUrl(u: string): { mimeType: string; data: string } | null {
 	return m?.[1] && m?.[2] ? { mimeType: m[1], data: m[2] } : null;
 }
 
+/** Interactions API image parts for up to 3 still data-URLs. */
+function imageInputs(refs: readonly string[]) {
+	const out: Array<{ type: "image"; mime_type: string; data: string }> = [];
+	for (const ref of refs.slice(0, 3)) {
+		const split = splitDataUrl(ref);
+		if (split)
+			out.push({ type: "image", mime_type: split.mimeType, data: split.data });
+	}
+	return out;
+}
+
 type Interaction = Record<string, unknown>;
 
 interface VideoContent {
@@ -121,15 +132,7 @@ export async function startSalesVideo(args: {
 			text: args.prompt ?? buildSalesVideoPrompt(args.kind, args.ctx),
 		},
 	];
-	for (const ref of args.references.slice(0, 3)) {
-		const split = splitDataUrl(ref);
-		if (split)
-			input.push({
-				type: "image",
-				mime_type: split.mimeType,
-				data: split.data,
-			});
-	}
+	input.push(...imageInputs(args.references));
 	const res = await fetch(interactionsUrl(), {
 		method: "POST",
 		headers: omniHeaders(key),
@@ -165,44 +168,6 @@ export type VideoStatus =
 	| { status: "ready"; videoDataUrl: string }
 	| { status: "error"; error: string };
 
-/** Extend a finished part into the next 10s continuation (stateful edit). */
-export async function extendSalesVideo(args: {
-	previousInteractionId: string;
-	prompt: string;
-}): Promise<VideoStart> {
-	const key = omniKey();
-	if (!key) throw new Error("video needs GOOGLE_API_KEY");
-	const model = videoModel();
-	const res = await fetch(interactionsUrl(), {
-		method: "POST",
-		headers: omniHeaders(key),
-		body: JSON.stringify({
-			model,
-			input: [{ type: "text", text: args.prompt }],
-			previous_interaction_id: args.previousInteractionId,
-			response_format: { type: "video", delivery: "uri" },
-			background: true,
-		}),
-	});
-	if (!res.ok) {
-		const text = await res.text().catch(() => "");
-		throw new Error(`video extend ${res.status} ${text.slice(0, 200)}`);
-	}
-	const data = (await res.json()) as Interaction;
-	const id =
-		typeof data.id === "string"
-			? data.id
-			: typeof data.name === "string"
-				? data.name
-				: null;
-	if (!id) throw new Error("video extend: no interaction id");
-	const video = findVideoContent(data);
-	return {
-		operationId: id,
-		model,
-		readyUrl: video ? await videoContentToDataUrl(video, key) : null,
-	};
-}
 /** One poll of an interaction — follows Google-hosted URIs until ACTIVE. */
 export async function pollSalesVideo(
 	operationId: string,

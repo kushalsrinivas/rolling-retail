@@ -45,13 +45,13 @@ import {
 	SALES_VIDEO_PRESETS,
 	type SalesVideoKind,
 	salesSlideFor,
-	TOUR_PARTS,
 } from "#/lib/food-truck/sales";
 import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
 import MenuBuilder from "./MenuBuilder";
 
 const LABEL_MAP: Record<string, string> = {
+	side_elevation: "Curbside view",
 	exterior: "Exterior hero",
 	hatch_open: "Hatch open · serve",
 	interior: "Interior line",
@@ -79,12 +79,37 @@ interface BrandReportPanelProps {
 	onAskAbout: (label: string, value: string) => void;
 	onGenerateConcepts: () => void;
 	onToggleFavorite: (label: string) => void;
+	/** Bring the chat into view with its input focused. */
+	onOpenChat: () => void;
 	onRefreshLeads: () => void;
 	brandName: string;
 	menu: MenuDesign | null;
 	onMenuChange: (menu: MenuDesign) => void;
 	isRenderingMenu: boolean;
 	onRenderMenuBoard: (menu: MenuDesign, artwork: string) => void;
+	/** Versioned design record + server-side approvals. */
+	design?: {
+		current?: {
+			version: number;
+			state: string;
+			changeSummary?: string | null;
+			spec?: Record<string, unknown>;
+		} | null;
+		versions?: Array<{
+			version: number;
+			state: string;
+			changeSummary?: string | null;
+		}>;
+		approvals?: Array<{
+			version: number;
+			by?: string | null;
+			createdAt: number;
+		}>;
+		stamp?: string | null;
+	} | null;
+	onApproveVersion?: (version: number) => void;
+	isApproving?: boolean;
+	sessionId?: string | null;
 }
 
 type TabId = "visuals" | "menu" | "build";
@@ -216,12 +241,12 @@ function EmptyState({
 }
 
 /**
- * The tour's progress, as one honest display.
+ * The round's progress, as one honest display.
  *
- * Nine renders and up to three video parts used to land piecemeal into a grid
- * that also held the finished article, so a half-built tour was
- * indistinguishable from a finished one. This stands in front of the work
- * until everything has settled.
+ * Nine renders and a clip used to land piecemeal into a grid that also held
+ * the finished article, so a half-built round was indistinguishable from a
+ * finished one. This stands in front of the work until everything has
+ * settled.
  */
 function TourProgress({
 	progress,
@@ -252,7 +277,7 @@ function TourProgress({
 		progress.phase === "videos"
 			? "Generating videos"
 			: progress.phase === "finalizing"
-				? "Finalizing tour"
+				? "Finalizing"
 				: "Generating renders";
 
 	const steps: Array<{
@@ -275,7 +300,7 @@ function TourProgress({
 		},
 		{
 			id: "final",
-			label: "Finalizing tour",
+			label: "Finalizing",
 			done: false,
 			now: progress.phase === "finalizing",
 		},
@@ -494,64 +519,11 @@ function downloadJson(filename: string, data: unknown) {
 }
 
 /**
- * Chained tour parts. Each extension returns the whole video so far (10s →
- * 20s → 30s), so only the latest ready part is shown — part 3 is the full tour.
+ * Chained tour parts were retired: the 30s tour filmed three disconnected
+ * 10s shots and the panel could only ever play the last one. Every clip is
+ * now a single independent 10s generation — inside walkthrough, 360 orbit,
+ * night — and the set renders like any other clip list.
  */
-function TourSeries({ parts }: { parts: GeneratedVideo[] }) {
-	const clip = parts
-		.filter((p) => p.status === "ready" && p.url)
-		.reduce<GeneratedVideo | undefined>(
-			(best, p) => (!best || (p.part ?? 1) > (best.part ?? 1) ? p : best),
-			undefined,
-		);
-	const pending = parts.some((p) => p.status === "pending");
-	const failed = parts.find((p) => p.status === "error");
-	if (!clip) {
-		if (failed && !pending) {
-			return (
-				<p className="px-3 py-3 text-xs text-[var(--ftf-red-600)]">
-					Tour failed{failed.error ? ` — ${failed.error}` : ""}. Stills are
-					unaffected; try again.
-				</p>
-			);
-		}
-		return (
-			<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
-				<Loader2 className="h-3.5 w-3.5 animate-spin" />
-				Filming part {Math.min(parts.length, TOUR_PARTS)} of {TOUR_PARTS} — the
-				full tour takes a few minutes.
-			</p>
-		);
-	}
-	const part = clip.part ?? 1;
-	const complete = part >= TOUR_PARTS;
-	return (
-		<>
-			{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
-			<video
-				key={clip.id}
-				src={clip.url ?? undefined}
-				controls
-				playsInline
-				className="aspect-video w-full bg-[var(--ftf-well)]"
-			/>
-			<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
-				<span className="text-[11px] text-[var(--ftf-ink-2)]">
-					{complete
-						? `Full tour · ~${TOUR_PARTS * 10}s`
-						: `Tour · part ${part} of ${TOUR_PARTS}${pending ? " · filming next…" : ""}`}
-				</span>
-				<a
-					href={clip.url ?? undefined}
-					download="tour.mp4"
-					className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
-				>
-					<Download className="h-3 w-3" /> Deck-ready MP4
-				</a>
-			</div>
-		</>
-	);
-}
 
 /** Project Brain — what the designer has understood so far. */
 function BrainCard({ brain }: { brain: ProjectBrain | null }) {
@@ -661,12 +633,17 @@ export default function BrandReportPanel({
 	onAskAbout,
 	onGenerateConcepts,
 	onToggleFavorite,
+	onOpenChat,
 	onRefreshLeads,
 	brandName,
 	menu,
 	onMenuChange,
 	isRenderingMenu,
 	onRenderMenuBoard,
+	design,
+	onApproveVersion,
+	isApproving,
+	sessionId,
 }: BrandReportPanelProps) {
 	const [tab, setTab] = useState<TabId>("visuals");
 	// Keyed by view, not index: the grid reorders as slots settle, and an
@@ -774,8 +751,11 @@ export default function BrandReportPanel({
 				))}
 				<div className="ml-auto flex items-center gap-1.5">
 					{typeof creditsLeft === "number" && (
-						<span className="rounded-sm border border-[var(--ftf-line)] px-2 py-1 text-[10px] font-medium tabular-nums text-[var(--ftf-ink-2)]">
-							{creditsLeft} / 5 visuals
+						<span
+							className="rounded-sm border border-[var(--ftf-line)] px-2 py-1 text-[10px] font-medium tabular-nums text-[var(--ftf-ink-2)]"
+							title="Concept rounds remaining with this customer"
+						>
+							{creditsLeft} {creditsLeft === 1 ? "round" : "rounds"} left
 						</span>
 					)}
 					{(layout || estimate || spec) && (
@@ -801,6 +781,67 @@ export default function BrandReportPanel({
 									: undefined
 						}
 					/>
+					{images.length > 0 && (
+						<p className="-mt-1 mb-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-[var(--ftf-ink-3)]">
+							<AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+							Concept renders for discussion, not construction drawings.
+							Dimensions, openings, equipment and wrap are confirmed by the
+							factory before build.
+						</p>
+					)}
+					{/* Version timeline — v1 → v2 → v3 with request, compare and approval. */}
+					{design?.current && (
+						<div className="mb-3 rounded border border-[var(--ftf-line)] bg-[var(--ftf-paper-2)] px-3 py-2.5">
+							<div className="flex flex-wrap items-center gap-2">
+								<span className="rounded-sm bg-[var(--ftf-ink)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+									{design.stamp ?? `v${design.current.version}`}
+								</span>
+								<span className="text-[11px] text-[var(--ftf-ink-2)]">
+									{(design.versions ?? [])
+										.map(
+											(v) =>
+												`v${v.version}${v.state === "approved" ? " ✓" : ""}`,
+										)
+										.join(" → ") || `v${design.current.version}`}
+								</span>
+								{design.current.changeSummary && (
+									<span
+										className="max-w-full truncate text-[11px] italic text-[var(--ftf-ink-3)]"
+										title={design.current.changeSummary}
+									>
+										{design.current.changeSummary}
+									</span>
+								)}
+								<span className="ml-auto flex items-center gap-2">
+									{(design.approvals ?? []).length > 0 ? (
+										<span className="text-[11px] font-semibold text-[var(--ftf-teal-600)]">
+											Approved v{(design.approvals ?? [])[0]?.version}
+											{(design.approvals ?? [])[0]?.by
+												? ` by ${(design.approvals ?? [])[0]?.by}`
+												: ""}
+										</span>
+									) : (
+										onApproveVersion && (
+											<button
+												type="button"
+												disabled={isApproving || !design.current}
+												onClick={() =>
+													design.current &&
+													onApproveVersion(design.current.version)
+												}
+												className="rounded-sm bg-[var(--ftf-blue-800)] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-40"
+												title="Freeze this version server-side with who/when. A regenerate can never overwrite it."
+											>
+												{isApproving
+													? "Approving…"
+													: `Approve v${design.current.version}`}
+											</button>
+										)
+									)}
+								</span>
+							</div>
+						</div>
+					)}
 					{/*
 					 * While a round is in flight the panel shows progress and
 					 * nothing else. A grid that fills in one tile at a time reads
@@ -815,16 +856,16 @@ export default function BrandReportPanel({
 					) : images.length === 0 ? (
 						<EmptyState
 							icon={Truck}
-							title={`No concepts yet — start with ${CONCEPT_VIEW_COUNT}`}
-							body="The exterior hero is rendered first and becomes the anchor; every later view is generated with the finished renders before it attached as references, so all nine show the same truck rather than nine interpretations of it."
+							title="No concepts yet — start with 3 starter views"
+							body="Hero, curbside and interior prove the concept from the same truck. Rear, night, assembly and brand views follow on request once the direction is confirmed."
 							action={{
-								label: `Generate ${CONCEPT_VIEW_COUNT} starter concepts`,
+								label: "Generate 3 starter concepts",
 								onClick: onGenerateConcepts,
 							}}
 							footnote={
 								<>
-									<Lock className="h-3 w-3" /> 5 free visuals · then top-up or
-									talk to sales
+									<Lock className="h-3 w-3" /> Included with this customer ·
+									sales unlocks further rounds
 								</>
 							}
 						/>
@@ -934,8 +975,8 @@ export default function BrandReportPanel({
 												onClick={() => onToggleFavorite(img.label)}
 												title={
 													img.favorite
-														? "Approved for deck + video — click to unstar"
-														: "Star to approve for deck + video"
+														? "Favorite — click to remove"
+														: "Mark as a favorite direction"
 												}
 												className={cn(
 													"absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-sm transition",
@@ -951,14 +992,14 @@ export default function BrandReportPanel({
 													)}
 												/>
 											</button>
-											{/* Provenance: which renders this one inherited from. */}
+											{/* How this was made — provenance lives here, not as a badge. */}
 											{img.references && img.references.length > 0 && (
 												<span
-													title={`Generated with references: ${img.references.map(prettyView).join(", ")}`}
+													title={`How this was made — conditioned on: ${img.references.map(prettyView).join(", ")}`}
 													className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-sm bg-black/55 px-1.5 py-1 text-[10px] font-medium text-white/70 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
 												>
 													<Layers className="h-3 w-3" />
-													{img.references.length}
+													how this was made
 												</span>
 											)}
 											{/* Caption plate: always readable, not a hover surprise. */}
@@ -969,7 +1010,7 @@ export default function BrandReportPanel({
 													</span>
 													<span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/60">
 														{salesSlideFor(img.label)}
-														{img.favorite && " · approved"}
+														{img.favorite && " · favorite"}
 													</span>
 												</span>
 												<Maximize2 className="h-4 w-4 shrink-0 text-white/60 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -990,20 +1031,14 @@ export default function BrandReportPanel({
 								</button>
 								<button
 									type="button"
-									onClick={() =>
-										onAskAbout(
-											"Concept feedback",
-											"Develop the hatch-open direction with bolder signage.",
-										)
-									}
+									onClick={onOpenChat}
 									className={GHOST_BTN}
 								>
 									<MessageCircle className="h-3 w-3" /> Refine in chat
 								</button>
 							</div>
 
-							{/* Sales video — Omni Flash films the master + starred
-							    stills, so the video shows the approved product. */}
+							{/* Sales video — Omni Flash films from the stored renders. */}
 							<div className="mt-8">
 								<SectionHeader
 									icon={Clapperboard}
@@ -1018,10 +1053,12 @@ export default function BrandReportPanel({
 									}
 								/>
 								<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
-									Each clip is filmed from the renders that show the space it
-									covers — the walkthrough from the interior views, the night
-									cut from the night render — so the camera moves through the
-									truck you approved rather than a new one.
+									Three clips: an inside walkthrough of the full equipment
+									line, a 360° orbit of the exterior, and the trailer at
+									night. The walkthrough is filmed standing inside the galley,
+									so it shows the line end to end. Clips are concept
+									visualizations for a pitch, not a record of the build; check
+									every clip before sharing it.
 								</p>
 								<div className="grid gap-2 sm:grid-cols-2">
 									{SALES_VIDEO_PRESETS.map((p) => (
@@ -1053,37 +1090,11 @@ export default function BrandReportPanel({
 										/>
 									</div>
 								)}
-								{!isGeneratingVideo &&
-									videos.length > 0 &&
-									(() => {
-										const groups = new Map<string, GeneratedVideo[]>();
-										const singles: GeneratedVideo[] = [];
-										for (const v of videos) {
-											if (v.kind === "tour") {
-												const key = v.seriesId || v.id;
-												const g = groups.get(key) ?? [];
-												g.push(v);
-												groups.set(key, g);
-											} else {
-												singles.push(v);
-											}
-										}
-										return (
-											<>
-												{[...groups.values()].map((parts) => (
-													<div
-														key={parts[0].seriesId || parts[0].id}
-														className={cn(CARD, "mt-2.5 overflow-hidden")}
-													>
-														<TourSeries parts={parts} />
-													</div>
-												))}
-												{singles.map((v) => (
-													<div
-														key={v.id}
-														className={cn(CARD, "mt-2.5 overflow-hidden")}
-													>
-														{v.status === "ready" && v.url ? (
+							{!isGeneratingVideo &&
+								videos.length > 0 &&
+								videos.map((v) => (
+									<div key={v.id} className={cn(CARD, "mt-2.5 overflow-hidden")}>
+										{v.status === "ready" && v.url ? (
 															<>
 																{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
 																<video
@@ -1117,15 +1128,12 @@ export default function BrandReportPanel({
 														) : (
 															<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
 																<Loader2 className="h-3.5 w-3.5 animate-spin" />
-																Filming the approved stills — this takes a
-																minute or two.
+																Filming from your renders — this takes a minute
+																or two.
 															</p>
 														)}
 													</div>
 												))}
-											</>
-										);
-									})()}
 							</div>
 
 							{/* The trailer itself — built from the factory's dimensions,
@@ -1140,8 +1148,9 @@ export default function BrandReportPanel({
 									/>
 									<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
 										Built from the factory's own dimensions and your equipment
-										list — change the layout and the power draw, the aisle and
-										every render angle follow.
+										list — change the layout and the power draw and the aisle
+										follow. This model is the planning reference; the renders
+										above are illustrations of the concept.
 									</p>
 									<Suspense
 										fallback={
@@ -1328,7 +1337,7 @@ export default function BrandReportPanel({
 								<div className="mb-6">
 									<SectionHeader
 										icon={FileJson}
-										title="Investor spec"
+										title="Concept package"
 										badge="Private"
 										tone="live"
 									/>
@@ -1359,18 +1368,30 @@ export default function BrandReportPanel({
 												))}
 											</ol>
 											<div className="mt-4 flex flex-wrap gap-2">
-												<button
-													type="button"
-													onClick={() =>
-														downloadJson(
-															`${spec.brandName.replace(/\s+/g, "-").toLowerCase()}-spec.json`,
-															{ spec, layout, estimate },
-														)
-													}
-													className="ftf-cta inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs"
-												>
-													<Download className="h-3 w-3" /> Spec JSON
-												</button>
+												{sessionId ? (
+													<a
+														href={`/api/agent/package?sessionId=${encodeURIComponent(sessionId)}`}
+														target="_blank"
+														rel="noreferrer"
+														className="ftf-cta inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs"
+														title="Hero, elevations, interior, deterministic plan, palette sheet, equipment + power, revision history, fabrication notes — stamped CONCEPT. Print to PDF."
+													>
+														<Download className="h-3 w-3" /> Concept package
+													</a>
+												) : (
+													<button
+														type="button"
+														onClick={() =>
+															downloadJson(
+																`${spec.brandName.replace(/\s+/g, "-").toLowerCase()}-spec.json`,
+																{ spec, layout, estimate },
+															)
+														}
+														className="ftf-cta inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs"
+													>
+														<Download className="h-3 w-3" /> Spec JSON
+													</button>
+												)}
 												<button
 													type="button"
 													onClick={copyHandoff}

@@ -23,6 +23,31 @@ export * from './enums.ts';
  */
 export type Todo = Prisma.TodoModel
 /**
+ * Model Project
+ * One buyer project — survives restarts, deploys and reloads.
+ * Sessions are ephemeral; projects are the record.
+ */
+export type Project = Prisma.ProjectModel
+/**
+ * Model DesignVersion
+ * Immutable design snapshot. A revision never mutates — it appends a child
+ * with parentVersionId + changeSummary, so v1 → v2 → v3 is auditable and a
+ * customer can always see what changed and approve a specific version.
+ */
+export type DesignVersion = Prisma.DesignVersionModel
+/**
+ * Model Asset
+ * A render or video file. Storage is a URL (object storage / /api/assets),
+ * never a base64 data URL in RAM.
+ */
+export type Asset = Prisma.AssetModel
+/**
+ * Model Approval
+ * Who approved which version, when. "Favorite" is browser state; approval
+ * freezes a version server-side and cannot be overwritten by a regenerate.
+ */
+export type Approval = Prisma.ApprovalModel
+/**
  * Model BlockGroup
  * 
  */

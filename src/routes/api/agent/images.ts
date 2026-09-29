@@ -7,12 +7,17 @@ import {
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import {
 	adoptMasterFromImages,
+	commitDesignVersion,
 	conceptsByView,
 	creditsLeft,
+	currentDesign,
 	getOrCreateSession,
 	listConcepts,
+	persistSession,
 	putConcepts,
+	restoreSession,
 } from "#/lib/food-truck/session";
+import { layoutFor } from "#/lib/food-truck/tools";
 
 const LABELS = CONCEPT_VIEWS;
 
@@ -33,7 +38,10 @@ export const Route = createFileRoute("/api/agent/images")({
 						only?: string[];
 					};
 					const session = getOrCreateSession(body.sessionId);
-					if (creditsLeft(session) <= 0) {
+					await restoreSession(session.sessionId);
+					// Retrying failed views is free, so it works with no credits left.
+					const isRetry = Array.isArray(body.only) && body.only.length > 0;
+					if (creditsLeft(session) <= 0 && !isRetry) {
 						return Response.json(
 							{
 								error: "Visual credits exhausted",
@@ -44,9 +52,9 @@ export const Route = createFileRoute("/api/agent/images")({
 						);
 					}
 					const brain = session.brain;
-					const brand =
-						(body.brand || brain?.brandName || "BIB Truck").trim() ||
-						"BIB Truck";
+					// No name means no lettering. A placeholder here used to be
+					// painted down the side of the customer's trailer.
+					const brand = (body.brand || brain?.brandName || "").trim();
 					const vehicle = getVehicle(body.vehicleId ?? brain?.vehicleId ?? "");
 					const vehicleLabel = vehicle?.label ?? "Square Trailer 4m";
 					const business = getBusiness(brain?.businessType ?? "");
@@ -100,7 +108,12 @@ export const Route = createFileRoute("/api/agent/images")({
 						vibe,
 						businessType: brain?.businessType ?? "combined",
 						menuKeywords: brain?.menuKeywords ?? [],
-						equipment: business?.needs ?? [],
+						equipment: layoutFor(
+							business?.id ?? "combined",
+							vehicle?.id ?? "square-4m",
+							brain?.walkIn === true,
+							brain?.menuKeywords ?? [],
+						).equipment,
 						serveMode,
 						brainNote: body.brainNote,
 					});
@@ -108,6 +121,34 @@ export const Route = createFileRoute("/api/agent/images")({
 					session.visualRounds += 1;
 					adoptMasterFromImages(session, run.images);
 					putConcepts(session, run.images);
+					// First visuals commit the design record — later revisions
+					// patch it instead of re-parsing prose.
+					if (!currentDesign(session) && brain) {
+						try {
+							const { specFromIntake } = await import(
+								"#/lib/food-truck/design-record"
+							);
+							commitDesignVersion(
+								session,
+								specFromIntake({
+									brandName: brand || undefined,
+									businessType: brain.businessType ?? undefined,
+									menu: brain.menuKeywords.join(", ") || undefined,
+									colors: brain.colors.join(", ") || undefined,
+									vibe: brain.vibeWords.join(", ") || undefined,
+									vehicleId: vehicle?.id,
+									service: brain.walkIn ? "walk-in" : "hatch",
+								}),
+								{
+									changeSummary: "First visuals — design record v1.",
+									state: "concept",
+								},
+							);
+						} catch {
+							/* record is best-effort */
+						}
+					}
+					persistSession(session);
 					return Response.json({
 						images: listConcepts(session),
 						creditsLeft: creditsLeft(session),

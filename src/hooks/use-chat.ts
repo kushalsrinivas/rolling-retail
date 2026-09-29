@@ -10,7 +10,6 @@ import {
 	pickApprovedReferences,
 	pickMasterReference,
 	type SalesVideoKind,
-	TOUR_PARTS,
 } from "#/lib/food-truck/sales";
 
 export type MessageRole = "user" | "assistant";
@@ -245,9 +244,64 @@ export function useChat() {
 	const [isRenderingMenu, setIsRenderingMenu] = useState(false);
 	// Held here, not in the tab, so switching tabs never loses a half-typed menu.
 	const [menuDraft, setMenuDraft] = useState<MenuDesign | null>(null);
+	// Versioned design record — v1 → v2 → v3 with approvals + stamp.
+	const [design, setDesign] = useState<{
+		current?: {
+			version: number;
+			state: string;
+			changeSummary?: string | null;
+			spec?: Record<string, unknown>;
+		} | null;
+		versions?: Array<{
+			version: number;
+			state: string;
+			changeSummary?: string | null;
+		}>;
+		approvals?: Array<{
+			version: number;
+			by?: string | null;
+			createdAt: number;
+		}>;
+		stamp?: string | null;
+	} | null>(null);
+	const [isApproving, setIsApproving] = useState(false);
 
 	const sessionIdRef = useRef<string | null>(null);
+	const [sessionId, setSessionId] = useState<string | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
+
+	const refreshDesign = useCallback(async () => {
+		const sid = sessionIdRef.current;
+		if (!sid) return;
+		try {
+			const res = await fetch(
+				`/api/agent/design?sessionId=${encodeURIComponent(sid)}`,
+			);
+			if (!res.ok) return;
+			const data = (await res.json()) as {
+				current?: {
+					version: number;
+					state: string;
+					changeSummary?: string | null;
+					spec?: Record<string, unknown>;
+				} | null;
+				versions?: Array<{
+					version: number;
+					state: string;
+					changeSummary?: string | null;
+				}>;
+				approvals?: Array<{
+					version: number;
+					by?: string | null;
+					createdAt: number;
+				}>;
+				stamp?: string | null;
+			};
+			setDesign(data);
+		} catch {
+			/* design bar is best-effort */
+		}
+	}, []);
 
 	const ensureSession = useCallback(async () => {
 		if (sessionIdRef.current) return sessionIdRef.current;
@@ -262,10 +316,12 @@ export function useChat() {
 			credits?: { left: number };
 		};
 		sessionIdRef.current = data.sessionId;
+		setSessionId(data.sessionId);
 		if (typeof data.credits?.left === "number")
 			setCreditsLeft(data.credits.left);
+		void refreshDesign();
 		return data.sessionId;
-	}, []);
+	}, [refreshDesign]);
 
 	/**
 	 * Fold a batch of renders into the view-keyed set.
@@ -404,6 +460,35 @@ export function useChat() {
 		}
 	}, []);
 
+	const approveVersion = useCallback(
+		async (version: number) => {
+			const sid = sessionIdRef.current;
+			if (!sid || isApproving) return;
+			setIsApproving(true);
+			setError(null);
+			try {
+				const res = await fetch("/api/agent/approve", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						sessionId: sid,
+						version,
+						by: brandName.trim() || undefined,
+					}),
+				});
+				const data = (await res.json().catch(() => ({}))) as { error?: string };
+				if (!res.ok)
+					throw new Error(data.error || `Approval failed (${res.status})`);
+				await refreshDesign();
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Approval failed");
+			} finally {
+				setIsApproving(false);
+			}
+		},
+		[isApproving, brandName, refreshDesign],
+	);
+
 	const applyStreamEvent = useCallback(
 		(evt: Record<string, unknown>) => {
 			const type = evt.type as string;
@@ -500,9 +585,16 @@ export function useChat() {
 					setCreditsLeft(evt.creditsLeft as number);
 				if (typeof evt.error === "string") setError(evt.error);
 				void reconcileImages();
+				void refreshDesign();
 			}
 		},
-		[refreshLeads, mergeImages, openRenderSlots, reconcileImages],
+		[
+			refreshLeads,
+			mergeImages,
+			openRenderSlots,
+			reconcileImages,
+			refreshDesign,
+		],
 	);
 
 	const sendMessage = useCallback(
@@ -661,10 +753,14 @@ export function useChat() {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						sessionId,
-						brand: brandName.trim() || "New Brand",
+						// Only what the customer actually gave. Placeholders here
+						// used to override their palette ("bold brand colors") and
+						// letter "New Brand" onto the trailer; the server falls back
+						// to the project brain instead.
+						brand: brandName.trim() || undefined,
 						vehicleId,
-						colors: opts?.colors || "bold brand colors",
-						vibe: opts?.vibe || businessType,
+						colors: opts?.colors || undefined,
+						vibe: opts?.vibe || undefined,
 						only: opts?.only,
 					}),
 				});
@@ -683,7 +779,7 @@ export function useChat() {
 				if (!res.ok) {
 					if (res.status === 402) {
 						setError(
-							"You have used your 5 complimentary concepts. Please top up or share your contact details and our sales team will unlock more.",
+							"This round is included with the customer. Share their contact and sales will unlock further iterations.",
 						);
 						if (typeof data.creditsLeft === "number")
 							setCreditsLeft(data.creditsLeft);
@@ -696,9 +792,10 @@ export function useChat() {
 				mergeImages(data.images ?? []);
 				if (typeof data.creditsLeft === "number")
 					setCreditsLeft(data.creditsLeft);
+				void refreshDesign();
 				if (opts?.only?.length) return;
 				await sendMessage(
-					`I just generated the full ${CONCEPT_VIEW_COUNT}-view concept set (exterior hero, rear, side elevation, interior layout, front elevation, assembly theater, night, roof plan, brand mark) for ${brandName} on the current vehicle. Which direction should we develop — and what should change?`,
+					`I just generated the ${CONCEPT_VIEW_COUNT}-view concept set (${CONCEPT_VIEWS.map(prettyView).join(", ")})${brandName.trim() ? ` for ${brandName.trim()}` : ""} on the current vehicle. Which direction should we develop — and what should change?`,
 				);
 			} catch (err) {
 				setError(
@@ -716,11 +813,11 @@ export function useChat() {
 			ensureSession,
 			brandName,
 			vehicleId,
-			businessType,
 			sendMessage,
 			mergeImages,
 			openRenderSlots,
 			reconcileImages,
+			refreshDesign,
 		],
 	);
 
@@ -738,26 +835,18 @@ export function useChat() {
 		await generateConcepts({ only: failed });
 	}, [images, generateConcepts]);
 
-	const toggleFavorite = useCallback(
-		async (label: string) => {
-			let starred: boolean | null = null;
-			setImages((prev) =>
-				prev.map((img) => {
-					if (img.label !== label) return img;
-					starred = !img.favorite;
-					return { ...img, favorite: starred };
-				}),
-			);
-			// Tell the agent to develop the starred direction (not on unstar).
-			if (starred) {
-				const pretty = label.replace(/_/g, " ");
-				await sendMessage(
-					`I'm starring the "${pretty}" concept — develop this direction. Keep the same body and brand, tell me what you'd refine next.`,
-				);
-			}
-		},
-		[sendMessage],
-	);
+	/*
+	 * A favorite is a marker, not a sign-off, and it no longer speaks for the
+	 * customer: starring used to post a design brief into the chat in their
+	 * name.
+	 */
+	const toggleFavorite = useCallback((label: string) => {
+		setImages((prev) =>
+			prev.map((img) =>
+				img.label === label ? { ...img, favorite: !img.favorite } : img,
+			),
+		);
+	}, []);
 
 	const clearError = useCallback(() => setError(null), []);
 
@@ -804,7 +893,7 @@ export function useChat() {
 				if (!res.ok || !data.image) {
 					throw new Error(
 						res.status === 402
-							? "You have used your 5 complimentary visuals. Please top up or share your contact details and our sales team will unlock more."
+							? "This round is included with the customer. Share their contact and sales will unlock further iterations."
 							: data.error || `Menu board render failed (${res.status})`,
 					);
 				}
@@ -823,13 +912,10 @@ export function useChat() {
 	/*
 	 * ── Sales video ──
 	 *
-	 * The server now chooses the references: it holds the round's renders and
-	 * picks the ones that show the space each preset films (a walkthrough gets
-	 * the interior views, not the exterior hero). These bytes are only a
-	 * fallback for a session whose renders the server never stored.
-	 *
-	 * The route polls the provider, we poll the route. Tours chain TOUR_PARTS
-	 * 10s segments via previous_interaction_id into ~30s.
+	 * One clip per request: the walkthrough films from inside off the
+	 * interior render, the 360 orbits the outside, night closes. The server
+	 * chooses the references; these bytes are only a fallback for a session
+	 * whose renders the server never stored.
 	 */
 	const generateVideo = useCallback(
 		async (kind: SalesVideoKind = "hero-orbit") => {
@@ -848,120 +934,68 @@ export function useChat() {
 				return;
 			}
 			setIsGeneratingVideo(true);
-			const partsTotal = kind === "tour" ? TOUR_PARTS : 1;
 			setProgress((prev) => ({
 				...prev,
 				phase: "videos",
-				step:
-					kind === "tour"
-						? "Filming the tour · part 1"
-						: "Filming the approved stills",
+				step: "Filming from your renders",
 				videosDone: 0,
-				videosTotal: partsTotal,
+				videosTotal: 1,
 			}));
 			try {
 				const sessionId = await ensureSession();
-				const startPart = async (
-					extendJobId?: string,
-					prev?: GeneratedVideo | null,
-					part?: number,
-				): Promise<GeneratedVideo> => {
-					const started = await fetch("/api/agent/video", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							sessionId,
-							kind,
-							brand: brandName.trim() || undefined,
-							// The picker values, not a stand-in for them: `vibe` used to
-							// carry the business-type id, so every clip was briefed with
-							// "grill" as its mood and "food trailer" as its body.
-							vehicleId: vehicleId || undefined,
-							businessType: businessType || undefined,
-							colors: brain?.colors.slice(0, 3).join(", ") || undefined,
-							vibe: brain?.vibeWords.slice(0, 2).join(", ") || undefined,
-							equipment: layout?.equipment,
-							serveMode: layout?.serveMode,
-							references: refs,
-							extendJobId,
-							// Stateless chaining: the next request may land on a fresh
-							// serverless instance with no memory of the earlier part.
-							previousOperationId: prev?.operationId ?? undefined,
-							seriesId: prev?.seriesId ?? undefined,
-							part,
-						}),
-					});
-					const startData = (await started.json().catch(() => ({}))) as {
-						video?: GeneratedVideo;
-						error?: string;
-					};
-					if (!started.ok || !startData.video) {
-						throw new Error(
-							startData.error || `Video start failed (${started.status})`,
-						);
-					}
-					return startData.video;
+				const started = await fetch("/api/agent/video", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						sessionId,
+						kind,
+						brand: brandName.trim() || undefined,
+						// The picker values, not a stand-in for them: `vibe` used to
+						// carry the business-type id, so every clip was briefed with
+						// "grill" as its mood and "food trailer" as its body.
+						vehicleId: vehicleId || undefined,
+						businessType: businessType || undefined,
+						colors: brain?.colors.slice(0, 3).join(", ") || undefined,
+						vibe: brain?.vibeWords.slice(0, 2).join(", ") || undefined,
+						equipment: layout?.equipment,
+						serveMode: layout?.serveMode,
+						references: refs,
+					}),
+				});
+				const startData = (await started.json().catch(() => ({}))) as {
+					video?: GeneratedVideo;
+					error?: string;
 				};
-				const pollPart = async (job: GeneratedVideo) => {
-					let current = job;
-					// Omni 10s renders take minutes, not seconds — 30×4s stranded
-					// every tour at part 1. 90×4s ≈ 6 min per part.
-					for (let i = 0; i < 90 && current.status === "pending"; i++) {
-						await new Promise((r) => setTimeout(r, 4000));
-						const params = new URLSearchParams({
-							sessionId,
-							videoId: job.id,
-						});
-						if (job.operationId) params.set("operationId", job.operationId);
-						const poll = await fetch(`/api/agent/video?${params.toString()}`);
-						const pollData = (await poll.json().catch(() => ({}))) as {
-							video?: GeneratedVideo;
-						};
-						if (!poll.ok || !pollData.video) break;
-						current = pollData.video;
-						setVideos((prev) =>
-							prev.map((v) => (v.id === current.id ? current : v)),
-						);
-					}
-					return current;
-				};
-				const parts = partsTotal;
-				let previous: GeneratedVideo | null = null;
-				for (let part = 1; part <= parts; part++) {
-					setProgress((prev) => ({
-						...prev,
-						phase: "videos",
-						step:
-							parts > 1
-								? `Filming the tour · part ${part} of ${parts}`
-								: "Filming the approved stills",
-						videosDone: part - 1,
-					}));
-					const job = await startPart(
-						previous?.id,
-						previous,
-						kind === "tour" ? part : undefined,
+				if (!started.ok || !startData.video) {
+					throw new Error(
+						startData.error || `Video start failed (${started.status})`,
 					);
-					setVideos((prev) => [
-						{ ...job, kind },
-						...prev.filter((v) => v.id !== job.id),
-					]);
-					const final = await pollPart(job);
-					if (final.status !== "ready") {
-						if (kind === "tour" && part < parts) {
-							setError(
-								`Part ${part + 1} wasn't ready in time — part ${final.part ?? part} is playable below; run the tour again to continue it.`,
-							);
-						}
-						break;
+				}
+				const job = { ...startData.video, kind } as GeneratedVideo;
+				setVideos((prev) => [job, ...prev.filter((v) => v.id !== job.id)]);
+				// Omni 10s renders take minutes, not seconds — 90×4s ≈ 6 min.
+				let current = job;
+				for (let i = 0; i < 90 && current.status === "pending"; i++) {
+					await new Promise((r) => setTimeout(r, 4000));
+					const params = new URLSearchParams({ sessionId, videoId: job.id });
+					if (job.operationId) {
+						params.set("operationId", String(job.operationId));
 					}
-					previous = final;
-					setProgress((prev) => ({ ...prev, videosDone: part }));
+					const poll = await fetch(`/api/agent/video?${params.toString()}`);
+					const pollData = (await poll.json().catch(() => ({}))) as {
+						video?: GeneratedVideo;
+					};
+					if (!poll.ok || !pollData.video) break;
+					current = pollData.video;
+					setVideos((prev) =>
+						prev.map((v) => (v.id === current.id ? current : v)),
+					);
 				}
 				setProgress((prev) => ({
 					...prev,
 					phase: "finalizing",
-					step: "Assembling the tour",
+					step: "",
+					videosDone: current.status === "ready" ? 1 : prev.videosDone,
 				}));
 			} catch (err) {
 				setError(
@@ -1008,6 +1042,12 @@ export function useChat() {
 		leads,
 		refreshLeads,
 		toggleFavorite,
+		design,
+		refreshDesign,
+		approveVersion,
+		isApproving,
+		ensureSession,
+		sessionId,
 		metrics,
 		events,
 		analytics,

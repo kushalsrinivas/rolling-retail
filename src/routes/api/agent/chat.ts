@@ -7,9 +7,10 @@ import {
 	updateBrain,
 } from "#/lib/food-truck/brain";
 import {
-	CONCEPT_VIEW_COUNT,
+	type ConceptView,
 	getBusiness,
 	getVehicle,
+	STARTER_AUTO_VIEWS,
 } from "#/lib/food-truck/constants";
 import {
 	getFoodTruckAgent,
@@ -20,11 +21,15 @@ import {
 import { runStarterConcepts } from "#/lib/food-truck/images";
 import {
 	adoptMasterFromImages,
+	commitDesignVersion,
 	conceptsByView,
 	creditsLeft,
+	currentDesign,
 	getOrCreateSession,
 	listConcepts,
+	persistSession,
 	putConcepts,
+	restoreSession,
 } from "#/lib/food-truck/session";
 import { layoutFor } from "#/lib/food-truck/tools";
 
@@ -84,6 +89,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 				}
 
 				const session = getOrCreateSession(body.sessionId);
+				await restoreSession(session.sessionId);
 
 				// Keep the latest inspiration photo on the session. It used to reach
 				// only the LLM turn it arrived on, so "make it look like this" never
@@ -126,7 +132,7 @@ export const Route = createFileRoute("/api/agent/chat")({
 						: null,
 					`[${brainDigest(brain)}]`,
 					shouldAutoVisuals
-						? "[SYSTEM: brand knowledge is sufficient — after your reply the system WILL auto-generate a complete 9-view concept set (exterior hero, rear, side elevation, interior layout, front elevation, assembly theater, night, roof plan, brand mark). 1 credit. End with ONE short line saying the full concept set is generating. Do not ask permission.]"
+						? `[SYSTEM: brand knowledge is sufficient — after your reply the system WILL auto-generate 3 starter renders (${STARTER_AUTO_VIEWS.map((v) => v.replace(/_/g, " ")).join(", ")}). 1 credit. In your reply, state the category you read this as (${getBusiness(brain.businessType ?? "")?.label ?? brain.businessType}) and the equipment line it implies, so the buyer can correct you before the renders land. End with ONE short line saying the starter renders are generating and the rest (rear, interior views, night, brand) are available on request. Do not ask permission.]`
 						: null,
 					image ? "[Buyer attached an inspiration photo — see image.]" : null,
 					text || "What do you see in this photo? How would you build it?",
@@ -164,7 +170,6 @@ export const Route = createFileRoute("/api/agent/chat")({
 								const vehicle =
 									getVehicle(effectiveVehicleId) ??
 									getVehicle(brain.vehicleId ?? "");
-								const business = getBusiness(brain.businessType ?? "");
 								const vehicleLabel =
 									vehicle?.label ?? describeVehicle(effectiveVehicleId);
 								const serveMode =
@@ -184,6 +189,9 @@ export const Route = createFileRoute("/api/agent/chat")({
 										vehicleId: effectiveVehicleId,
 										inspirationImage: session.inspirationImage,
 										masterReference: session.masterImageUrl,
+										// First generation proves the concept: hero, curbside,
+										// interior. The rest are offered on request.
+										only: [...STARTER_AUTO_VIEWS] as ConceptView[],
 										brand:
 											brain.brandName ?? body.context?.brandName?.trim() ?? "",
 										vehicleLabel,
@@ -199,7 +207,13 @@ export const Route = createFileRoute("/api/agent/chat")({
 											"bold street-food",
 										businessType: brain.businessType ?? "combined",
 										menuKeywords: brain.menuKeywords,
-										equipment: business?.needs ?? [],
+										// One equipment list for renders, spec and 3D.
+										equipment: layoutFor(
+											brain.businessType ?? "combined",
+											effectiveVehicleId,
+											brain.walkIn === true,
+											brain.menuKeywords,
+										).equipment,
 										serveMode,
 										brainNote: [
 											brain.businessType
@@ -210,7 +224,6 @@ export const Route = createFileRoute("/api/agent/chat")({
 												: brain.walkIn
 													? "walk-in interior service"
 													: "hatch-serve service",
-											"drinks end-cap carries margin",
 										]
 											.filter(Boolean)
 											.join("; "),
@@ -231,6 +244,32 @@ export const Route = createFileRoute("/api/agent/chat")({
 								session.visualRounds += 1;
 								adoptMasterFromImages(session, run.images);
 								putConcepts(session, run.images);
+								if (!currentDesign(session)) {
+									try {
+										const { specFromIntake } = await import(
+											"#/lib/food-truck/design-record"
+										);
+										commitDesignVersion(
+											session,
+											specFromIntake({
+												brandName: brain.brandName ?? undefined,
+												businessType: brain.businessType ?? undefined,
+												menu: brain.menuKeywords.join(", ") || undefined,
+												colors: brain.colors.join(", ") || undefined,
+												vibe: brain.vibeWords.join(", ") || undefined,
+												vehicleId: brain.vehicleId ?? undefined,
+												service: brain.walkIn ? "walk-in" : "hatch",
+											}),
+											{
+												changeSummary: "First visuals — design record v1.",
+												state: "concept",
+											},
+										);
+									} catch {
+										/* record is best-effort */
+									}
+								}
+								persistSession(session);
 								send({
 									type: "images_done",
 									images: listConcepts(session),
@@ -265,12 +304,13 @@ export const Route = createFileRoute("/api/agent/chat")({
 										brain.businessType ?? "combined",
 										effectiveVehicleId,
 										brain.walkIn === true,
+										brain.menuKeywords,
 									),
 								});
 							} catch {
 								/* layout is best-effort — images still fire */
 							}
-							send({ type: "images_start", count: CONCEPT_VIEW_COUNT });
+							send({ type: "images_start", count: STARTER_AUTO_VIEWS.length });
 						};
 
 						// ── No LLM key: deterministic offline designer (demo never dies) ──

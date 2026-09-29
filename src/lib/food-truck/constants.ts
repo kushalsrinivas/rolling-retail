@@ -116,6 +116,18 @@ export const BUSINESS_TYPES = [
 		note: "High-heat cooking and rapid servery shape the workflow.",
 	},
 	{
+		id: "mexican",
+		label: "Tacos & Mexican",
+		needs: [
+			"griddle",
+			"extraction-hood",
+			"hand-basin",
+			"refrigeration",
+			"till",
+		],
+		note: "Plancha, steam wells and a salsa rail shape the line.",
+	},
+	{
 		id: "breakfast",
 		label: "Breakfast & Brunch",
 		needs: ["griddle", "coffee-machine", "hand-basin", "refrigeration", "till"],
@@ -234,13 +246,24 @@ export const CONCEPT_VIEWS = [
 	"front_elevation",
 	"assembly_theater",
 	"night_exterior",
-	"roof_plan",
 	"brand_mark",
 ] as const;
 
 export type ConceptView = (typeof CONCEPT_VIEWS)[number];
 
 export const CONCEPT_VIEW_COUNT = CONCEPT_VIEWS.length;
+
+/**
+ * First generation leads with the decision, not the spectacle: hero,
+ * curbside and interior prove the concept. Night, assembly theater,
+ * rear and brand mark are offered on request — they used to burn the free
+ * credit before the customer had confirmed anything.
+ */
+export const STARTER_AUTO_VIEWS = [
+	"exterior_hero",
+	"side_elevation",
+	"interior_layout",
+] as const;
 
 /**
  * Rendered on demand from the Menu tab, never as part of a concept round —

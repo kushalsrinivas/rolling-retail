@@ -77,6 +77,18 @@ export default function ChatLayout() {
 			onAskAbout={(label, value) => chat.sendContextMessage(label, value)}
 			onGenerateConcepts={() => chat.generateConcepts()}
 			onToggleFavorite={(label) => chat.toggleFavorite(label)}
+			design={chat.design}
+			onApproveVersion={(v) => chat.approveVersion(v)}
+			isApproving={chat.isApproving}
+			sessionId={chat.sessionId}
+			onOpenChat={() => {
+				// On a phone the chat is the other pane; show it, then focus
+				// the box so the customer writes their own feedback.
+				setPane("design");
+				requestAnimationFrame(() =>
+					document.getElementById("chat-input")?.focus(),
+				);
+			}}
 			onRefreshLeads={() => chat.refreshLeads()}
 			brandName={chat.brain?.brandName || chat.brandName}
 			menu={chat.menuDraft}
@@ -98,6 +110,21 @@ export default function ChatLayout() {
 						if (answers.vehicleId) chat.setVehicleId(answers.vehicleId);
 						if (answers.businessType)
 							chat.setBusinessType(answers.businessType);
+						// Structured intake writes the design record directly —
+						// the prose brief alone would lose "sage"/"birria" to regex.
+						void (async () => {
+							try {
+								const sessionId = await chat.ensureSession();
+								await fetch("/api/agent/intake", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({ sessionId, answers }),
+								});
+								await chat.refreshDesign();
+							} catch {
+								/* record is best-effort — chat still carries the brief */
+							}
+						})();
 						chat.sendMessage(brief, image ? { image } : undefined);
 					}}
 					onSkip={() => setIntakeDone(true)}

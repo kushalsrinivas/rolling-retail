@@ -11,7 +11,7 @@ import {
 	menuBoardPrompt,
 	sanitizeMenu,
 } from "./menu";
-import { buildSalesVideoPrompt, tourContinuationPrompt } from "./sales";
+import { buildSalesVideoPrompt } from "./sales";
 
 const photo = (tag: string) => `data:image/png;base64,${tag}`;
 
@@ -195,12 +195,9 @@ describe("no people in generated imagery", () => {
 			"hero-orbit",
 			"walkthrough",
 			"night-cinematic",
-			"tour",
 		] as const) {
 			expect(buildSalesVideoPrompt(kind, ctx), kind).not.toMatch(PEOPLE);
 		}
-		expect(tourContinuationPrompt(2, ctx)).not.toMatch(PEOPLE);
-		expect(tourContinuationPrompt(3, ctx)).not.toMatch(PEOPLE);
 	});
 });
 

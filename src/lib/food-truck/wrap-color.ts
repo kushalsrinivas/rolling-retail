@@ -27,6 +27,8 @@ const WRAP: Record<string, WrapFinish> = {
 	white: { hex: "#f5f5f5", metalness: 0.15, roughness: 0.55 },
 	cream: { hex: "#efe4cf", metalness: 0.1, roughness: 0.62 },
 	beige: { hex: "#ddccb0", metalness: 0.1, roughness: 0.65 },
+	"sage green": { hex: "#9caf88", metalness: 0.15, roughness: 0.55 },
+	sage: { hex: "#9caf88", metalness: 0.15, roughness: 0.55 },
 	red: { hex: "#c8322b", metalness: 0.2, roughness: 0.45 },
 	blue: { hex: "#2a5ec2", metalness: 0.2, roughness: 0.45 },
 	navy: { hex: "#1b2a52", metalness: 0.2, roughness: 0.48 },

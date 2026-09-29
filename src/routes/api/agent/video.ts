@@ -7,18 +7,16 @@ import {
 	SALES_VIDEO_PRESETS,
 	type SalesVideoContext,
 	type SalesVideoKind,
-	tourContinuationPrompt,
 } from "#/lib/food-truck/sales";
 import {
 	conceptsByView,
 	getOrCreateSession,
+	persistSession,
+	restoreSession,
 	type VideoJob,
 } from "#/lib/food-truck/session";
-import {
-	extendSalesVideo,
-	pollSalesVideo,
-	startSalesVideo,
-} from "#/lib/food-truck/video";
+import { layoutFor } from "#/lib/food-truck/tools";
+import { pollSalesVideo, startSalesVideo } from "#/lib/food-truck/video";
 
 const KINDS = new Set(SALES_VIDEO_PRESETS.map((p) => p.kind));
 
@@ -49,17 +47,6 @@ export const Route = createFileRoute("/api/agent/video")({
 					equipment?: string[];
 					serveMode?: string;
 					references?: string[];
-					/** Ready video job id to continue from (tour chaining). */
-					extendJobId?: string;
-					/**
-					 * Stateless chaining fallback: the previous part's provider
-					 * interaction id + series/part, so tours keep chaining when the
-					 * next request lands on a fresh serverless instance whose
-					 * in-memory session has no record of the earlier part.
-					 */
-					previousOperationId?: string;
-					seriesId?: string;
-					part?: number;
 				};
 				try {
 					body = (await request.json()) as typeof body;
@@ -86,9 +73,8 @@ export const Route = createFileRoute("/api/agent/video")({
 					);
 				}
 				const session = getOrCreateSession(body.sessionId);
-				const brain = session.brain;
-
-				/*
+				await restoreSession(session.sessionId).catch(() => {});
+				const brain = session.brain;				/*
 				 * The stills are briefed on body, dimensions, menu, equipment and
 				 * service model; the video used to get four loose strings, so it
 				 * filmed a generic trailer. Same brain, same vehicle table, same
@@ -98,10 +84,18 @@ export const Route = createFileRoute("/api/agent/video")({
 					getVehicle(body.vehicleId ?? brain?.vehicleId) ??
 					getVehicle("airstream-m");
 				const business = getBusiness(body.businessType ?? brain?.businessType);
+				// The layout's equipment, never the loose words the chat picked up
+				// ("fryer" said in passing used to put a fryer in a boba clip).
 				const equipmentIds =
 					body.equipment?.filter((e) => typeof e === "string") ??
-					brain?.equipmentHints ??
-					[];
+					(business && vehicle
+						? layoutFor(
+								business.id,
+								vehicle.id,
+								brain?.walkIn === true,
+								brain?.menuKeywords ?? [],
+							).equipment
+						: []);
 				const brand = str(body.brand, brain?.brandName ?? "");
 				const serveMode: SalesVideoContext["serveMode"] =
 					body.serveMode === "walk-in" ||
@@ -123,6 +117,7 @@ export const Route = createFileRoute("/api/agent/video")({
 					lengthM: vehicle?.lengthM ?? null,
 					widthM: vehicle?.widthM ?? null,
 					businessLabel: business?.label ?? null,
+					businessType: business?.id ?? null,
 					menu: brain?.menuKeywords.slice(0, 5).join(", ") || null,
 					equipment: equipmentIds.length ? equipmentPhrase(equipmentIds) : null,
 					serveMode,
@@ -135,35 +130,12 @@ export const Route = createFileRoute("/api/agent/video")({
 						brain?.vibeWords.slice(0, 2).join(", ") || "bold street-food",
 					),
 				};
-				// ── Extension: continue a ready part (no stills needed) ──
-				// Session lookup first; stateless fallback (previousOperationId +
-				// seriesId/part) for serverless instances with no session memory.
-				const base = body.extendJobId
-					? session.videos.find((v) => v.id === body.extendJobId)
-					: undefined;
-				const previousOperationId =
-					base?.operationId ?? body.previousOperationId ?? null;
-				const wantsExtend = Boolean(
-					body.extendJobId || body.previousOperationId,
-				);
-				if (wantsExtend && !previousOperationId) {
-					return Response.json(
-						{ error: "Video to extend not found." },
-						{ status: 404 },
-					);
-				}
-				if (base && base.status !== "ready") {
-					return Response.json(
-						{ error: "Previous part is not ready yet." },
-						{ status: 409 },
-					);
-				}
 				/*
 				 * Reference selection: the still that actually shows the space
 				 * this clip films leads, then the identity anchor.
 				 *
 				 * This used to be "master hero first, then whatever the buyer
-				 * starred", so a serve-up walkthrough was briefed on an exterior
+				 * starred", so a walkthrough was briefed on an exterior
 				 * three-quarter and had to invent the galley — a different one
 				 * every run. The server picks from its own stored renders so the
 				 * clip cannot disagree with the deck, and only falls back to the
@@ -182,7 +154,7 @@ export const Route = createFileRoute("/api/agent/video")({
 				const videoRefs = planned.length > 0 ? planned : refs.slice(0, 3);
 				const referenceViews = planned.length > 0 ? refViews : [];
 
-				if (videoRefs.length === 0 && !wantsExtend) {
+				if (videoRefs.length === 0) {
 					return Response.json(
 						{
 							error: "Generate concepts first — video needs an approved still.",
@@ -191,16 +163,7 @@ export const Route = createFileRoute("/api/agent/video")({
 					);
 				}
 
-				const part = wantsExtend
-					? base
-						? base.part + 1
-						: typeof body.part === "number" && body.part >= 2 && body.part <= 3
-							? body.part
-							: 2
-					: 1;
-				const prompt = wantsExtend
-					? tourContinuationPrompt(part, ctx, referenceViews)
-					: buildSalesVideoPrompt(kind, ctx, referenceViews);
+				const prompt = buildSalesVideoPrompt(kind, ctx, referenceViews);
 				const job: VideoJob = {
 					id: newId(),
 					kind,
@@ -211,22 +174,17 @@ export const Route = createFileRoute("/api/agent/video")({
 					error: null,
 					createdAt: Date.now(),
 					updatedAt: Date.now(),
-					part,
-					seriesId: base?.seriesId ?? "",
+					part: 1,
+					seriesId: "",
 				};
-				job.seriesId = base?.seriesId || body.seriesId || job.id;
+				job.seriesId = job.id;
 				try {
-					const started = previousOperationId
-						? await extendSalesVideo({
-								previousInteractionId: previousOperationId,
-								prompt,
-							})
-						: await startSalesVideo({
-								kind,
-								ctx,
-								prompt,
-								references: videoRefs,
-							});
+					const started = await startSalesVideo({
+						kind,
+						ctx,
+						prompt,
+						references: videoRefs,
+					});
 					job.operationId = started.operationId;
 					if (started.readyUrl) {
 						job.status = "ready";
@@ -241,22 +199,37 @@ export const Route = createFileRoute("/api/agent/video")({
 					session.videos = session.videos.slice(0, 10);
 					const status = msg.includes("GOOGLE_API_KEY")
 						? 503
-						: /video (start|extend) 4\d\d/.test(msg)
+						: /video start 4\d\d/.test(msg)
 							? 502
 							: 500;
 					return Response.json({ error: msg, video: job }, { status });
 				}
 				session.videos.unshift(job);
 				session.videos = session.videos.slice(0, 10);
+				persistSession(session);
 				return Response.json({ video: job });
 			},
 			// ── Poll: ?sessionId=&videoId= → pending | ready | error ──
+			// Ready videos are stored to disk and served as URLs — data URLs
+			// up to 24MB on every poll used to round-trip through the client.
 			GET: async ({ request }) => {
 				const url = new URL(request.url);
 				const videoId = url.searchParams.get("videoId");
 				const session = getOrCreateSession(
 					url.searchParams.get("sessionId") ?? undefined,
 				);
+				await restoreSession(session.sessionId).catch(() => {});
+				const storeUrl = async (
+					dataUrl: string | null,
+				): Promise<string | null> => {
+					if (!dataUrl || !dataUrl.startsWith("data:")) return dataUrl;
+					try {
+						const { storeDataUrl } = await import("#/lib/food-truck/store");
+						return await storeDataUrl(dataUrl, "video");
+					} catch {
+						return dataUrl;
+					}
+				};
 				const job = session.videos.find((v) => v.id === videoId);
 				// Stateless poll fallback: the client re-sends the provider
 				// interaction id, so polling survives a fresh serverless instance.
@@ -270,7 +243,7 @@ export const Route = createFileRoute("/api/agent/video")({
 									video: {
 										id: videoId,
 										status: "ready",
-										url: s.videoDataUrl,
+										url: await storeUrl(s.videoDataUrl),
 										operationId: fallbackOperationId,
 									},
 								});
@@ -290,13 +263,14 @@ export const Route = createFileRoute("/api/agent/video")({
 					return Response.json({ error: "Video not found" }, { status: 404 });
 				}
 				if (job.status !== "pending" || !job.operationId) {
+					if (job.url) job.url = (await storeUrl(job.url)) ?? job.url;
 					return Response.json({ video: job });
 				}
 				try {
 					const s = await pollSalesVideo(job.operationId);
 					if (s.status === "ready") {
 						job.status = "ready";
-						job.url = s.videoDataUrl;
+						job.url = await storeUrl(s.videoDataUrl);
 					} else if (s.status === "error") {
 						job.status = "error";
 						job.error = s.error;

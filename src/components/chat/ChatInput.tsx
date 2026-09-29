@@ -98,6 +98,7 @@ export default function ChatInput({
 					</div>
 				)}
 				<textarea
+					id="chat-input"
 					ref={textareaRef}
 					value={value}
 					onChange={handleInput}

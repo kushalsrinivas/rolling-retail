@@ -67,11 +67,17 @@ export default function ChatPanel({ chat }: ChatPanelProps) {
 						</span>
 					)}
 					{typeof creditsLeft === "number" && (
-						<span className="hidden rounded-sm border border-[var(--ftf-line)] px-2.5 py-1.5 text-[11px] tabular-nums text-[var(--ftf-ink-2)] sm:block">
+						<span
+							className="hidden rounded-sm border border-[var(--ftf-line)] px-2.5 py-1.5 text-[11px] tabular-nums text-[var(--ftf-ink-2)] sm:block"
+							title="Concept rounds remaining with this customer"
+						>
 							<span className="font-semibold text-[var(--ftf-ink)]">
 								{creditsLeft}
 							</span>
-							<span className="text-[var(--ftf-ink-4)]"> / 5 visuals</span>
+							<span className="text-[var(--ftf-ink-4)]">
+								{" "}
+								{creditsLeft === 1 ? "round" : "rounds"} left
+							</span>
 						</span>
 					)}
 				</div>

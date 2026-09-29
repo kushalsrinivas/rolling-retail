@@ -52,6 +52,10 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   Todo: 'Todo',
+  Project: 'Project',
+  DesignVersion: 'DesignVersion',
+  Asset: 'Asset',
+  Approval: 'Approval',
   BlockGroup: 'BlockGroup',
   Brand: 'Brand',
   Report: 'Report'
@@ -80,6 +84,58 @@ export const TodoScalarFieldEnum = {
 } as const
 
 export type TodoScalarFieldEnum = (typeof TodoScalarFieldEnum)[keyof typeof TodoScalarFieldEnum]
+
+
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  brandName: 'brandName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const DesignVersionScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  version: 'version',
+  parentVersionId: 'parentVersionId',
+  changeSummary: 'changeSummary',
+  spec: 'spec',
+  state: 'state',
+  createdAt: 'createdAt'
+} as const
+
+export type DesignVersionScalarFieldEnum = (typeof DesignVersionScalarFieldEnum)[keyof typeof DesignVersionScalarFieldEnum]
+
+
+export const AssetScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  designVersionId: 'designVersionId',
+  kind: 'kind',
+  view: 'view',
+  url: 'url',
+  model: 'model',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type AssetScalarFieldEnum = (typeof AssetScalarFieldEnum)[keyof typeof AssetScalarFieldEnum]
+
+
+export const ApprovalScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  designVersionId: 'designVersionId',
+  state: 'state',
+  approvedBy: 'approvedBy',
+  createdAt: 'createdAt'
+} as const
+
+export type ApprovalScalarFieldEnum = (typeof ApprovalScalarFieldEnum)[keyof typeof ApprovalScalarFieldEnum]
 
 
 export const BlockGroupScalarFieldEnum = {

@@ -13,6 +13,75 @@ model Todo {
   createdAt DateTime @default(now())
 }
 
+/// One buyer project — survives restarts, deploys and reloads.
+/// Sessions are ephemeral; projects are the record.
+model Project {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  brandName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions  DesignVersion[]
+  assets    Asset[]
+  approvals Approval[]
+}
+
+/// Immutable design snapshot. A revision never mutates — it appends a child
+/// with parentVersionId + changeSummary, so v1 → v2 → v3 is auditable and a
+/// customer can always see what changed and approve a specific version.
+model DesignVersion {
+  id              String   @id @default(cuid())
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  version         Int
+  parentVersionId String?
+  changeSummary   String?
+  /// Full DesignSpec JSON (vehicle, openings, equipment, palette, livery).
+  spec            Json
+  state           String   @default("concept")
+  createdAt       DateTime @default(now())
+
+  assets    Asset[]
+  approvals Approval[]
+
+  @@unique([projectId, version])
+  @@index([projectId])
+}
+
+/// A render or video file. Storage is a URL (object storage / /api/assets),
+/// never a base64 data URL in RAM.
+model Asset {
+  id              String         @id @default(cuid())
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  designVersion   DesignVersion? @relation(fields: [designVersionId], references: [id], onDelete: SetNull)
+  designVersionId String?
+  kind            String
+  view            String?
+  url             String
+  model           String?
+  status          String         @default("ready")
+  createdAt       DateTime       @default(now())
+
+  @@index([projectId])
+}
+
+/// Who approved which version, when. "Favorite" is browser state; approval
+/// freezes a version server-side and cannot be overwritten by a regenerate.
+model Approval {
+  id              String         @id @default(cuid())
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  designVersion   DesignVersion  @relation(fields: [designVersionId], references: [id], onDelete: Cascade)
+  designVersionId String
+  state           String         @default("approved")
+  approvedBy      String?
+  createdAt       DateTime       @default(now())
+
+  @@index([projectId])
+}
+
 model BlockGroup {
   geoid            String  @id
   countyFips       String

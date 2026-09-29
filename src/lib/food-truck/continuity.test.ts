@@ -181,19 +181,15 @@ describe("drift lock", () => {
 
 describe("video references", () => {
 	it("films each preset from the still that shows its space", () => {
-		expect(videoReferenceViews("walkthrough")[0]).toBe("assembly_theater");
+		// The walkthrough stands inside the galley, so it is briefed on the
+		// interior render — the full equipment run — before anything else.
+		expect(videoReferenceViews("walkthrough")[0]).toBe("interior_layout");
 		expect(videoReferenceViews("night-cinematic")[0]).toBe("night_exterior");
 		expect(videoReferenceViews("hero-orbit")[0]).toBe("exterior_hero");
-		expect(videoReferenceViews("tour")[0]).toBe("exterior_hero");
 	});
 
 	it("only ever names real concept views", () => {
-		for (const kind of [
-			"hero-orbit",
-			"walkthrough",
-			"night-cinematic",
-			"tour",
-		]) {
+		for (const kind of ["hero-orbit", "walkthrough", "night-cinematic"]) {
 			for (const v of videoReferenceViews(kind)) {
 				expect(CONCEPT_VIEWS, `${kind} → ${v}`).toContain(v);
 			}
