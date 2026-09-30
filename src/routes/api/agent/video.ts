@@ -8,8 +8,10 @@ import {
 	type SalesVideoContext,
 	type SalesVideoKind,
 } from "#/lib/food-truck/sales";
+import { defaultOpenings } from "#/lib/food-truck/openings";
 import {
 	conceptsByView,
+	currentDesign,
 	getOrCreateSession,
 	persistSession,
 	restoreSession,
@@ -106,6 +108,10 @@ export const Route = createFileRoute("/api/agent/video")({
 							? "walk-in"
 							: "hatch-serve";
 
+				// Openings come from the design record when one exists — the
+				// exact distances the clip is accountable to — else the body
+				// defaults, so a clip never films blind.
+				const recordOpenings = currentDesign(session)?.spec.openings;
 				const ctx: SalesVideoContext = {
 					brand: brand || "the business",
 					hasBrand: Boolean(brand),
@@ -116,6 +122,11 @@ export const Route = createFileRoute("/api/agent/video")({
 					vehicleBody: vehicle?.body ?? null,
 					lengthM: vehicle?.lengthM ?? null,
 					widthM: vehicle?.widthM ?? null,
+					openings:
+						recordOpenings ??
+						(vehicle
+							? defaultOpenings(vehicle.body, vehicle.lengthM)
+							: null),
 					businessLabel: business?.label ?? null,
 					businessType: business?.id ?? null,
 					menu: brain?.menuKeywords.slice(0, 5).join(", ") || null,

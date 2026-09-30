@@ -7,6 +7,11 @@
  */
 import { CONCEPT_VIEWS } from "./constants";
 import { type LineProfile, lineProfileFor } from "./line-profile";
+import {
+	defaultOpenings,
+	type Opening,
+	openingsBrief,
+} from "./openings";
 
 export function isRealPhoto(url: string | null | undefined): url is string {
 	return (
@@ -126,6 +131,12 @@ export interface SalesVideoContext {
 	equipment?: string | null;
 	/** hatch-serve | walk-in | hybrid */
 	serveMode?: "hatch-serve" | "walk-in" | "hybrid" | null;
+	/**
+	 * The record's openings. When present the brief positions every opening
+	 * by exact distance and closes the world with a count; when absent the
+	 * brief falls back to the body defaults so a clip never films blind.
+	 */
+	openings?: Opening[] | null;
 }
 
 function bodyPhrase(body: SalesVideoContext["vehicleBody"]): string {
@@ -162,6 +173,12 @@ function productBrief(ctx: SalesVideoContext): string {
 		`Livery: ${ctx.colors}. Overall feel: ${ctx.vibe}.`,
 		`Service model: ${servePhrase(ctx.serveMode)}.`,
 	];
+	const openings =
+		ctx.openings ??
+		(ctx.vehicleBody && ctx.lengthM
+			? defaultOpenings(ctx.vehicleBody, ctx.lengthM)
+			: null);
+	if (openings) bits.push(openingsBrief(openings, ctx.vehicleBody ?? null));
 	if (ctx.menu) bits.push(`Menu on the board: ${ctx.menu}.`);
 	if (ctx.equipment)
 		bits.push(`Equipment visible on the line: ${ctx.equipment}.`);
@@ -182,11 +199,25 @@ const ACTION =
  * interior, and invents a different one every run. Told that image 1 IS the
  * galley it is filming, it moves a camera through it instead.
  */
+/**
+ * Resolve the openings a clip is accountable to: the record's when the
+ * caller has them, else the body defaults — never nothing.
+ */
+function openingsFor(ctx: SalesVideoContext): Opening[] | null {
+	return (
+		ctx.openings ??
+		(ctx.vehicleBody && ctx.lengthM
+			? defaultOpenings(ctx.vehicleBody, ctx.lengthM)
+			: null)
+	);
+}
+
 function lockFor(
 	referenceViews: readonly string[] = [],
 	line?: LineProfile,
 	/** "inside" = the walkthrough, filmed within the galley. */
 	camera: "outside" | "inside" = "outside",
+	openings?: readonly Opening[] | null,
 ): string {
 	const named = referenceViews
 		.map((v, i) => `image ${i + 1} is the approved ${v.replace(/_/g, " ")}`)
@@ -201,7 +232,9 @@ function lockFor(
 			? `Reference ${named}. The space, objects and surfaces you can see in them are the set for this shot.`
 			: "Reference image 1 is the master.",
 		"Reproduce them precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography, and — inside — the layout, counters, equipment, materials, flooring, wall and ceiling finishes.",
-		"GEOMETRY IS FIXED for the whole clip: the number and position of doors, windows, hatches, panels and vents never changes. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.",
+		openings
+			? `GEOMETRY IS FIXED for the whole clip: exactly ${openings.length} openings — ${openings.filter((o) => o.type === "hatch").length} hatch(es), ${openings.filter((o) => o.type === "door").length} door(s), ${openings.filter((o) => o.type === "window").length} window(s) — in the briefed positions. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.`
+			: "GEOMETRY IS FIXED for the whole clip: the number and position of doors, windows, hatches, panels and vents never changes. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.",
 		cameraRule,
 		`You are operating a camera around a vehicle that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and ${line?.motion ?? "no other motion"}. The scene is unoccupied — there are no people in it, and none may appear.`,
 		line ? `THE LINE: ${line.forbid}` : "",
@@ -212,7 +245,7 @@ function lockFor(
 
 /** What generic video models add unprompted, and what ruins a sales asset. */
 const NEGATIVE =
-	"DO NOT: redesign, restyle or re-proportion the trailer; add, move, remove, merge or repurpose a door, hatch, window, vent or wheel, or let any opening change shape or function mid-clip; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld.";
+	"DO NOT: redesign, restyle or re-proportion the trailer; add, move, remove, merge or repurpose a door, hatch, window, vent or wheel, or let any opening change shape or function mid-clip; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld; render the trailer as a blueprint, technical drawing, sectional or cutaway view, isometric drawing or wireframe — every clip is a photoreal camera shot.";
 
 /** Grade and glass, held constant across the exterior clips. */
 const CRAFT =
@@ -276,7 +309,7 @@ export function buildSalesVideoPrompt(
 
 	// The walkthrough is filmed from inside the galley, so its lock changes.
 	if (kind === "walkthrough") {
-		const LOCK = lockFor(referenceViews, line, "inside");
+		const LOCK = lockFor(referenceViews, line, "inside", openingsFor(ctx));
 		return [
 			"10-second product film: an INSIDE WALKTHROUGH of this exact trailer — the flagship clip of the sales deck, filmed from within the interior.",
 			brief,
@@ -291,7 +324,7 @@ export function buildSalesVideoPrompt(
 		].join(" ");
 	}
 
-	const LOCK = lockFor(referenceViews, line);
+	const LOCK = lockFor(referenceViews, line, "outside", openingsFor(ctx));
 
 	if (kind === "night-cinematic") {
 		return [

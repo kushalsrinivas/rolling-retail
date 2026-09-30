@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { updateBrain } from "./brain";
+import { DRIFT_NEGATIVES } from "./continuity";
 import { applyPatch, specFromIntake, versionStamp } from "./design-record";
+import { conceptPrompts } from "./images";
 import { paletteFor, palettePhrase } from "./palette";
 import { elevationSvg, planSvg } from "./plan-svg";
 import { qaPromptForSpec } from "./qa";
@@ -103,5 +105,57 @@ describe("prompt QA", () => {
 		);
 		expect(r.pass).toBe(false);
 		expect(r.failures.join(" ")).toMatch(/curbside/);
+	});
+
+	it("fails a prompt with no medium lock", () => {
+		const spec = specFromIntake({ vehicleId: "airstream-m", colors: "cream" });
+		const r = qaPromptForSpec(
+			"a beautiful food truck photograph of the curbside and roadside with no gradients",
+			spec,
+		);
+		expect(r.pass).toBe(false);
+		expect(r.failures.join(" ")).toMatch(/medium lock/);
+	});
+});
+
+describe("medium locks (photo vs drawing)", () => {
+	const args = {
+		brand: "Sage Birria",
+		vehicleLabel: "Airstream · Mid",
+		vehicleBody: "airstream" as const,
+		lengthM: 6,
+		widthM: 2.2,
+		heightM: 2.7,
+		colors: "cream, sage green",
+		vibe: "premium",
+		businessType: "mexican",
+		menuKeywords: ["birria tacos"],
+		equipment: ["griddle", "extraction-hood"],
+		serveMode: "hatch-serve" as const,
+	};
+
+	it("every view declares its medium, so the medium is never a per-run decision", () => {
+		for (const { label, prompt } of conceptPrompts(args)) {
+			expect(prompt, label).toMatch(
+				/not a 3d render|illustration|mockup|direction board/i,
+			);
+		}
+	});
+
+	it("the interior is an eye-level photograph, never an overhead/section", () => {
+		const interior = conceptPrompts(args).find(
+			(p) => p.label === "interior_layout",
+		)?.prompt;
+		expect(interior).toBeTruthy();
+		expect(interior).toMatch(/eye-level/);
+		expect(interior).toMatch(/18mm/);
+		expect(interior).not.toMatch(/high-angle|three-quarter overhead/);
+		expect(interior).toMatch(/no dollhouse|no.*sectional/i);
+	});
+
+	it("the continuity lock bans medium drift on every view that carries it", () => {
+		expect(DRIFT_NEGATIVES).toMatch(/blueprint/);
+		expect(DRIFT_NEGATIVES).toMatch(/isometric/);
+		expect(DRIFT_NEGATIVES).toMatch(/cutaway/);
 	});
 });

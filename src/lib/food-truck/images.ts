@@ -304,6 +304,20 @@ function servePhrase(mode: ServeMode): string {
 }
 
 /**
+ * Medium lock, appended to every photographic view.
+ *
+ * Run-to-run drift was a change of *medium*, not content: the same brief
+ * came back as a photograph, a blueprint, or an isometric sectional. The
+ * camera wording ("high-angle three-quarter overhead") read like an
+ * axonometric drawing brief, and nothing in the shared context forbade the
+ * model from picking a drawing. This names the medium once, positively and
+ * negatively, in identical words on every photo view so the medium stops
+ * being a per-run decision.
+ */
+export const PHOTO_LOCK =
+	"MEDIUM: a photoreal photograph taken with a real camera — not a 3D render, illustration, blueprint, technical drawing, floor plan, sectional view, cutaway, dollhouse view, isometric, axonometric, or wireframe. Real light on real materials.";
+
+/**
  * Build a complete concept set from the project brain. Every view is
  * detailed and consistent so the buyer sees the full truck inside and out.
  */
@@ -356,7 +370,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		? `An illuminated "${brand}" badge mounted on the counter front.`
 		: "An illuminated blank badge panel on the counter front, awaiting branding.";
 
-	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. EXACT GEOMETRY — style it, don't change it: ${openings}. LIVERY TEMPLATE: ${livery}. Status: ${stamp}. THE LINE: ${line.forbid} SIDES: the curbside is the side with the service hatch and the entry door; the roadside wall has no hatch and no door. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic, architectural visualization quality, high detail, 35mm lens. ${
+	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. EXACT GEOMETRY — style it, don't change it: ${openings}. LIVERY TEMPLATE: ${livery}. Status: ${stamp}. THE LINE: ${line.forbid} SIDES: the curbside is the side with the service hatch and the entry door; the roadside wall has no hatch and no door. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic photograph, professional commercial photography, high detail. ${
 		hasBrand
 			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
 			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
@@ -365,7 +379,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	return [
 		{
 			label: "exterior_hero",
-			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle of the CURBSIDE at golden hour, so the service hatch and the entry door are both in view. Full wrap livery visible, service hatch open showing a glimpse of ${line.heroGlimpse}, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, shallow depth of field.`,
+			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle of the CURBSIDE at golden hour, so the service hatch and the entry door are both in view. Full wrap livery visible, service hatch open showing a glimpse of ${line.heroGlimpse}, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, 35mm lens, shallow depth of field. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "exterior_rear",
@@ -373,37 +387,37 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 				vehicleBody === "airstream"
 					? "The rounded rear end cap is a solid curved panel with no door in it."
 					: "The rear wall carries the single rear door described in the body lock, and nothing else."
-			} Show the heavy-duty shore power camlock inlet mounted low on the back, the roof-mounted commercial HVAC unit, and the back of the illuminated roof blade sign. Stabilizer jacks deployed, clean pavement, late afternoon light.`,
+			} Show the heavy-duty shore power camlock inlet mounted low on the back, the roof-mounted commercial HVAC unit, and the back of the illuminated roof blade sign. Stabilizer jacks deployed, clean pavement, late afternoon light, 35mm lens. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "side_elevation",
-			prompt: `${ctx} CURBSIDE VIEW: flat side-on concept illustration of the curbside, no perspective. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame and the entry door behind it, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, clean illustration style, sharp edges, no shadows, no people. This is a presentation illustration, not a drawing: no dimension lines, no measurements, no callouts, no labels, no title block.`,
+			prompt: `${ctx} CURBSIDE VIEW: flat side-on concept illustration of the curbside, no perspective. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame and the entry door behind it, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, flat vector-style presentation illustration, sharp edges, no shadows, no people, no blueprint grid or background. This is a presentation illustration, not a drawing: no dimension lines, no measurements, no callouts, no labels, no title block, no blueprint, no technical drawing, no sectional or isometric view.`,
 		},
 		{
 			label: "interior_layout",
-			prompt: `${ctx} INTERIOR LAYOUT — PHOTOREALISTIC OVERVIEW: high-angle three-quarter overhead view from the rear corner of the complete fitted interior, showing the FULL linear run end to end inside the ${lengthM}m × ${widthM}m box. Left to right along the hatch wall: ${line.galley}. ${
+			prompt: `${ctx} INTERIOR LAYOUT — PROFESSIONAL KITCHEN PHOTOGRAPH: eye-level wide-angle photograph taken from just inside the rear of the unit looking forward along the full working aisle, showing the FULL linear run end to end inside the ${lengthM}m × ${widthM}m box. 18mm rectilinear wide-angle lens, camera 1.5m high, verticals straight, ceiling and non-slip commercial floor both visible, walls and roof intact — no roof removed, no wall cut away, no dollhouse, sectional, or overhead view. Left to right along the hatch wall: ${line.galley}. ${
 				line.hot
 					? "Only the cooking equipment named here sits under a stainless extraction canopy; nothing else is under it."
 					: "There is no extraction canopy, hood or cooking equipment anywhere in this interior."
-			} Back wall: easy-clean panels, tiled splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting, cool daylight through the open hatch. Every unit hard up against the walls with a clear 800mm working aisle, fresh/grey water tanks below counter. Nobody inside — an empty, ready-to-trade interior with product prepped.`,
+			} Back wall: easy-clean panels, tiled splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting, cool daylight through the open hatch. Every unit hard up against the walls with a clear 800mm working aisle, fresh/grey water tanks below counter. Nobody inside — an empty, ready-to-trade interior with product prepped, shot like a trade-magazine kitchen feature. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "front_elevation",
-			prompt: `${ctx} FRONT ELEVATION: dead-on straight view from outside the open service hatch at eye level. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: ${line.frontRun}. ${counterBadge} Symmetrical, dead-on composition.`,
+			prompt: `${ctx} FRONT ELEVATION: dead-on straight photograph from outside the open service hatch at eye level, 35mm lens. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: ${line.frontRun}. ${counterBadge} Symmetrical, dead-on composition. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "assembly_theater",
-			prompt: `${ctx} ASSEMBLY THEATER: eye-level POV from the counter looking through the open service hatch at the working line — ${line.counterMoment}, and ${line.signature} sitting ready on the counter. No staff and no hands in frame; the line reads as if the team just stepped away. Warm appetizing lighting on the product, shallow depth of field, golden-hour ambiance.`,
+			prompt: `${ctx} ASSEMBLY THEATER: eye-level photograph, POV from the counter looking through the open service hatch at the working line, 35mm lens — ${line.counterMoment}, and ${line.signature} sitting ready on the counter. No staff and no hands in frame; the line reads as if the team just stepped away. Warm appetizing lighting on the product, shallow depth of field, golden-hour ambiance. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "night_exterior",
-			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light, the forecourt empty. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights.`,
+			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light, the forecourt empty. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights, 35mm lens. ${PHOTO_LOCK}`,
 		},
 		{
 			label: "brand_mark",
 			prompt: hasBrand
-				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a deep neutral background drawn from the palette (${colors}), the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
-				: `Brand direction board for an unnamed ${businessType} food truck. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Deep neutral background drawn from the palette (${colors}). Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
+				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck — a flat graphic presentation, not a photograph of a physical sign. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a deep neutral background drawn from the palette (${colors}), the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
+				: `Brand direction board for an unnamed ${businessType} food truck — a flat graphic presentation, not a photograph. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Deep neutral background drawn from the palette (${colors}). Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
 		},
 	];
 }

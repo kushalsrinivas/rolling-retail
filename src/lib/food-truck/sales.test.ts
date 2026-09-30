@@ -142,6 +142,49 @@ describe("sales asset pipeline", () => {
 		expect(p).toMatch(/griddle and chargrill under the canopy/);
 	});
 
+	it("positions every opening by exact distance and closes the world", () => {
+		const p = buildSalesVideoPrompt("hero-orbit", CTX, ["exterior_hero"]);
+		// Airstream-m defaults: hatch at 0.35 × 6m, door at 0.72 × 6m.
+		expect(p).toMatch(/EXACT OPENINGS/);
+		expect(p).toContain("leading edge 2.1m back from the front wall");
+		expect(p).toContain("leading edge 4.32m back from the front wall");
+		// Count check: 1 hatch, 1 door, 0 windows — and nothing else exists.
+		expect(p).toMatch(/2 openings in total: 1 serving hatch, 1 door, 0 windows/);
+		expect(p).toMatch(/no other windows/);
+		expect(p).toMatch(/exactly 2 openings/);
+	});
+
+	it("the record's openings win over the body defaults", () => {
+		const p = buildSalesVideoPrompt("hero-orbit", {
+			...CTX,
+			openings: [
+				{
+					type: "hatch",
+					side: "curbside",
+					xFromFront: 1.5,
+					width: 2.0,
+					height: 1.1,
+					sillHeight: 1.05,
+					hinge: "top",
+				},
+			],
+		});
+		expect(p).toContain("leading edge 1.5m back from the front wall");
+		expect(p).not.toContain("leading edge 2.1m back from the front wall");
+		expect(p).toMatch(/1 openings in total: 1 serving hatch, 0 doors, 0 windows/);
+	});
+
+	it("a context with no body still builds, without an openings brief", () => {
+		const p = buildSalesVideoPrompt("walkthrough", {
+			brand: "BIB Burgers",
+			vehicleLabel: "Airstream Mid",
+			colors: "matte black",
+			vibe: "bold",
+		});
+		expect(p).not.toMatch(/EXACT OPENINGS/);
+		expect(p).toMatch(/GEOMETRY IS FIXED/);
+	});
+
 	it("the 360 orbit completes a full circle", () => {
 		const p = buildSalesVideoPrompt("hero-orbit", CTX);
 		expect(p).toMatch(/full 360° orbit/);

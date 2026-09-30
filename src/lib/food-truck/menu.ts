@@ -379,7 +379,7 @@ export function menuBoardPrompt(args: MenuBoardPromptArgs): string {
 			? `a framed menu board (${surface}) secured flat to the trailer's side wall immediately beside the open service hatch, at eye height, with a slim frame in the brand's accent colour and neat stainless fixings`
 			: `a freestanding A-frame sandwich board (${surface}) standing on the pavement a short step in front of and beside the open service hatch, with a sturdy frame in the brand's accent colour or natural hardwood`;
 	return [
-		`Photorealistic concept render of the ${args.hasBrand ? `"${args.brand}"` : "unnamed"} food truck (${args.vehicleLabel}) at its serving position, open for trade in golden-hour light.`,
+		`Photorealistic photograph of the ${args.hasBrand ? `"${args.brand}"` : "unnamed"} food truck (${args.vehicleLabel}) at its serving position, open for trade in golden-hour light — a real camera photograph, not a 3D render, illustration, blueprint, or sectional view.`,
 		`MENU BOARD SHOT: three-quarter front angle, camera at standing eye level a few metres back, framed so the trailer's open service hatch and ${stand} are both clearly in frame. The board is the foreground subject: its face is turned almost square to the camera, sharp, evenly lit and large enough in the frame to read.`,
 		"The board face shows the attached MENU ARTWORK reference exactly — same layout, same words, same prices, same colours — as a flat printed insert. Do not rewrite, reorder, translate, abbreviate or invent any menu text, and put no other menu anywhere in the scene. The trailer livery itself carries no menu.",
 		"NO PEOPLE: no customers, staff, passers-by, silhouettes or hands. Clean pavement, shallow depth of field on the background only.",

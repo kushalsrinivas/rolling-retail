@@ -91,3 +91,48 @@ export function openingsPhrase(openings: readonly Opening[]): string {
 	});
 	return bits.join("; ");
 }
+
+/**
+ * Closed-world openings brief: every opening positioned by exact distance,
+ * then a total count that forbids all others.
+ *
+ * Video generations invented windows because the brief asserted "the
+ * position of every door, hatch, window and vent" without naming a single
+ * one. This lists each opening with its measured position and size, then
+ * closes the world: the counts that follow are the complete set, and
+ * anything beyond them — a second hatch, a roadside window, a rear door
+ * that isn't listed — is a wrong render, not a creative choice.
+ */
+export function openingsBrief(
+	openings: readonly Opening[],
+	body: "airstream" | "square" | null,
+): string {
+	const describe = (o: Opening): string => {
+		const pos =
+			o.side === "rear"
+				? "in the rear wall"
+				: `on the ${o.side}, leading edge ${o.xFromFront}m back from the front wall`;
+		const size = `${o.width}m wide × ${o.height}m tall`;
+		const sill =
+			o.type === "door"
+				? "opens at floor level"
+				: `sill ${o.sillHeight}m above the floor`;
+		const hinge =
+			o.hinge === "top"
+				? "top-hinged, propped open upward as an awning"
+				: o.hinge === "none"
+					? "fixed"
+					: `hinged on its ${o.hinge} edge`;
+		return `${o.type} ${pos} (${size}, ${sill}, ${hinge})`;
+	};
+	const n = (t: Opening["type"]) => openings.filter((o) => o.type === t).length;
+	const counts = `${openings.length} openings in total: ${n("hatch")} serving hatch${n("hatch") === 1 ? "" : "es"}, ${n("door")} door${n("door") === 1 ? "" : "s"}, ${n("window")} windows`;
+	const roof =
+		body === "square"
+			? "roof vents and one rooftop HVAC unit"
+			: "two small roof vents and one rooftop HVAC unit";
+	return [
+		`EXACT OPENINGS — ${openings.map(describe).join("; ")}.`,
+		`COUNT CHECK: ${counts}. There are no other windows, doors, hatches, vents or openings anywhere on this vehicle — none on the roadside, none on the rear beyond those listed, none on the roof beyond ${roof}. If you are about to draw an opening that is not in this list, stop: it does not exist.`,
+	].join(" ");
+}

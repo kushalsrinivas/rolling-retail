@@ -17,12 +17,23 @@ export interface QaResult {
 	failures: string[];
 }
 
-/** Prompt must name sides, openings, livery rules and the line forbid list. */
+/**
+ * Prompt must name sides, openings, livery rules, the line forbid list —
+ * and the medium. A prompt with no medium lock is where the
+ * photograph/blueprint/isometric lottery starts.
+ */
 export function qaPromptForSpec(prompt: string, spec: DesignSpec): QaResult {
 	const failures: string[] = [];
 	const p = prompt.toLowerCase();
 	if (!/curbside/.test(p)) failures.push("prompt never names the curbside");
 	if (!/roadside/.test(p)) failures.push("prompt never names the roadside");
+	if (
+		!/not a 3d render|blueprint|technical drawing|sectional|cutaway|isometric|wireframe|illustration|mockup|direction board/.test(
+			p,
+		)
+	) {
+		failures.push("prompt lacks a medium lock (photo vs drawing)");
+	}
 	if (spec.vehicleBody === "airstream" && /rear (service )?door/.test(p)) {
 		failures.push("prompt asks for a rear door on an Airstream");
 	}
