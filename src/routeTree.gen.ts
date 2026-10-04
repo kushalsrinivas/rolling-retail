@@ -9,47 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StudioRouteImport } from './routes/studio'
-import { Route as ReportRouteImport } from './routes/report'
-import { Route as ChatRouteImport } from './routes/chat'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
-import { Route as ApiRodinSubmitRouteImport } from './routes/api/rodin/submit'
-import { Route as ApiRodinStatusRouteImport } from './routes/api/rodin/status'
-import { Route as ApiRodinProxyDownloadRouteImport } from './routes/api/rodin/proxy-download'
-import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/download'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ApiAssetsFilenameRouteImport } from './routes/api/assets.$filename'
-import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
-import { Route as ApiAgentSubmissionsRouteImport } from './routes/api/agent/submissions'
-import { Route as ApiAgentStateRouteImport } from './routes/api/agent/state'
-import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
-import { Route as ApiAgentQuizStepRouteImport } from './routes/api/agent/quiz-step'
-import { Route as ApiAgentPlanRouteImport } from './routes/api/agent/plan'
-import { Route as ApiAgentPackageRouteImport } from './routes/api/agent/package'
-import { Route as ApiAgentMenuRouteImport } from './routes/api/agent/menu'
-import { Route as ApiAgentLeadsRouteImport } from './routes/api/agent/leads'
-import { Route as ApiAgentIntakeRouteImport } from './routes/api/agent/intake'
-import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
-import { Route as ApiAgentFabricationRouteImport } from './routes/api/agent/fabrication'
-import { Route as ApiAgentDesignRouteImport } from './routes/api/agent/design'
-import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as ReportRouteImport } from './routes/report'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiAgentApproveRouteImport } from './routes/api/agent/approve'
+import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
+import { Route as ApiAgentDesignRouteImport } from './routes/api/agent/design'
+import { Route as ApiAgentFabricationRouteImport } from './routes/api/agent/fabrication'
+import { Route as ApiAgentImagesRouteImport } from './routes/api/agent/images'
+import { Route as ApiAgentIntakeRouteImport } from './routes/api/agent/intake'
+import { Route as ApiAgentLeadsRouteImport } from './routes/api/agent/leads'
+import { Route as ApiAgentMenuRouteImport } from './routes/api/agent/menu'
+import { Route as ApiAgentPackageRouteImport } from './routes/api/agent/package'
+import { Route as ApiAgentPlanRouteImport } from './routes/api/agent/plan'
+import { Route as ApiAgentQuizStepRouteImport } from './routes/api/agent/quiz-step'
+import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
+import { Route as ApiAgentStateRouteImport } from './routes/api/agent/state'
+import { Route as ApiAgentSubmissionsRouteImport } from './routes/api/agent/submissions'
+import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
+import { Route as ApiAssetsFilenameRouteImport } from './routes/api/assets.$filename'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/download'
+import { Route as ApiRodinProxyDownloadRouteImport } from './routes/api/rodin/proxy-download'
+import { Route as ApiRodinStatusRouteImport } from './routes/api/rodin/status'
+import { Route as ApiRodinSubmitRouteImport } from './routes/api/rodin/submit'
+import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 
-const StudioRoute = StudioRouteImport.update({
-  id: '/studio',
-  path: '/studio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportRoute = ReportRouteImport.update({
-  id: '/report',
-  path: '/report',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChatRoute = ChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -57,109 +47,24 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
-  id: '/api/trpc/$',
-  path: '/api/trpc/$',
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiRodinSubmitRoute = ApiRodinSubmitRouteImport.update({
-  id: '/api/rodin/submit',
-  path: '/api/rodin/submit',
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiRodinStatusRoute = ApiRodinStatusRouteImport.update({
-  id: '/api/rodin/status',
-  path: '/api/rodin/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiRodinProxyDownloadRoute = ApiRodinProxyDownloadRouteImport.update({
-  id: '/api/rodin/proxy-download',
-  path: '/api/rodin/proxy-download',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiRodinDownloadRoute = ApiRodinDownloadRouteImport.update({
-  id: '/api/rodin/download',
-  path: '/api/rodin/download',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAssetsFilenameRoute = ApiAssetsFilenameRouteImport.update({
-  id: '/api/assets/$filename',
-  path: '/api/assets/$filename',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentVideoRoute = ApiAgentVideoRouteImport.update({
-  id: '/api/agent/video',
-  path: '/api/agent/video',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentSubmissionsRoute = ApiAgentSubmissionsRouteImport.update({
-  id: '/api/agent/submissions',
-  path: '/api/agent/submissions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentStateRoute = ApiAgentStateRouteImport.update({
-  id: '/api/agent/state',
-  path: '/api/agent/state',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
-  id: '/api/agent/session',
-  path: '/api/agent/session',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentQuizStepRoute = ApiAgentQuizStepRouteImport.update({
-  id: '/api/agent/quiz-step',
-  path: '/api/agent/quiz-step',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentPlanRoute = ApiAgentPlanRouteImport.update({
-  id: '/api/agent/plan',
-  path: '/api/agent/plan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentPackageRoute = ApiAgentPackageRouteImport.update({
-  id: '/api/agent/package',
-  path: '/api/agent/package',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentMenuRoute = ApiAgentMenuRouteImport.update({
-  id: '/api/agent/menu',
-  path: '/api/agent/menu',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentLeadsRoute = ApiAgentLeadsRouteImport.update({
-  id: '/api/agent/leads',
-  path: '/api/agent/leads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentIntakeRoute = ApiAgentIntakeRouteImport.update({
-  id: '/api/agent/intake',
-  path: '/api/agent/intake',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentImagesRoute = ApiAgentImagesRouteImport.update({
-  id: '/api/agent/images',
-  path: '/api/agent/images',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentFabricationRoute = ApiAgentFabricationRouteImport.update({
-  id: '/api/agent/fabrication',
-  path: '/api/agent/fabrication',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentDesignRoute = ApiAgentDesignRouteImport.update({
-  id: '/api/agent/design',
-  path: '/api/agent/design',
+const ApiAgentApproveRoute = ApiAgentApproveRouteImport.update({
+  id: '/api/agent/approve',
+  path: '/api/agent/approve',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentChatRoute = ApiAgentChatRouteImport.update({
@@ -167,9 +72,104 @@ const ApiAgentChatRoute = ApiAgentChatRouteImport.update({
   path: '/api/agent/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAgentApproveRoute = ApiAgentApproveRouteImport.update({
-  id: '/api/agent/approve',
-  path: '/api/agent/approve',
+const ApiAgentDesignRoute = ApiAgentDesignRouteImport.update({
+  id: '/api/agent/design',
+  path: '/api/agent/design',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentFabricationRoute = ApiAgentFabricationRouteImport.update({
+  id: '/api/agent/fabrication',
+  path: '/api/agent/fabrication',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentImagesRoute = ApiAgentImagesRouteImport.update({
+  id: '/api/agent/images',
+  path: '/api/agent/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentIntakeRoute = ApiAgentIntakeRouteImport.update({
+  id: '/api/agent/intake',
+  path: '/api/agent/intake',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentLeadsRoute = ApiAgentLeadsRouteImport.update({
+  id: '/api/agent/leads',
+  path: '/api/agent/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentMenuRoute = ApiAgentMenuRouteImport.update({
+  id: '/api/agent/menu',
+  path: '/api/agent/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentPackageRoute = ApiAgentPackageRouteImport.update({
+  id: '/api/agent/package',
+  path: '/api/agent/package',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentPlanRoute = ApiAgentPlanRouteImport.update({
+  id: '/api/agent/plan',
+  path: '/api/agent/plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentQuizStepRoute = ApiAgentQuizStepRouteImport.update({
+  id: '/api/agent/quiz-step',
+  path: '/api/agent/quiz-step',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
+  id: '/api/agent/session',
+  path: '/api/agent/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentStateRoute = ApiAgentStateRouteImport.update({
+  id: '/api/agent/state',
+  path: '/api/agent/state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentSubmissionsRoute = ApiAgentSubmissionsRouteImport.update({
+  id: '/api/agent/submissions',
+  path: '/api/agent/submissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentVideoRoute = ApiAgentVideoRouteImport.update({
+  id: '/api/agent/video',
+  path: '/api/agent/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssetsFilenameRoute = ApiAssetsFilenameRouteImport.update({
+  id: '/api/assets/$filename',
+  path: '/api/assets/$filename',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRodinDownloadRoute = ApiRodinDownloadRouteImport.update({
+  id: '/api/rodin/download',
+  path: '/api/rodin/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRodinProxyDownloadRoute = ApiRodinProxyDownloadRouteImport.update({
+  id: '/api/rodin/proxy-download',
+  path: '/api/rodin/proxy-download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRodinStatusRoute = ApiRodinStatusRouteImport.update({
+  id: '/api/rodin/status',
+  path: '/api/rodin/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRodinSubmitRoute = ApiRodinSubmitRouteImport.update({
+  id: '/api/rodin/submit',
+  path: '/api/rodin/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
+  id: '/api/trpc/$',
+  path: '/api/trpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -383,25 +383,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/studio': {
-      id: '/studio'
-      path: '/studio'
-      fullPath: '/studio'
-      preLoaderRoute: typeof StudioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/report': {
-      id: '/report'
-      path: '/report'
-      fullPath: '/report'
-      preLoaderRoute: typeof ReportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -411,151 +397,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/trpc/$': {
-      id: '/api/trpc/$'
-      path: '/api/trpc/$'
-      fullPath: '/api/trpc/$'
-      preLoaderRoute: typeof ApiTrpcSplatRouteImport
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/rodin/submit': {
-      id: '/api/rodin/submit'
-      path: '/api/rodin/submit'
-      fullPath: '/api/rodin/submit'
-      preLoaderRoute: typeof ApiRodinSubmitRouteImport
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/rodin/status': {
-      id: '/api/rodin/status'
-      path: '/api/rodin/status'
-      fullPath: '/api/rodin/status'
-      preLoaderRoute: typeof ApiRodinStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/rodin/proxy-download': {
-      id: '/api/rodin/proxy-download'
-      path: '/api/rodin/proxy-download'
-      fullPath: '/api/rodin/proxy-download'
-      preLoaderRoute: typeof ApiRodinProxyDownloadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/rodin/download': {
-      id: '/api/rodin/download'
-      path: '/api/rodin/download'
-      fullPath: '/api/rodin/download'
-      preLoaderRoute: typeof ApiRodinDownloadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/assets/$filename': {
-      id: '/api/assets/$filename'
-      path: '/api/assets/$filename'
-      fullPath: '/api/assets/$filename'
-      preLoaderRoute: typeof ApiAssetsFilenameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/video': {
-      id: '/api/agent/video'
-      path: '/api/agent/video'
-      fullPath: '/api/agent/video'
-      preLoaderRoute: typeof ApiAgentVideoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/submissions': {
-      id: '/api/agent/submissions'
-      path: '/api/agent/submissions'
-      fullPath: '/api/agent/submissions'
-      preLoaderRoute: typeof ApiAgentSubmissionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/state': {
-      id: '/api/agent/state'
-      path: '/api/agent/state'
-      fullPath: '/api/agent/state'
-      preLoaderRoute: typeof ApiAgentStateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/session': {
-      id: '/api/agent/session'
-      path: '/api/agent/session'
-      fullPath: '/api/agent/session'
-      preLoaderRoute: typeof ApiAgentSessionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/quiz-step': {
-      id: '/api/agent/quiz-step'
-      path: '/api/agent/quiz-step'
-      fullPath: '/api/agent/quiz-step'
-      preLoaderRoute: typeof ApiAgentQuizStepRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/plan': {
-      id: '/api/agent/plan'
-      path: '/api/agent/plan'
-      fullPath: '/api/agent/plan'
-      preLoaderRoute: typeof ApiAgentPlanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/package': {
-      id: '/api/agent/package'
-      path: '/api/agent/package'
-      fullPath: '/api/agent/package'
-      preLoaderRoute: typeof ApiAgentPackageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/menu': {
-      id: '/api/agent/menu'
-      path: '/api/agent/menu'
-      fullPath: '/api/agent/menu'
-      preLoaderRoute: typeof ApiAgentMenuRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/leads': {
-      id: '/api/agent/leads'
-      path: '/api/agent/leads'
-      fullPath: '/api/agent/leads'
-      preLoaderRoute: typeof ApiAgentLeadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/intake': {
-      id: '/api/agent/intake'
-      path: '/api/agent/intake'
-      fullPath: '/api/agent/intake'
-      preLoaderRoute: typeof ApiAgentIntakeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/images': {
-      id: '/api/agent/images'
-      path: '/api/agent/images'
-      fullPath: '/api/agent/images'
-      preLoaderRoute: typeof ApiAgentImagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/fabrication': {
-      id: '/api/agent/fabrication'
-      path: '/api/agent/fabrication'
-      fullPath: '/api/agent/fabrication'
-      preLoaderRoute: typeof ApiAgentFabricationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/design': {
-      id: '/api/agent/design'
-      path: '/api/agent/design'
-      fullPath: '/api/agent/design'
-      preLoaderRoute: typeof ApiAgentDesignRouteImport
+    '/api/agent/approve': {
+      id: '/api/agent/approve'
+      path: '/api/agent/approve'
+      fullPath: '/api/agent/approve'
+      preLoaderRoute: typeof ApiAgentApproveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent/chat': {
@@ -565,11 +432,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/agent/approve': {
-      id: '/api/agent/approve'
-      path: '/api/agent/approve'
-      fullPath: '/api/agent/approve'
-      preLoaderRoute: typeof ApiAgentApproveRouteImport
+    '/api/agent/design': {
+      id: '/api/agent/design'
+      path: '/api/agent/design'
+      fullPath: '/api/agent/design'
+      preLoaderRoute: typeof ApiAgentDesignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/fabrication': {
+      id: '/api/agent/fabrication'
+      path: '/api/agent/fabrication'
+      fullPath: '/api/agent/fabrication'
+      preLoaderRoute: typeof ApiAgentFabricationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/images': {
+      id: '/api/agent/images'
+      path: '/api/agent/images'
+      fullPath: '/api/agent/images'
+      preLoaderRoute: typeof ApiAgentImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/intake': {
+      id: '/api/agent/intake'
+      path: '/api/agent/intake'
+      fullPath: '/api/agent/intake'
+      preLoaderRoute: typeof ApiAgentIntakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/leads': {
+      id: '/api/agent/leads'
+      path: '/api/agent/leads'
+      fullPath: '/api/agent/leads'
+      preLoaderRoute: typeof ApiAgentLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/menu': {
+      id: '/api/agent/menu'
+      path: '/api/agent/menu'
+      fullPath: '/api/agent/menu'
+      preLoaderRoute: typeof ApiAgentMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/package': {
+      id: '/api/agent/package'
+      path: '/api/agent/package'
+      fullPath: '/api/agent/package'
+      preLoaderRoute: typeof ApiAgentPackageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/plan': {
+      id: '/api/agent/plan'
+      path: '/api/agent/plan'
+      fullPath: '/api/agent/plan'
+      preLoaderRoute: typeof ApiAgentPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/quiz-step': {
+      id: '/api/agent/quiz-step'
+      path: '/api/agent/quiz-step'
+      fullPath: '/api/agent/quiz-step'
+      preLoaderRoute: typeof ApiAgentQuizStepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/session': {
+      id: '/api/agent/session'
+      path: '/api/agent/session'
+      fullPath: '/api/agent/session'
+      preLoaderRoute: typeof ApiAgentSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/state': {
+      id: '/api/agent/state'
+      path: '/api/agent/state'
+      fullPath: '/api/agent/state'
+      preLoaderRoute: typeof ApiAgentStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/submissions': {
+      id: '/api/agent/submissions'
+      path: '/api/agent/submissions'
+      fullPath: '/api/agent/submissions'
+      preLoaderRoute: typeof ApiAgentSubmissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/video': {
+      id: '/api/agent/video'
+      path: '/api/agent/video'
+      fullPath: '/api/agent/video'
+      preLoaderRoute: typeof ApiAgentVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assets/$filename': {
+      id: '/api/assets/$filename'
+      path: '/api/assets/$filename'
+      fullPath: '/api/assets/$filename'
+      preLoaderRoute: typeof ApiAssetsFilenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rodin/download': {
+      id: '/api/rodin/download'
+      path: '/api/rodin/download'
+      fullPath: '/api/rodin/download'
+      preLoaderRoute: typeof ApiRodinDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rodin/proxy-download': {
+      id: '/api/rodin/proxy-download'
+      path: '/api/rodin/proxy-download'
+      fullPath: '/api/rodin/proxy-download'
+      preLoaderRoute: typeof ApiRodinProxyDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rodin/status': {
+      id: '/api/rodin/status'
+      path: '/api/rodin/status'
+      fullPath: '/api/rodin/status'
+      preLoaderRoute: typeof ApiRodinStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rodin/submit': {
+      id: '/api/rodin/submit'
+      path: '/api/rodin/submit'
+      fullPath: '/api/rodin/submit'
+      preLoaderRoute: typeof ApiRodinSubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trpc/$': {
+      id: '/api/trpc/$'
+      path: '/api/trpc/$'
+      fullPath: '/api/trpc/$'
+      preLoaderRoute: typeof ApiTrpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
