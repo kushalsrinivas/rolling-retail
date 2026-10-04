@@ -8,6 +8,7 @@ import {
 	commitDesignVersion,
 	currentDesign,
 	getOrCreateSession,
+	logQuizStep,
 	persistSession,
 	restoreSession,
 } from "#/lib/food-truck/session";
@@ -23,7 +24,11 @@ export const Route = createFileRoute("/api/agent/intake")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
-				let body: { sessionId?: string; answers?: IntakeDirect } = {};
+				let body: {
+					sessionId?: string;
+					answers?: IntakeDirect;
+					quiz?: { styles?: string[]; palettes?: string[]; extras?: string[] };
+				} = {};
 				try {
 					body = (await request.json()) as typeof body;
 				} catch {
@@ -37,6 +42,9 @@ export const Route = createFileRoute("/api/agent/intake")({
 				}
 				await restoreSession(body.sessionId);
 				const s = getOrCreateSession(body.sessionId);
+				// Raw star-picks ride along for the CMS; the spec still comes
+				// from the derived answers so the record path is unchanged.
+				if (body.quiz) logQuizStep(s, "final", body.quiz);
 				const spec = specFromIntake(body.answers ?? {});
 				const rec = commitDesignVersion(s, spec, {
 					changeSummary: "Structured intake — customer answers, confirmed.",

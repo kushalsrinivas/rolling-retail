@@ -40,6 +40,17 @@ export interface DesignApproval {
 	createdAt: number;
 }
 
+/**
+ * One quiz step's answers, logged as the buyer advances — not just at the
+ * end. The CMS reads these, so a drop-off after step 2 is still a record
+ * of what the buyer liked.
+ */
+export interface QuizStepEntry {
+	step: string;
+	at: number;
+	data: Record<string, unknown>;
+}
+
 export interface TruckSession {
 	sessionId: string;
 	createdAt: number;
@@ -88,6 +99,8 @@ export interface TruckSession {
 	 * version here with who/when, and a regenerate can never overwrite it.
 	 */
 	approvals: DesignApproval[];
+	/** Style-quiz answers per step — the CMS record of every buyer run. */
+	quizSteps: QuizStepEntry[];
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -116,17 +129,21 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			menu: null,
 			designVersions: [],
 			approvals: [],
+			quizSteps: [],
 		};
 		sessions.set(id, s);
 		// Best-effort restore from disk — a restart must not lose the design.
 		// Sync path can't await; routes call restoreSession() after this.
 		void restoreSession(id).catch(() => {});
-		// Old snapshots predate designVersions/approvals.
+		// Old snapshots predate designVersions/approvals/quizSteps.
 		if (!Array.isArray((s as { designVersions?: unknown }).designVersions)) {
 			s.designVersions = [];
 		}
 		if (!Array.isArray((s as { approvals?: unknown }).approvals)) {
 			s.approvals = [];
+		}
+		if (!Array.isArray((s as { quizSteps?: unknown }).quizSteps)) {
+			s.quizSteps = [];
 		}
 	}
 	s.lastSeen = Date.now();
@@ -173,6 +190,7 @@ function normalizeSnapshot(snap: TruckSession): TruckSession {
 		? snap.designVersions
 		: [];
 	snap.approvals = Array.isArray(snap.approvals) ? snap.approvals : [];
+	snap.quizSteps = Array.isArray(snap.quizSteps) ? snap.quizSteps : [];
 	snap.images = snap.images ?? {};
 	snap.videos = snap.videos ?? [];
 	restored.add(snap);
@@ -372,6 +390,17 @@ export function approveDesignVersion(
 
 export function approvalsFor(s: TruckSession): DesignApproval[] {
 	return [...s.approvals].sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Append one quiz step's answers. Capped — the CMS needs signal, not spam. */
+export function logQuizStep(
+	s: TruckSession,
+	step: string,
+	data: Record<string, unknown>,
+): void {
+	const steps = Array.isArray(s.quizSteps) ? s.quizSteps : [];
+	s.quizSteps = [...steps, { step, at: Date.now(), data }].slice(-50);
+	persistSession(s);
 }
 
 // Best-effort cap so a hung dev server doesn't grow forever.

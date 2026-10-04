@@ -10,7 +10,7 @@ import { useMediaQuery } from "#/hooks/use-media-query";
 import { cn } from "#/lib/utils";
 import BrandReportPanel from "./BrandReportPanel";
 import ChatPanel from "./ChatPanel";
-import IntakeFlow from "./IntakeFlow";
+import StyleQuizFlow from "./StyleQuizFlow";
 
 const MIN_PERCENT = 25;
 const MAX_PERCENT = 75;
@@ -124,8 +124,23 @@ export default function ChatLayout() {
 	if (showIntake) {
 		return (
 			<div className="ftf chat-layout h-dvh w-full overflow-hidden">
-				<IntakeFlow
-					onComplete={(brief, answers, image) => {
+				<StyleQuizFlow
+					onStep={(step, data) => {
+						// Per-round CMS log — best-effort, never blocks the quiz.
+						void (async () => {
+							try {
+								const sessionId = await chat.ensureSession();
+								await fetch("/api/agent/quiz-step", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({ sessionId, step, data }),
+								});
+							} catch {
+								/* CMS logging is best-effort */
+							}
+						})();
+					}}
+					onComplete={(brief, answers, _image, picks) => {
 						setIntakeDone(true);
 						// Seed the pickers so the panel and the renders agree with the
 						// brief before the first reply lands.
@@ -135,20 +150,23 @@ export default function ChatLayout() {
 							chat.setBusinessType(answers.businessType);
 						// Structured intake writes the design record directly —
 						// the prose brief alone would lose "sage"/"birria" to regex.
+						// The full signal (business + vehicle + colors + vibe)
+						// trips brainReady on this first message, so the single
+						// auto-render round fires without further questions.
 						void (async () => {
 							try {
 								const sessionId = await chat.ensureSession();
 								await fetch("/api/agent/intake", {
 									method: "POST",
 									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({ sessionId, answers }),
+									body: JSON.stringify({ sessionId, answers, quiz: picks }),
 								});
 								await chat.refreshDesign();
 							} catch {
 								/* record is best-effort — chat still carries the brief */
 							}
 						})();
-						chat.sendMessage(brief, image ? { image } : undefined);
+						chat.sendMessage(brief);
 					}}
 					onSkip={() => setIntakeDone(true)}
 				/>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "#/lib/track";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
 import {
 	CONCEPT_VIEW_COUNT,
@@ -604,6 +605,7 @@ export function useChat() {
 				const data = (await res.json().catch(() => ({}))) as { error?: string };
 				if (!res.ok)
 					throw new Error(data.error || `Approval failed (${res.status})`);
+				track("design_approved", { version });
 				await refreshDesign();
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Approval failed");

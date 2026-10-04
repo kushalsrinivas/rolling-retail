@@ -10,7 +10,7 @@ import { listLeads } from "#/lib/food-truck/session";
  * accounts land it is gated on a shared secret; without FACTORY_DASHBOARD_TOKEN
  * set the endpoint stays closed rather than falling open.
  */
-function authorized(request: Request) {
+export function authorized(request: Request) {
 	const expected = process.env.FACTORY_DASHBOARD_TOKEN;
 	if (!expected) return false;
 	const header = request.headers.get("authorization") ?? "";

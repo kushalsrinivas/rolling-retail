@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as ApiRodinSubmitRouteImport } from './routes/api/rodin/submit'
@@ -21,8 +22,10 @@ import { Route as ApiRodinDownloadRouteImport } from './routes/api/rodin/downloa
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsFilenameRouteImport } from './routes/api/assets.$filename'
 import { Route as ApiAgentVideoRouteImport } from './routes/api/agent/video'
+import { Route as ApiAgentSubmissionsRouteImport } from './routes/api/agent/submissions'
 import { Route as ApiAgentStateRouteImport } from './routes/api/agent/state'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
+import { Route as ApiAgentQuizStepRouteImport } from './routes/api/agent/quiz-step'
 import { Route as ApiAgentPlanRouteImport } from './routes/api/agent/plan'
 import { Route as ApiAgentPackageRouteImport } from './routes/api/agent/package'
 import { Route as ApiAgentMenuRouteImport } from './routes/api/agent/menu'
@@ -47,6 +50,11 @@ const ReportRoute = ReportRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -94,6 +102,11 @@ const ApiAgentVideoRoute = ApiAgentVideoRouteImport.update({
   path: '/api/agent/video',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentSubmissionsRoute = ApiAgentSubmissionsRouteImport.update({
+  id: '/api/agent/submissions',
+  path: '/api/agent/submissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentStateRoute = ApiAgentStateRouteImport.update({
   id: '/api/agent/state',
   path: '/api/agent/state',
@@ -102,6 +115,11 @@ const ApiAgentStateRoute = ApiAgentStateRouteImport.update({
 const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
   id: '/api/agent/session',
   path: '/api/agent/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentQuizStepRoute = ApiAgentQuizStepRouteImport.update({
+  id: '/api/agent/quiz-step',
+  path: '/api/agent/quiz-step',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentPlanRoute = ApiAgentPlanRouteImport.update({
@@ -157,6 +175,7 @@ const ApiAgentApproveRoute = ApiAgentApproveRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
@@ -170,8 +189,10 @@ export interface FileRoutesByFullPath {
   '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
+  '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
+  '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -183,6 +204,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
@@ -196,8 +218,10 @@ export interface FileRoutesByTo {
   '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
+  '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
+  '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -210,6 +234,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/report': typeof ReportRoute
   '/studio': typeof StudioRoute
@@ -223,8 +248,10 @@ export interface FileRoutesById {
   '/api/agent/menu': typeof ApiAgentMenuRoute
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
+  '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
+  '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
   '/api/agent/video': typeof ApiAgentVideoRoute
   '/api/assets/$filename': typeof ApiAssetsFilenameRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -238,6 +265,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/chat'
     | '/report'
     | '/studio'
@@ -251,8 +279,10 @@ export interface FileRouteTypes {
     | '/api/agent/menu'
     | '/api/agent/package'
     | '/api/agent/plan'
+    | '/api/agent/quiz-step'
     | '/api/agent/session'
     | '/api/agent/state'
+    | '/api/agent/submissions'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -264,6 +294,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/chat'
     | '/report'
     | '/studio'
@@ -277,8 +308,10 @@ export interface FileRouteTypes {
     | '/api/agent/menu'
     | '/api/agent/package'
     | '/api/agent/plan'
+    | '/api/agent/quiz-step'
     | '/api/agent/session'
     | '/api/agent/state'
+    | '/api/agent/submissions'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -290,6 +323,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/chat'
     | '/report'
     | '/studio'
@@ -303,8 +337,10 @@ export interface FileRouteTypes {
     | '/api/agent/menu'
     | '/api/agent/package'
     | '/api/agent/plan'
+    | '/api/agent/quiz-step'
     | '/api/agent/session'
     | '/api/agent/state'
+    | '/api/agent/submissions'
     | '/api/agent/video'
     | '/api/assets/$filename'
     | '/api/auth/$'
@@ -317,6 +353,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
   ReportRoute: typeof ReportRoute
   StudioRoute: typeof StudioRoute
@@ -330,8 +367,10 @@ export interface RootRouteChildren {
   ApiAgentMenuRoute: typeof ApiAgentMenuRoute
   ApiAgentPackageRoute: typeof ApiAgentPackageRoute
   ApiAgentPlanRoute: typeof ApiAgentPlanRoute
+  ApiAgentQuizStepRoute: typeof ApiAgentQuizStepRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
   ApiAgentStateRoute: typeof ApiAgentStateRoute
+  ApiAgentSubmissionsRoute: typeof ApiAgentSubmissionsRoute
   ApiAgentVideoRoute: typeof ApiAgentVideoRoute
   ApiAssetsFilenameRoute: typeof ApiAssetsFilenameRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -363,6 +402,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -428,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/submissions': {
+      id: '/api/agent/submissions'
+      path: '/api/agent/submissions'
+      fullPath: '/api/agent/submissions'
+      preLoaderRoute: typeof ApiAgentSubmissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/state': {
       id: '/api/agent/state'
       path: '/api/agent/state'
@@ -440,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/api/agent/session'
       fullPath: '/api/agent/session'
       preLoaderRoute: typeof ApiAgentSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/quiz-step': {
+      id: '/api/agent/quiz-step'
+      path: '/api/agent/quiz-step'
+      fullPath: '/api/agent/quiz-step'
+      preLoaderRoute: typeof ApiAgentQuizStepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent/plan': {
@@ -517,6 +577,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
   ReportRoute: ReportRoute,
   StudioRoute: StudioRoute,
@@ -530,8 +591,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentMenuRoute: ApiAgentMenuRoute,
   ApiAgentPackageRoute: ApiAgentPackageRoute,
   ApiAgentPlanRoute: ApiAgentPlanRoute,
+  ApiAgentQuizStepRoute: ApiAgentQuizStepRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
   ApiAgentStateRoute: ApiAgentStateRoute,
+  ApiAgentSubmissionsRoute: ApiAgentSubmissionsRoute,
   ApiAgentVideoRoute: ApiAgentVideoRoute,
   ApiAssetsFilenameRoute: ApiAssetsFilenameRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
