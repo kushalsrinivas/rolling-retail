@@ -76,7 +76,7 @@ export const Route = createFileRoute("/api/agent/video")({
 				}
 				const session = getOrCreateSession(body.sessionId);
 				await restoreSession(session.sessionId).catch(() => {});
-				const brain = session.brain;				/*
+				const brain = session.brain; /*
 				 * The stills are briefed on body, dimensions, menu, equipment and
 				 * service model; the video used to get four loose strings, so it
 				 * filmed a generic trailer. Same brain, same vehicle table, same
@@ -124,9 +124,7 @@ export const Route = createFileRoute("/api/agent/video")({
 					widthM: vehicle?.widthM ?? null,
 					openings:
 						recordOpenings ??
-						(vehicle
-							? defaultOpenings(vehicle.body, vehicle.lengthM)
-							: null),
+						(vehicle ? defaultOpenings(vehicle.body, vehicle.lengthM) : null),
 					businessLabel: business?.label ?? null,
 					businessType: business?.id ?? null,
 					menu: brain?.menuKeywords.slice(0, 5).join(", ") || null,
@@ -140,6 +138,7 @@ export const Route = createFileRoute("/api/agent/video")({
 						body.vibe,
 						brain?.vibeWords.slice(0, 2).join(", ") || "bold street-food",
 					),
+					brief: session.brief,
 				};
 				/*
 				 * Reference selection: the still that actually shows the space

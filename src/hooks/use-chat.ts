@@ -220,7 +220,7 @@ function generateId() {
 }
 
 const WELCOME =
-	"Welcome to the Factory Designer. Please share your brand, menu, colors, service style and any inspiration — I will organize it into a factory-buildable layout and prepare visual concepts once I have enough detail. What are you building?";
+	"Welcome to the Rolling Retail designer. Please share your brand, menu, colors, service style and any inspiration — I will organize it into a factory-buildable layout and prepare visual concepts once I have enough detail. What are you building?";
 
 export function useChat() {
 	const [messages, setMessages] = useState<ChatMessage[]>([

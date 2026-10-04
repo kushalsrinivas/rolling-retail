@@ -7,11 +7,15 @@
  */
 import { CONCEPT_VIEWS } from "./constants";
 import { type LineProfile, lineProfileFor } from "./line-profile";
+import { type DesignBrief, finishPhraseFor, sceneFor } from "./brief";
+import { defaultOpenings, type Opening, openingsSteLines } from "./openings";
 import {
-	defaultOpenings,
-	type Opening,
-	openingsBrief,
-} from "./openings";
+	row,
+	type SteSection,
+	steDocument,
+	termsSection,
+	warning,
+} from "./ste";
 
 export function isRealPhoto(url: string | null | undefined): url is string {
 	return (
@@ -137,68 +141,25 @@ export interface SalesVideoContext {
 	 * brief falls back to the body defaults so a clip never films blind.
 	 */
 	openings?: Opening[] | null;
+	/** Operating brief — the orbit's setting and the wrap's film finish. */
+	brief?: DesignBrief | null;
 }
 
-function bodyPhrase(body: SalesVideoContext["vehicleBody"]): string {
+function bodyName(body: SalesVideoContext["vehicleBody"]): string {
 	if (body === "airstream")
-		return "polished riveted aluminium rounded Airstream-style trailer";
+		return "rounded riveted polished-aluminium Airstream-style trailer";
 	if (body === "square")
-		return "square-profile stainless-steel food trailer with flat vertical sides";
+		return "square-profile food trailer with flat vertical side walls";
 	return "food trailer";
 }
 
-function servePhrase(mode: SalesVideoContext["serveMode"]): string {
+function serviceName(mode: SalesVideoContext["serveMode"]): string {
 	if (mode === "walk-in")
-		return "customers step inside to order at an interior counter";
-	if (mode === "hybrid")
-		return "a walk-in aisle alongside a street-side serve hatch";
-	return "a wide street-side serve hatch, no public entry";
+		return "walk-in; customers step inside to order at an interior counter";
+	if (mode === "hybrid") return "hybrid; a walk-in aisle and a service hatch";
+	return "hatch-serve; a wide curbside service hatch; no public entry";
 }
 
-/** One sentence naming the exact product, reused by every shot list. */
-function subject(ctx: SalesVideoContext): string {
-	const named =
-		ctx.hasBrand !== false && ctx.brand && ctx.brand !== "the business";
-	const who = named ? `"${ctx.brand}"` : "an as-yet-unnamed business";
-	const size =
-		ctx.lengthM && ctx.widthM ? `${ctx.lengthM}m × ${ctx.widthM}m ` : "";
-	const biz = ctx.businessLabel ? `${ctx.businessLabel.toLowerCase()} ` : "";
-	return `a ${size}${bodyPhrase(ctx.vehicleBody)} (${ctx.vehicleLabel}) operating as a ${biz}food truck for ${who}`;
-}
-
-/** The facts the camera must respect but does not itself frame. */
-function productBrief(ctx: SalesVideoContext): string {
-	const bits: string[] = [
-		`SUBJECT: ${subject(ctx)}.`,
-		`Livery: ${ctx.colors}. Overall feel: ${ctx.vibe}.`,
-		`Service model: ${servePhrase(ctx.serveMode)}.`,
-	];
-	const openings =
-		ctx.openings ??
-		(ctx.vehicleBody && ctx.lengthM
-			? defaultOpenings(ctx.vehicleBody, ctx.lengthM)
-			: null);
-	if (openings) bits.push(openingsBrief(openings, ctx.vehicleBody ?? null));
-	if (ctx.menu) bits.push(`Menu on the board: ${ctx.menu}.`);
-	if (ctx.equipment)
-		bits.push(`Equipment visible on the line: ${ctx.equipment}.`);
-	return bits.join(" ");
-}
-
-/** Camera-height/action block shared by the outside clips. */
-const ACTION =
-	"ACTION: no people anywhere in frame — the product and the camera carry the motion.";
-
-/**
- * The hard constraint. The references are approved renders the buyer already
- * signed off, so the model's job is cinematography, not design — one wrong
- * hatch and the clip stops matching the quote the factory sends.
- *
- * Naming the view each reference came from matters: a walkthrough handed the
- * exterior hero and told only "match the references" still has to invent an
- * interior, and invents a different one every run. Told that image 1 IS the
- * galley it is filming, it moves a camera through it instead.
- */
 /**
  * Resolve the openings a clip is accountable to: the record's when the
  * caller has them, else the body defaults — never nothing.
@@ -212,51 +173,155 @@ function openingsFor(ctx: SalesVideoContext): Opening[] | null {
 	);
 }
 
-function lockFor(
-	referenceViews: readonly string[] = [],
-	line?: LineProfile,
-	/** "inside" = the walkthrough, filmed within the galley. */
-	camera: "outside" | "inside" = "outside",
-	openings?: readonly Opening[] | null,
-): string {
-	const named = referenceViews
-		.map((v, i) => `image ${i + 1} is the approved ${v.replace(/_/g, " ")}`)
-		.join(", ");
-	const cameraRule =
-		camera === "inside"
-			? "THE CAMERA IS INSIDE from frame one: it is standing in this trailer's aisle and never passes through a wall, floor, ceiling or the service window; it never leaves the trailer."
-			: "THE CAMERA NEVER PASSES THROUGH A DOOR, HATCH OR WINDOW: it stays outside the trailer and looks in through the open hatch, so the opening keeps its frame in every shot.";
-	return [
-		"REFERENCE LOCK — the attached images are approved renders of this exact trailer, already signed off by the buyer.",
-		named
-			? `Reference ${named}. The space, objects and surfaces you can see in them are the set for this shot.`
-			: "Reference image 1 is the master.",
-		"Reproduce them precisely: silhouette, length and proportions, panel lines, the position of every door, hatch, window and vent, wheel and axle position, roof unit and blade sign, wrap artwork, brand colours, logo placement and signage typography, and — inside — the layout, counters, equipment, materials, flooring, wall and ceiling finishes.",
-		openings
-			? `GEOMETRY IS FIXED for the whole clip: exactly ${openings.length} openings — ${openings.filter((o) => o.type === "hatch").length} hatch(es), ${openings.filter((o) => o.type === "door").length} door(s), ${openings.filter((o) => o.type === "window").length} window(s) — in the briefed positions. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.`
-			: "GEOMETRY IS FIXED for the whole clip: the number and position of doors, windows, hatches, panels and vents never changes. A door stays a door and a hatch stays the only hatch in every frame — nothing opens, folds, slides or converts into a different opening, and no new serving window ever appears.",
-		cameraRule,
-		`You are operating a camera around a vehicle that already exists. Do not recreate, redesign or re-dress the scene. The ONLY things this clip introduces are the camera move described below, the stated light, and ${line?.motion ?? "no other motion"}. The scene is unoccupied — there are no people in it, and none may appear.`,
-		line ? `THE LINE: ${line.forbid}` : "",
-	]
-		.filter(Boolean)
-		.join(" ");
+/**
+ * The facts the camera must respect but does not itself frame. Same data
+ * rows on every clip, so the three films describe one trailer.
+ */
+function subjectSection(ctx: SalesVideoContext, line: LineProfile): SteSection {
+	const named =
+		ctx.hasBrand !== false && ctx.brand && ctx.brand !== "the business";
+	return {
+		title: "Subject data",
+		lines: [
+			row(
+				"Brand",
+				named
+					? `"${ctx.brand}"`
+					: "none; an as-yet-unnamed business; letter nothing",
+			),
+			row("Business", ctx.businessLabel),
+			row("Trailer model", ctx.vehicleLabel),
+			row("Body", bodyName(ctx.vehicleBody)),
+			ctx.lengthM && ctx.widthM
+				? row("Box size", `${ctx.lengthM} m long × ${ctx.widthM} m wide`)
+				: null,
+			row("Service model", serviceName(ctx.serveMode)),
+			row("Wrap colors", ctx.colors),
+			row("Film finish", ctx.brief ? finishPhraseFor(ctx.brief) : null),
+			row("Style", ctx.vibe),
+			row("Menu", ctx.menu),
+			row("Equipment line", ctx.equipment),
+			row("Forbidden in this trailer", line.forbid),
+		],
+	};
+}
+
+function geometrySection(ctx: SalesVideoContext): SteSection {
+	const openings = openingsFor(ctx);
+	return {
+		title: openings ? "Exact openings" : "Fixed geometry",
+		lines: [
+			"GEOMETRY IS FIXED for the full clip.",
+			...(openings ? openingsSteLines(openings, ctx.vehicleBody ?? null) : []),
+			"A door stays a door. The service hatch stays the only hatch.",
+			"No opening opens, folds, slides or changes into a different opening.",
+		],
+	};
+}
+
+/**
+ * The hard constraint. The references are approved renders the buyer already
+ * signed off, so the model's job is cinematography, not design — one wrong
+ * hatch and the clip stops matching the quote the factory sends.
+ *
+ * Naming the view each reference came from matters: a walkthrough handed the
+ * exterior hero and told only "match the references" still has to invent an
+ * interior, and invents a different one every run. Told that image 1 IS the
+ * galley it is filming, it moves a camera through it instead.
+ */
+function referenceSection(
+	referenceViews: readonly string[],
+	line: LineProfile,
+	camera: "outside" | "inside",
+): SteSection {
+	return {
+		title: "Reference lock",
+		lines: [
+			"The attached images are approved renders of this trailer. The buyer signed them off.",
+			...(referenceViews.length
+				? referenceViews.map(
+						(v, i) =>
+							`Reference image ${i + 1}: the approved ${v.replace(/_/g, " ")}`,
+					)
+				: ["Reference image 1: the master render"]),
+			"The space, objects and surfaces in the references are the set for this clip.",
+			"Copy the silhouette, proportions, panel lines, wheels, roof unit and sign from the references.",
+			"Copy the wrap artwork, brand colors, logo position and sign lettering from the references.",
+			camera === "inside"
+				? "Copy the interior layout, counters, equipment, materials, floor, walls and ceiling from the references."
+				: null,
+			camera === "inside"
+				? "THE CAMERA IS INSIDE from frame one. It stands in the aisle of this trailer and never leaves it."
+				: "THE CAMERA stays outside the trailer and looks in through the open hatch.",
+			camera === "inside"
+				? "The camera never passes through a wall, floor, ceiling or the service hatch."
+				: "The camera never passes through a door, hatch or window.",
+			"You operate a camera around a trailer that exists now. Do not redesign or re-dress the scene.",
+			row(
+				"Permitted motion",
+				`the camera move, the stated light, and ${line.motion}`,
+			),
+		],
+	};
 }
 
 /** What generic video models add unprompted, and what ruins a sales asset. */
-const NEGATIVE =
-	"DO NOT: redesign, restyle or re-proportion the trailer; add, move, remove, merge or repurpose a door, hatch, window, vent or wheel, or let any opening change shape or function mid-clip; change the wrap artwork or brand colours; invent text, lettering, slogans, prices, logos or gibberish anywhere in frame; add people of any kind — customers, staff, chefs, passers-by, silhouettes, hands or reflections; add a second vehicle; add on-screen captions, subtitles, lower-thirds, watermarks or UI; morph, warp or teleport the trailer between frames; cut to a different location; use fisheye, heavy vignette, lens flare spam, speed ramping or shaky handheld; render the trailer as a blueprint, technical drawing, sectional or cutaway view, isometric drawing or wireframe — every clip is a photoreal camera shot.";
+const WARNINGS: readonly string[] = [
+	warning("Do not redesign, restyle or re-proportion the trailer."),
+	warning(
+		"Do not add, move, remove or merge a door, hatch, window, vent or wheel.",
+	),
+	warning("Do not let an opening change shape or function during the clip."),
+	warning("Do not change the wrap artwork or the brand colors."),
+	warning(
+		"Do not invent text, lettering, slogans, prices, logos or random characters in frame.",
+	),
+	warning(
+		"Do not show people.",
+		"This includes customers, staff, chefs, passers-by, silhouettes, hands and reflections.",
+	),
+	warning("Do not add a second vehicle."),
+	warning("Do not add captions, subtitles, lower-thirds, watermarks or UI."),
+	warning("Do not morph, warp or jump the trailer between frames."),
+	warning("Do not cut to a different location."),
+	warning(
+		"Do not use fisheye, a heavy vignette, lens flares, speed ramps or a shaky handheld camera.",
+	),
+	warning(
+		"Do not show a blueprint, technical drawing, sectional, cutaway, isometric or wireframe view.",
+		"Each clip is a photoreal camera shot.",
+	),
+];
 
 /** Grade and glass, held constant across the exterior clips. */
-const CRAFT =
-	"CRAFT: shot on a cinema camera, 35mm equivalent, shallow depth of field on close shots and deep focus on wides, smooth motorised camera movement (gimbal or dolly, never handheld), 24fps cinematic motion blur, natural colour grade with clean whites and no crushed blacks, photoreal product-commercial quality. No dialogue, no on-screen text.";
+const CRAFT_OUTSIDE: readonly string[] = [
+	row(
+		"Camera",
+		"cinema camera, 35 mm equivalent lens, 24 fps, 1/48 s shutter",
+	)!,
+	row("Support", "motorized gimbal or dolly; never handheld")!,
+	row(
+		"Focus",
+		"shallow depth of field on close shots; deep focus on wide shots",
+	)!,
+	row("Grade", "natural; clean whites; no crushed blacks")!,
+	row("Audio and text", "no dialogue; no on-screen text")!,
+];
 
 /**
  * The inside walkthrough's glass: one lens decision stated once, because
  * "35mm" and "24mm" in the same prompt taught the model to average them.
  */
-const CRAFT_INSIDE =
-	"CRAFT: shot on a cinema camera on a dolly riding the aisle, 24fps cinematic motion blur, natural colour grade with clean whites and no crushed blacks, photoreal product-commercial quality. No dialogue, no on-screen text.";
+const CRAFT_INSIDE: readonly string[] = [
+	row(
+		"Camera",
+		"cinema camera, 24mm ultra-wide equivalent lens, 24 fps, 1/48 s shutter",
+	)!,
+	row("Support", "dolly on the aisle at chest height")!,
+	row("Focus", "deep focus for the full clip")!,
+	row("Grade", "natural; clean whites; no crushed blacks")!,
+	row("Audio and text", "no dialogue; no on-screen text")!,
+];
 
 /**
  * The serve line the camera sees, per business.
@@ -292,11 +357,11 @@ function inferType(label: string | null | undefined): string {
 }
 
 /**
- * Reference-locked shot lists. Each is written the way a director writes a
- * board: subject, then beat-by-beat camera and action against the clock, then
- * light, then craft, then the lock and the negatives. The one-line versions
- * these replaced gave the model nothing to hold onto for ten whole seconds,
- * which is exactly when it starts improvising a different truck.
+ * Reference-locked shot lists, written as ASD-STE100 video specifications:
+ * the task, the subject data, then one timed step per camera beat, the
+ * light, the craft, the lock and the warnings. Each step is one command
+ * against the clock, which is what the model holds onto for ten seconds
+ * instead of improvising a different trailer halfway through.
  */
 export function buildSalesVideoPrompt(
 	kind: SalesVideoKind,
@@ -304,49 +369,168 @@ export function buildSalesVideoPrompt(
 	/** Concept views attached as references, in the order the model sees them. */
 	referenceViews: readonly string[] = [],
 ): string {
-	const brief = productBrief(ctx);
 	const line = lineFor(ctx);
+	const terms = termsSection([
+		"trailer",
+		"curbside",
+		"roadside",
+		"hatch",
+		"wrap",
+		"line",
+	]);
+	const subject = subjectSection(ctx, line);
+	const geometry = geometrySection(ctx);
+	const warnings: SteSection = { title: "Warnings", lines: [...WARNINGS] };
+	const doc = (title: string, sections: (SteSection | null)[]) =>
+		steDocument({
+			kind: "VIDEO SPECIFICATION",
+			title,
+			sections: sections.filter((s): s is SteSection => s !== null),
+		});
 
 	// The walkthrough is filmed from inside the galley, so its lock changes.
 	if (kind === "walkthrough") {
-		const LOCK = lockFor(referenceViews, line, "inside", openingsFor(ctx));
-		return [
-			"10-second product film: an INSIDE WALKTHROUGH of this exact trailer — the flagship clip of the sales deck, filmed from within the interior.",
-			brief,
-			"THE INTERIOR IS COMPLETE: a full professional commercial line inside the described box, dense with real equipment from wall to wall, exactly as the interior reference shows it.",
-			`SHOT LIST — 0.0–3.0s: the camera stands INSIDE at the rear end of the aisle, eye level, looking forward: the full equipment run ahead — ${line?.videoLine ?? "the service line"} — brightly lit, the open service hatch glowing at the far end of the aisle. 3.0–7.0s: one continuous slow forward dolly down the centre aisle at chest height — the line passes the lens in the exact order the brief and the interior reference name it, nothing added, nothing skipped, nothing swapped. 7.0–10.0s: a smooth reverse pull-back with a gentle tilt-up so the whole galley — counters, splashback, task lighting, the length of the aisle — folds into one wide frame, and rest.`,
-			"LIGHT: warm 4000K task lighting on the line, cool daylight bleeding in through the open service hatch, appetising contrast on the stainless, no blown highlights.",
-			ACTION,
-			CRAFT_INSIDE,
-			`WIDE-ANGLE BRIEF: 24mm ultra-wide equivalent at chest height, deep focus throughout, so the aisle reads long and generous — bigger than the trailer's footprint — WITHOUT inventing any equipment, corridor or extra room the brief and references do not name. The drama comes from the lens and the dolly, never from changing the space.`,
-			LOCK,
-			NEGATIVE,
-		].join(" ");
+		return doc("INSIDE WALKTHROUGH — 10 SECONDS", [
+			{
+				title: "Task",
+				lines: [
+					"Make one 10-second photoreal product film inside the trailer.",
+					"This is the flagship clip of the sales deck.",
+					"The interior is complete: a full commercial line, exactly as the interior reference shows it.",
+				],
+			},
+			terms,
+			subject,
+			{
+				title: "Line on camera",
+				lines: [
+					row("Line, in camera order", line.videoLine),
+					"Show the line in this order. Do not add, skip or swap a unit.",
+				],
+			},
+			{
+				title: "Shot list",
+				lines: [
+					"Step 1, 0.0–3.0 s: Start inside at the rear end of the aisle, eye level, looking forward.",
+					"Step 1 frame: the full line ahead, bright; the open service hatch glows at the far end.",
+					"Step 2, 3.0–7.0 s: Dolly slowly forward down the center of the aisle at chest height.",
+					"Step 3, 7.0–10.0 s: Pull back smoothly and tilt up a little. End on one wide frame of the full galley.",
+				],
+			},
+			{
+				title: "Light",
+				lines: [
+					row(
+						"Light",
+						"warm task light on the line; cool daylight through the open service hatch",
+					),
+					row("Color temperature", "4000 K task light; 6500 K daylight"),
+					"Keep contrast on the stainless. Do not blow out the highlights.",
+				],
+			},
+			{
+				title: "Craft",
+				lines: [
+					...CRAFT_INSIDE,
+					"The wide lens makes the aisle read bigger than the trailer's footprint.",
+					"Do not invent equipment, corridors or rooms to make the space bigger.",
+				],
+			},
+			geometry,
+			referenceSection(referenceViews, line, "inside"),
+			warnings,
+		]);
 	}
-
-	const LOCK = lockFor(referenceViews, line, "outside", openingsFor(ctx));
 
 	if (kind === "night-cinematic") {
-		return [
-			"10-second cinematic film: the trailer at night.",
-			brief,
-			`SHOT LIST — 0.0–3.5s: open wide on a three-quarter front angle of the curbside across wet pavement, the trailer's lit reflection stretching toward camera, street bokeh behind. 3.5–7.5s: a slow, continuous push-in toward the glowing service hatch while the camera drifts a few degrees around the front corner, so the wrap and the illuminated roof blade sign both read. 7.5–10.0s: settle on a medium of the hatch, warm interior light spilling out across the counter with ${line.signature} waiting on it.`,
-			"LIGHT: blue-hour-to-night ambient, the hatch and blade sign as the only warm sources, accent-coloured hatch frame catching interior light, practical streetlights far behind as bokeh. Moody and premium, never murky — the wrap colours must still be identifiable.",
-			"ACTION: no people in frame; a single car light passing far behind is the only movement besides the camera.",
-			CRAFT,
-			LOCK,
-			NEGATIVE,
-		].join(" ");
+		return doc("NIGHT CINEMATIC — 10 SECONDS", [
+			{
+				title: "Task",
+				lines: [
+					"Make one 10-second photoreal cinematic film of the trailer at night.",
+				],
+			},
+			terms,
+			subject,
+			{
+				title: "Shot list",
+				lines: [
+					"Step 1, 0.0–3.5 s: Open wide on a three-quarter front view of the curbside, across wet pavement.",
+					"Step 1 frame: the lit reflection of the trailer stretches toward the camera; street bokeh is behind.",
+					"Step 2, 3.5–7.5 s: Push in slowly toward the glowing service hatch.",
+					"Step 2 drift: move a few degrees around the front corner, so the wrap and the roof sign both read.",
+					`Step 3, 7.5–10.0 s: Settle on a medium shot of the hatch, with ${line.signature} on the counter.`,
+				],
+			},
+			{
+				title: "Light",
+				lines: [
+					row(
+						"Light",
+						"blue hour into night; the hatch and the roof sign are the only warm sources",
+					),
+					row("Color temperature", "3000 K hatch and sign; 7000 K sky"),
+					row("Background", "practical streetlights far behind, as bokeh"),
+					"Keep the mood dark but clear. The wrap colors must stay identifiable.",
+				],
+			},
+			{
+				title: "Action",
+				lines: [
+					"There are no people in frame.",
+					"A single car light passes far behind. This is the only motion other than the camera.",
+				],
+			},
+			{ title: "Craft", lines: [...CRAFT_OUTSIDE] },
+			geometry,
+			referenceSection(referenceViews, line, "outside"),
+			warnings,
+		]);
 	}
 
-	return [
-		"10-second film: the full 360° orbit. This is the deck's exterior slide.",
-		brief,
-		"SHOT LIST — one continuous full 360° orbit at a constant rate, camera at chest height on a level circular path, the trailer held dead centre and the same size in frame throughout. 0.0–3.5s: begin at the three-quarter front angle of the curbside, nose toward camera. 3.5–7.0s: pass the full livery side, wrap artwork and roof blade sign square to camera at the midpoint. 7.0–10.0s: continue past the rear end cap and down the roadside, back to the opening angle, decelerating to rest exactly where the clip began — the full circle complete.",
-		"LIGHT: golden hour, low warm sun, long soft shadows, clean ground plane, uncluttered background that never competes with the trailer.",
-		"ACTION: none — the product is the subject. No people anywhere in frame.",
-		CRAFT,
-		LOCK,
-		NEGATIVE,
-	].join(" ");
+	const setting = ctx.brief ? sceneFor(ctx.brief) : null;
+	return doc("FULL 360° ORBIT — 10 SECONDS", [
+		{
+			title: "Task",
+			lines: [
+				"Make one 10-second photoreal film: one full 360° orbit of the trailer.",
+				"This is the exterior slide of the sales deck.",
+			],
+		},
+		terms,
+		subject,
+		{
+			title: "Shot list",
+			lines: [
+				"Orbit at a constant rate on a level circle, camera at chest height.",
+				"Hold the trailer dead center and at the same size for the full clip.",
+				"Step 1, 0.0–3.5 s: Start at the three-quarter front view of the curbside, nose toward the camera.",
+				"Step 2, 3.5–7.0 s: Pass the full curbside. The wrap and the roof sign are square to the camera at the midpoint.",
+				"Step 3, 7.0–10.0 s: Continue past the rear and along the roadside, back to the opening angle.",
+				"Decelerate and stop exactly at the opening angle. The circle is complete.",
+			],
+		},
+		{
+			title: "Light and scene",
+			lines: [
+				row("Light", "golden hour; low warm sun; long soft shadows"),
+				row("Color temperature", "3500 K sun; 6500 K sky fill"),
+				row(
+					"Setting",
+					setting ?? "a clean ground plane; an uncluttered background",
+				),
+				"The background must not compete with the trailer.",
+			],
+		},
+		{
+			title: "Action",
+			lines: [
+				"There is no action. The product is the subject. There are no people in frame.",
+			],
+		},
+		{ title: "Craft", lines: [...CRAFT_OUTSIDE] },
+		geometry,
+		referenceSection(referenceViews, line, "outside"),
+		warnings,
+	]);
 }

@@ -78,24 +78,24 @@ describe("sales asset pipeline", () => {
 			expect(p).toContain("BIB Burgers");
 			// Locked to the approved stills, and told what not to invent.
 			expect(p).toMatch(/REFERENCE LOCK/);
-			expect(p).toMatch(/DO NOT:/);
+			expect(p).toMatch(/WARNING: Do not/);
 			// A shot list against the clock, not a one-line mood note.
 			expect(p).toMatch(/SHOT LIST/);
-			expect(p).toMatch(/10\.0s/);
-			expect(p).toMatch(/LIGHT:/);
+			expect(p).toMatch(/10\.0 s/);
+			expect(p).toMatch(/\bLIGHT\b/);
 		}
 	});
 
 	it("briefs the video on the same build facts as the stills", () => {
 		const p = buildSalesVideoPrompt("hero-orbit", CTX);
 		expect(p).toContain("Airstream · Mid");
-		expect(p).toContain("6m × 2.2m");
+		expect(p).toContain("6 m long × 2.2 m wide");
 		expect(p).toMatch(/Airstream-style trailer/);
-		expect(p).toContain("grill, burgers & barbecue");
+		expect(p.toLowerCase()).toContain("grill, burgers & barbecue");
 		expect(p).toContain("matte black, orange");
 		expect(p).toContain("smash burgers, loaded fries");
 		expect(p).toContain("flat-top griddle and chargrill");
-		expect(p).toMatch(/serve hatch/);
+		expect(p).toMatch(/service hatch/);
 	});
 
 	it("letters nothing when the business has no name yet", () => {
@@ -129,12 +129,12 @@ describe("sales asset pipeline", () => {
 			"exterior_hero",
 		]);
 		expect(p).toMatch(/INSIDE WALKTHROUGH/);
-		expect(p).toMatch(/camera stands INSIDE/);
+		expect(p).toMatch(/Start inside at the rear end of the aisle/);
 		// Its own camera rule, not the outside one.
 		expect(p).toMatch(/THE CAMERA IS INSIDE/);
 		expect(p).not.toMatch(/stays outside the trailer and looks in/);
 		// The interior reference is named as the galley it is filming.
-		expect(p).toMatch(/image 1 is the approved interior layout/);
+		expect(p).toMatch(/image 1: the approved interior layout/);
 		// The wide-angle brief sells the size without inventing space.
 		expect(p).toMatch(/24mm/);
 		expect(p).toMatch(/bigger than the trailer's footprint/);
@@ -146,12 +146,12 @@ describe("sales asset pipeline", () => {
 		const p = buildSalesVideoPrompt("hero-orbit", CTX, ["exterior_hero"]);
 		// Airstream-m defaults: hatch at 0.35 × 6m, door at 0.72 × 6m.
 		expect(p).toMatch(/EXACT OPENINGS/);
-		expect(p).toContain("leading edge 2.1m back from the front wall");
-		expect(p).toContain("leading edge 4.32m back from the front wall");
+		expect(p).toContain("leading edge 2.1 m from the front wall");
+		expect(p).toContain("leading edge 4.32 m from the front wall");
 		// Count check: 1 hatch, 1 door, 0 windows — and nothing else exists.
-		expect(p).toMatch(/2 openings in total: 1 serving hatch, 1 door, 0 windows/);
-		expect(p).toMatch(/no other windows/);
-		expect(p).toMatch(/exactly 2 openings/);
+		expect(p).toMatch(/2 total = 1 service hatch, 1 door, 0 windows/);
+		expect(p).toMatch(/not in this list/);
+		expect(p).toMatch(/Opening count: 2 total/);
 	});
 
 	it("the record's openings win over the body defaults", () => {
@@ -169,9 +169,9 @@ describe("sales asset pipeline", () => {
 				},
 			],
 		});
-		expect(p).toContain("leading edge 1.5m back from the front wall");
-		expect(p).not.toContain("leading edge 2.1m back from the front wall");
-		expect(p).toMatch(/1 openings in total: 1 serving hatch, 0 doors, 0 windows/);
+		expect(p).toContain("leading edge 1.5 m from the front wall");
+		expect(p).not.toContain("leading edge 2.1 m from the front wall");
+		expect(p).toMatch(/1 total = 1 service hatch, 0 doors, 0 windows/);
 	});
 
 	it("a context with no body still builds, without an openings brief", () => {

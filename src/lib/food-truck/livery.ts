@@ -107,3 +107,19 @@ export function liveryPhrase(body: VehicleBody): string {
 	const zones = t.zones.map((z) => `${z.label}: ${z.brief}`).join("; ");
 	return `Livery template "${t.label}" — zones: ${zones}. Keep-outs: ${t.keepOuts.join("; ")}. ${LIVERY_RULES}`;
 }
+
+/**
+ * The livery template as STE rows: one zone per row, one keep-out per
+ * sentence, then the durability rules as separate commands.
+ */
+export function liverySteLines(body: VehicleBody): string[] {
+	const t = liveryFor(body);
+	return [
+		`Livery template: ${t.label}`,
+		...t.zones.map((z) => `Zone, ${z.label.toLowerCase()}: ${z.brief}`),
+		...t.keepOuts.map((k) => `Keep-out: ${k}`),
+		"Use a maximum of 3 colors plus 1 neutral.",
+		"Use flat spot-color vinyl only. Use no gradients and no photographic wrap.",
+		`Make each emblem a flat spot-color vinyl shape, less than ${t.emblemMaxM} m tall.`,
+	];
+}

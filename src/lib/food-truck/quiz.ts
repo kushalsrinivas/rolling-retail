@@ -9,6 +9,7 @@
  * the factory supplies the 12 curated truck photos, cards render their
  * gradient — same component, one field swap, no code change.
  */
+import { FEATURES } from "./brief";
 
 export interface QuizStyle {
 	id: string;
@@ -112,44 +113,39 @@ export const QUIZ_PALETTES: QuizPalette[] = [
 	{ id: "p-blush", label: "Blush", colors: ["pink", "cream"] },
 ];
 
-export const QUIZ_EXTRAS: QuizExtra[] = [
-	{
-		id: "menu-board",
-		label: "Big menu board",
-		blurb: "Readable from the back of the queue",
-		note: "large readable menu board",
-	},
-	{
-		id: "night-lighting",
-		label: "Night lighting",
-		blurb: "Serve after dark",
-		note: "night service lighting",
-	},
-	{
-		id: "roof-sign",
-		label: "Roof sign",
-		blurb: "Seen over a crowded event",
-		note: "roof-mounted sign",
-	},
-	{
-		id: "awning",
-		label: "Serving awning",
-		blurb: "Shade + rain cover at the hatch",
-		note: "serving awning over the hatch",
-	},
-	{
-		id: "visible-kitchen",
-		label: "Visible kitchen",
-		blurb: "Cooking as theatre",
-		note: "burger assembly visible from the counter",
-	},
-	{
-		id: "rear-hatch",
-		label: "Rear hatch",
-		blurb: "Second serving point",
-		note: "second serving hatch at the rear",
-	},
-];
+/**
+ * Extras are the brief's feature catalog — one list, so what the buyer ticks
+ * is exactly what the renders fit. Every one is buildable on every body
+ * without changing the openings.
+ */
+export const QUIZ_EXTRAS: QuizExtra[] = FEATURES.map((f) => ({
+	id: f.id,
+	label: f.label,
+	blurb: f.blurb,
+	note: f.note,
+}));
+
+/** Tap-to-add menu ideas per business, so nobody faces an empty box. */
+export const MENU_SUGGESTIONS: Record<string, string[]> = {
+	fried: ["fish and chips", "loaded fries", "fried chicken", "onion rings"],
+	grill: ["smash burgers", "chicken sandwiches", "loaded fries", "shakes"],
+	pizza: ["wood-fired margherita", "pepperoni", "garlic knots", "calzones"],
+	asian: ["bao buns", "fried rice", "ramen", "dumplings"],
+	mexican: ["birria tacos", "burritos", "quesadillas", "elote"],
+	breakfast: ["breakfast burritos", "pancakes", "egg sandwiches", "coffee"],
+	coffee: ["espresso", "cold brew", "lattes", "pastries"],
+	"cold-drinks": [
+		"brown sugar boba",
+		"matcha latte",
+		"fresh juice",
+		"smoothies",
+	],
+	bakery: ["croissants", "cookies", "cupcakes", "churros"],
+	"ice-cream": ["gelato", "soft serve", "sundaes", "affogato"],
+	bar: ["craft beer", "cocktails", "wine", "spritzes"],
+	retail: ["apparel", "limited drops", "accessories", "prints"],
+	combined: ["signature bowls", "wraps", "lemonade", "iced tea"],
+};
 
 export interface QuizPicks {
 	styles: string[];
@@ -180,7 +176,10 @@ export function quizToDirect(picks: QuizPicks): {
 			if (!colors.includes(c)) colors.push(c);
 		}
 	}
-	return { vibe: vibe.slice(0, 3).join(", "), colors: colors.slice(0, 4).join(", ") };
+	return {
+		vibe: vibe.slice(0, 3).join(", "),
+		colors: colors.slice(0, 4).join(", "),
+	};
 }
 
 export function extrasNote(picks: QuizPicks): string {

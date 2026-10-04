@@ -168,7 +168,7 @@ describe("drift lock", () => {
 		expect(text).toContain("Reference image 2");
 		expect(text).toContain("interior layout");
 		expect(text).toContain("camera position");
-		expect(text).toContain("DO NOT:");
+		expect(text).toContain("WARNING: Do not");
 	});
 
 	it("falls back to words when there is no reference image", () => {

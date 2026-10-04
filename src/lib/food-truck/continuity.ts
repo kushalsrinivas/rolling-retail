@@ -19,6 +19,7 @@
  * Pure and client-safe: no fs, no fetch, no env.
  */
 import { CONCEPT_VIEWS, type ConceptView } from "./constants";
+import { warning } from "./ste";
 
 /**
  * What a given reference image is *for*. The role is written into the prompt
@@ -228,11 +229,62 @@ export function menuBoardReferences(args: {
 }
 
 /**
+ * Per-role instructions for one reference image, in STE.
+ *
+ * Each role gets its own short sentences rather than one long clause, so the
+ * model cannot read "borrow the palette" as permission to copy the body.
+ */
+function referenceLines(
+	r: RenderReference,
+	n: number,
+	geometry: string | null | undefined,
+): string[] {
+	const pretty = r.from.replace(/_/g, " ");
+	if (r.role === "body") {
+		return [
+			`Reference image ${n} is a photograph of the actual trailer shell for this build.`,
+			geometry ? `Shell data: ${geometry}.` : "",
+			`Copy the shell in image ${n} exactly: silhouette, proportions and panel lines.`,
+			`Copy the position of each door, hatch, window, vent, wheel and jack from image ${n}.`,
+		].filter(Boolean);
+	}
+	if (r.role === "anchor") {
+		return [
+			`Reference image ${n} is the APPROVED MASTER RENDER of this trailer (${pretty}).`,
+			`Image ${n} sets the wrap artwork, brand colors, logo position, sign lettering, materials and finishes.`,
+			`Treat image ${n} as a photograph of a trailer that exists now.`,
+		];
+	}
+	if (r.role === "spatial") {
+		return [
+			`Reference image ${n} is the same trailer from a different viewpoint (${pretty}).`,
+			`Each item that shows in image ${n} and in the new view must be identical.`,
+			"This includes the position of each unit, counter heights, equipment, materials, floor, walls and ceiling.",
+		];
+	}
+	if (r.role === "menu") {
+		return [
+			`Reference image ${n} is the buyer's finished MENU ARTWORK.`,
+			`Put image ${n} on the menu board face only, as a flat printed insert.`,
+			`Copy its layout, words, prices and colors exactly. Do not write new menu text.`,
+		];
+	}
+	return [
+		`Reference image ${n} is a mood photo the buyer shared.`,
+		`Borrow only the palette, the lettering style and the finish from image ${n}.`,
+		"Do NOT copy its body shape, layout or fittings. They belong to a different trailer.",
+		`Do not paste image ${n}, or an object from it, onto the trailer as a sticker or graphic.`,
+		"The wrap must look like one professionally designed vinyl livery that follows the body curves.",
+	];
+}
+
+/**
  * The instruction block that turns references into a constraint.
  *
  * Written as an explicit inventory ("image 2 is the same galley from the
  * hatch") plus a closed list of things the model may not touch, because a
  * general "be consistent" is exactly the phrasing these models ignore.
+ * Formatted as an STE appendix to the view's specification.
  */
 export function continuityLock(
 	refs: RenderReference[],
@@ -242,61 +294,95 @@ export function continuityLock(
 ): string {
 	if (refs.length === 0) {
 		return geometry
-			? `BODY LOCK: the trailer has ${geometry}. Keep every one of those features, in the same place. Do not invent additional doors, hatches or windows.`
+			? steAppendix("BODY LOCK", [
+					`Shell data: ${geometry}.`,
+					"Keep each of these features in the same position.",
+					warning(
+						"Do not add doors, hatches or windows.",
+						"The shell data is the complete list.",
+					),
+				])
 			: "";
 	}
 
-	const lines: string[] = [];
-	const pretty = (v: string) => v.replace(/_/g, " ");
-
+	const lines: string[] = [
+		`${refs.length} reference image${refs.length === 1 ? " is" : "s are"} attached. They are numbered in the order you receive them.`,
+	];
 	refs.forEach((r, i) => {
-		const n = i + 1;
-		if (r.role === "body") {
-			lines.push(
-				`Reference image ${n} is a photograph of the actual trailer shell this build uses${
-					geometry ? `, which has ${geometry}` : ""
-				}. Reproduce that shell exactly: silhouette, proportions, panel lines, and the position of every door, hatch, window, vent, wheel and jack.`,
-			);
-		} else if (r.role === "anchor") {
-			lines.push(
-				`Reference image ${n} is the APPROVED MASTER RENDER of this exact truck (${pretty(r.from)}). It defines the property's visual identity: wrap artwork, brand colours, logo placement, signage typography, materials, finishes and lighting character. Treat it as a photograph of a vehicle that already exists.`,
-			);
-		} else if (r.role === "spatial") {
-			lines.push(
-				`Reference image ${n} is the same truck already rendered from another viewpoint (${pretty(r.from)}). Everything visible in both views must match: layout and position of every unit, counter heights and runs, equipment, materials, flooring, wall and ceiling finishes, window and hatch placement, colour palette and spatial proportions.`,
-			);
-		} else if (r.role === "menu") {
-			lines.push(
-				`Reference image ${n} is the buyer's finished MENU ARTWORK. It appears on the menu board's face and nowhere else. Reproduce it exactly as a flat printed insert: same layout, words, prices and colours. This is the one place new text is allowed, and it must be copied, never invented.`,
-			);
-		} else {
-			lines.push(
-				`Reference image ${n} is a mood photo the buyer shared. Borrow only its palette, typography feel and finish. Do NOT copy its body shape, layout or fittings — they belong to somebody else's truck. NEVER paste this photo, or any object in it (a drink, cup, food item, product shot, logo or character), onto the vehicle as a sticker, decal, cut-out or oversized graphic. If it shows the product, let it inform the wrap's colours and illustration style only; the wrap must read as one professionally designed vinyl livery that follows the body's curves, not a photo stuck on the side.`,
-			);
-		}
+		lines.push(...referenceLines(r, i + 1, geometry));
 	});
+	if (allowedChanges?.length) {
+		lines.push(
+			`This is a targeted revision. You MAY change only: ${allowedChanges.join(", ")}.`,
+			"Keep all other items identical to the references.",
+		);
+	} else {
+		lines.push(
+			"Keep the visual identity and the architecture of the references.",
+		);
+	}
+	lines.push(
+		"You photograph a trailer that exists now.",
+		"The ONLY thing this view changes is the camera position, and the time of day where the specification says so.",
+	);
+	if (refs.some((r) => r.role === "menu")) {
+		lines.push(
+			"The one permitted addition is the menu board with the menu artwork. The warnings apply to all other items.",
+		);
+	}
+	lines.push(...DRIFT_WARNINGS);
+	return steAppendix("CONTINUITY LOCK", lines);
+}
 
-	return [
-		`CONTINUITY LOCK — ${refs.length} reference image${refs.length === 1 ? "" : "s"} attached.`,
-		...lines,
-		allowedChanges?.length
-			? `This is a targeted revision: you MAY change only ${allowedChanges.join(", ")}. Everything else — body shape, openings, equipment, wrap artwork, brand colours, logo placement, materials — must match the references exactly. You are photographing a vehicle that already exists; the ONLY other thing this view changes is the camera position and, where the brief says so, the time of day.`
-			: "Preserve the exact visual identity and architectural context established by these references. You are photographing a vehicle that already exists; the ONLY thing this view changes is the camera position and, where the brief says so, the time of day.",
-		...(refs.some((r) => r.role === "menu")
-			? [
-					"The one permitted addition is the menu board carrying the menu artwork, exactly as the brief places it; the rules below apply to everything else.",
-				]
-			: []),
-		DRIFT_NEGATIVES,
-	].join(" ");
+/** An STE appendix: lettered lines under a heading, appended to a document. */
+function steAppendix(title: string, lines: readonly string[]): string {
+	return [`APPENDIX: ${title}`, ...lines.map((l, i) => `A.${i + 1} ${l}`)].join(
+		"\n",
+	);
 }
 
 /**
  * The closed list. Everything here is a drift this pipeline has actually
- * produced, so it is worth the tokens to name each one.
+ * produced, so it is worth the tokens to name each one. One WARNING per
+ * drift, each a command — STE puts the prohibition first, the reason after.
  */
-export const DRIFT_NEGATIVES =
-	"DO NOT: redesign, reinterpret, replace or reinvent any element; change the body shape, length or proportions; add, remove or move furniture, counters, appliances or fittings; change the floor plan or room dimensions; change materials, flooring, wall colours, ceilings or splashbacks; move, add or remove windows, doors, hatches or vents; alter architectural details; change the interior design language or the overall aesthetic; change the wrap artwork or brand colours; add decoration, props, plants or objects that are not in the references; invent text, lettering, slogans, prices or gibberish; add people of any kind — customers, staff, chefs, passers-by, silhouettes or hands; change the lighting design (a stated time-of-day change may alter the light, never the fixtures); change the medium — never redraw a photograph as a blueprint, technical drawing, floor plan, sectional or cutaway view, dollhouse view, isometric or axonometric drawing, wireframe, illustration or 3D render, and never redraw an illustration as a photograph.";
+export const DRIFT_WARNINGS: readonly string[] = [
+	warning("Do not redesign, reinterpret, replace or reinvent an item."),
+	warning("Do not change the body shape, length or proportions."),
+	warning(
+		"Do not add, remove or move furniture, counters, appliances or fittings.",
+	),
+	warning("Do not change the floor plan or room dimensions."),
+	warning(
+		"Do not change materials, flooring, wall colours, ceilings or splashbacks.",
+	),
+	warning("Do not move, add or remove windows, doors, hatches or vents."),
+	warning("Do not change the wrap artwork or the brand colors."),
+	warning(
+		"Do not add decoration, props, plants or objects that the references do not show.",
+	),
+	warning(
+		"Do not write new text, lettering, slogans, prices or random characters.",
+	),
+	warning(
+		"Do not add people.",
+		"This includes customers, staff, chefs, passers-by, silhouettes and hands.",
+	),
+	warning(
+		"Do not change the light fixtures.",
+		"A stated time-of-day change can change the light, but not the fixtures.",
+	),
+	warning(
+		"Do not change the medium.",
+		"A photograph stays a photograph. An illustration stays an illustration.",
+	),
+	warning(
+		"Do not make a blueprint, technical drawing, floor plan, sectional, cutaway, dollhouse, isometric, axonometric or wireframe view.",
+	),
+];
+
+/** The same warnings as one block, for callers that quote them inline. */
+export const DRIFT_NEGATIVES = DRIFT_WARNINGS.join(" ");
 
 /**
  * Which render a sales clip should be filmed from.

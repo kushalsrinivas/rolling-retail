@@ -4,6 +4,9 @@ import {
 	specFromIntake,
 	versionStamp,
 } from "#/lib/food-truck/design-record";
+import { emptyBrain } from "#/lib/food-truck/brain";
+import { parseBrief } from "#/lib/food-truck/brief";
+import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
 import {
 	commitDesignVersion,
 	currentDesign,
@@ -28,6 +31,10 @@ export const Route = createFileRoute("/api/agent/intake")({
 					sessionId?: string;
 					answers?: IntakeDirect;
 					quiz?: { styles?: string[]; palettes?: string[]; extras?: string[] };
+					/** Operating brief — closed vocabulary, parsed server-side. */
+					brief?: unknown;
+					/** Optional mood photo from the quiz, as a data URL. */
+					inspirationImage?: string;
 				} = {};
 				try {
 					body = (await request.json()) as typeof body;
@@ -50,15 +57,37 @@ export const Route = createFileRoute("/api/agent/intake")({
 					changeSummary: "Structured intake — customer answers, confirmed.",
 					state: "concept",
 				});
-				// Seed the brain so chat/tools agree with the record.
-				if (s.brain) {
-					s.brain.businessType = spec.businessType as never;
-					s.brain.menuKeywords = [...spec.menu];
-					s.brain.colors = [...spec.colors];
-					s.brain.vehicleId = spec.vehicleId;
-					s.brain.walkIn = spec.serveMode === "walk-in";
-					if (spec.hasBrand) s.brain.brandName = spec.brand;
+				s.brief = parseBrief({
+					...(body.brief && typeof body.brief === "object" ? body.brief : {}),
+					notes: body.answers?.notes,
+				});
+				const photo = body.inspirationImage;
+				if (
+					typeof photo === "string" &&
+					/^data:image\/(png|jpe?g|webp);base64,/.test(photo) &&
+					photo.length < 12_000_000
+				) {
+					s.inspirationImage = photo;
 				}
+				// Seed the brain so chat/tools agree with the record. The brain
+				// is null on a fresh session — the quiz runs before any chat
+				// turn — so it is created here. Seeding only an existing brain
+				// meant the structured answers never reached the first renders.
+				const brain = s.brain ?? emptyBrain();
+				const answers = body.answers ?? {};
+				if (answers.businessType && getBusiness(answers.businessType)) {
+					brain.businessType = getBusiness(answers.businessType)?.id ?? null;
+				}
+				if (spec.menu.length) brain.menuKeywords = [...spec.menu];
+				if (spec.colors.length) brain.colors = [...spec.colors];
+				if (spec.vibe.length) brain.vibeWords = [...spec.vibe];
+				if (answers.vehicleId && getVehicle(answers.vehicleId)) {
+					brain.vehicleId = spec.vehicleId;
+					brain.vehicleSource = "picker";
+				}
+				if (answers.service) brain.walkIn = spec.serveMode === "walk-in";
+				if (spec.hasBrand) brain.brandName = spec.brand;
+				s.brain = brain;
 				persistSession(s);
 				return Response.json({
 					current: rec,

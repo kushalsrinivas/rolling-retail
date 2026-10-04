@@ -18,6 +18,8 @@
  * Pure and client-safe: no fs, no fetch, no DOM.
  */
 
+import { row, steDocument, termsSection, warning } from "./ste";
+
 export type MenuPlacement = "a-frame" | "side-board";
 export type MenuStyle = "chalkboard" | "printed";
 export type MenuFormat = "portrait" | "landscape";
@@ -372,16 +374,100 @@ export function menuBoardPrompt(args: MenuBoardPromptArgs): string {
 	const { menu } = args;
 	const surface =
 		menu.style === "chalkboard"
-			? "a matte black chalkboard face"
-			: "a printed menu poster behind a clear protective sleeve";
+			? "matte black chalkboard face"
+			: "printed menu poster behind a clear protective sleeve";
 	const stand =
 		menu.placement === "side-board"
-			? `a framed menu board (${surface}) secured flat to the trailer's side wall immediately beside the open service hatch, at eye height, with a slim frame in the brand's accent colour and neat stainless fixings`
-			: `a freestanding A-frame sandwich board (${surface}) standing on the pavement a short step in front of and beside the open service hatch, with a sturdy frame in the brand's accent colour or natural hardwood`;
-	return [
-		`Photorealistic photograph of the ${args.hasBrand ? `"${args.brand}"` : "unnamed"} food truck (${args.vehicleLabel}) at its serving position, open for trade in golden-hour light — a real camera photograph, not a 3D render, illustration, blueprint, or sectional view.`,
-		`MENU BOARD SHOT: three-quarter front angle, camera at standing eye level a few metres back, framed so the trailer's open service hatch and ${stand} are both clearly in frame. The board is the foreground subject: its face is turned almost square to the camera, sharp, evenly lit and large enough in the frame to read.`,
-		"The board face shows the attached MENU ARTWORK reference exactly — same layout, same words, same prices, same colours — as a flat printed insert. Do not rewrite, reorder, translate, abbreviate or invent any menu text, and put no other menu anywhere in the scene. The trailer livery itself carries no menu.",
-		"NO PEOPLE: no customers, staff, passers-by, silhouettes or hands. Clean pavement, shallow depth of field on the background only.",
-	].join(" ");
+			? [
+					row("Board type", `framed menu board with a ${surface}`),
+					row(
+						"Board position",
+						"fixed flat to the curbside wall, beside the open service hatch, at eye height",
+					),
+					row(
+						"Frame",
+						"slim frame in the brand accent color; brushed stainless fixings",
+					),
+				]
+			: [
+					row(
+						"Board type",
+						`freestanding A-frame sandwich board with a ${surface}`,
+					),
+					row(
+						"Board position",
+						"on the sidewalk, one step in front of and beside the open service hatch",
+					),
+					row(
+						"Frame",
+						"sturdy frame in the brand accent color or natural hardwood",
+					),
+				];
+	return steDocument({
+		kind: "RENDER SPECIFICATION",
+		title: "MENU BOARD",
+		sections: [
+			{
+				title: "Task",
+				lines: [
+					`Make one photoreal photograph of the ${args.hasBrand ? `"${args.brand}"` : "unnamed"} food trailer (${args.vehicleLabel}) at its serving position.`,
+					"Show the trailer open for trade, with the menu board in front as the subject.",
+				],
+			},
+			termsSection(["trailer", "curbside", "roadside", "hatch", "wrap"]),
+			{ title: "Menu board", lines: stand },
+			{
+				title: "Board face",
+				lines: [
+					"Put the attached MENU ARTWORK reference on the board face as a flat printed insert.",
+					"Copy the layout, words, prices and colors exactly.",
+					"Do not rewrite, reorder, translate, abbreviate or invent menu text.",
+					"Put no other menu anywhere in the scene. The trailer livery itself carries no menu.",
+				],
+			},
+			{
+				title: "Camera",
+				lines: [
+					row("Camera", "full-frame, 50 mm lens, f/4, ISO 100"),
+					row(
+						"Position",
+						"curbside, three-quarter front view, 3 m from the board",
+					),
+					row("Height", "1.6 m standing eye level"),
+					row(
+						"Framing",
+						"the board face almost square to the camera and large in frame; the open hatch behind it",
+					),
+					row("Focus", "the board face is sharp; the background is soft"),
+				],
+			},
+			{
+				title: "Light",
+				lines: [
+					row(
+						"Light",
+						"golden hour; even, soft light on the board face with no glare",
+					),
+					row("Color temperature", "3500 K"),
+				],
+			},
+			{
+				title: "Medium",
+				lines: [
+					"Medium: photoreal photograph from a real camera",
+					"It is not a 3D render, illustration, blueprint or sectional view.",
+				],
+			},
+			{
+				title: "Warnings",
+				lines: [
+					warning(
+						"NO PEOPLE. Do not show a person.",
+						"This includes customers, staff, passers-by, silhouettes and hands.",
+					),
+					"Keep the sidewalk clean.",
+				],
+			},
+		],
+	});
 }

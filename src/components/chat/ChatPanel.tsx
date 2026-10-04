@@ -52,7 +52,7 @@ export default function ChatPanel({ chat }: ChatPanelProps) {
 				</div>
 				<div className="min-w-0">
 					<p className="ftf-display text-[15px] leading-tight text-[var(--ftf-ink)]">
-						Factory Designer
+						Rolling Retail Designer
 					</p>
 					<p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 						<span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--ftf-teal-500)]" />

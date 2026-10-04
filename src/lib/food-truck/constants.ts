@@ -285,27 +285,48 @@ export const FREE_VISUAL_CREDITS = 5;
  * change — is what keeps all nine views describing the same trailer, and what
  * keeps the render something the factory can actually build.
  */
+export const VEHICLE_GEOMETRY_ITEMS: Record<
+	"airstream" | "square",
+	readonly string[]
+> = {
+	airstream: [
+		"riveted polished aluminium monocoque with a continuous rounded belt line",
+		"curved nose and tail end caps, no square corners anywhere on the shell",
+		"A-frame tongue and coupler at the front",
+		"single entry door on the curbside (passenger side) toward the rear, hinged on its forward edge",
+		"one serving hatch cut into the curbside ahead of the door, hinged along its top edge and propped open upward as an awning",
+		"two roof vents and a rooftop HVAC unit",
+		"single axle with a rounded wheel arch each side",
+		"stabilizer jacks at all four corners",
+	],
+	square: [
+		"flat vertical side walls meeting a flat roof at square corners with a small radius",
+		"bonded sheet skin over a welded frame",
+		"A-frame tongue and coupler at the front",
+		"a rear door on the back wall, hinged on its curbside edge",
+		"single entry door on the curbside toward the rear",
+		"one serving hatch cut into the curbside ahead of the door, hinged along its top edge and propped open upward as an awning",
+		"roof vents and a rooftop HVAC unit",
+		"single axle with a square fender each side",
+		"stabilizer jacks at all four corners",
+	],
+};
+
+/**
+ * The same facts as one line, for the body lock and the vision QA. The
+ * STE prompts read the list form instead, one fact per numbered line.
+ */
 export const VEHICLE_GEOMETRY: Record<"airstream" | "square", string> = {
-	airstream:
-		"riveted polished aluminium monocoque with a continuous rounded belt line, " +
-		"curved nose and tail end caps, no square corners anywhere on the shell; " +
-		"A-frame tongue and coupler at the front; single entry door on the curbside " +
-		"(passenger side) toward the rear, hinged on its forward edge; one serving " +
-		"hatch cut into the curbside ahead of the door, hinged along its top edge and " +
-		"propped open upward as an awning; two roof vents and a rooftop HVAC unit; " +
-		"single axle with a rounded wheel arch each side; stabilizer jacks at all four corners",
-	square:
-		"flat vertical side walls meeting a flat roof at square corners with a small " +
-		"radius, bonded sheet skin over a welded frame; A-frame tongue and coupler at " +
-		"the front; a rear door on the back wall, hinged on its curbside edge; single " +
-		"entry door on the curbside toward the rear; one serving hatch cut into the " +
-		"curbside ahead of the door, hinged along its top edge and propped open upward " +
-		"as an awning; roof vents and a rooftop HVAC unit; single axle with a square " +
-		"fender each side; stabilizer jacks at all four corners",
+	airstream: VEHICLE_GEOMETRY_ITEMS.airstream.join("; "),
+	square: VEHICLE_GEOMETRY_ITEMS.square.join("; "),
 };
 
 export function geometryFor(body: "airstream" | "square") {
 	return VEHICLE_GEOMETRY[body];
+}
+
+export function geometryItemsFor(body: "airstream" | "square") {
+	return VEHICLE_GEOMETRY_ITEMS[body];
 }
 
 export function getVehicle(id: string | null | undefined) {

@@ -612,7 +612,7 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 /** three.js is heavy and client-only; keep it out of the panel's first paint. */
 /** What the factory wants stamped on anything a buyer takes away. */
 const WATERMARK_TEXT =
-	import.meta.env.VITE_WATERMARK_TEXT || "Food Truck Factory";
+	import.meta.env.VITE_WATERMARK_TEXT || "Rolling Retail";
 
 const TruckConfigurator = lazy(
 	() => import("#/components/truck/TruckConfigurator"),

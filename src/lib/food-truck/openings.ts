@@ -136,3 +136,47 @@ export function openingsBrief(
 		`COUNT CHECK: ${counts}. There are no other windows, doors, hatches, vents or openings anywhere on this vehicle — none on the roadside, none on the rear beyond those listed, none on the roof beyond ${roof}. If you are about to draw an opening that is not in this list, stop: it does not exist.`,
 	].join(" ");
 }
+
+const OPENING_NAME: Record<OpeningType, string> = {
+	hatch: "Service hatch",
+	door: "Door",
+	window: "Window",
+};
+
+/**
+ * The openings as STE data rows: one row per opening, then the count, then
+ * the closing rule. Same facts as `openingsBrief`, in table form so each
+ * dimension is its own unambiguous value.
+ */
+export function openingsSteLines(
+	openings: readonly Opening[],
+	body: "airstream" | "square" | null,
+): string[] {
+	const rows = openings.map((o, i) => {
+		const where =
+			o.side === "rear"
+				? "rear wall"
+				: `${o.side}, leading edge ${o.xFromFront} m from the front wall`;
+		const size = `${o.width} m wide × ${o.height} m tall`;
+		const sill = o.type === "door" ? "floor level" : `sill ${o.sillHeight} m`;
+		const hinge =
+			o.hinge === "top"
+				? "top-hinged, propped open upward"
+				: o.hinge === "none"
+					? "fixed"
+					: `hinged on the ${o.hinge} edge`;
+		return `Opening ${i + 1}: ${OPENING_NAME[o.type]}, ${where}, ${size}, ${sill}, ${hinge}`;
+	});
+	const n = (t: OpeningType) => openings.filter((o) => o.type === t).length;
+	const roof =
+		body === "square"
+			? "roof vents and one rooftop HVAC unit"
+			: "two small roof vents and one rooftop HVAC unit";
+	return [
+		...rows,
+		`Opening count: ${openings.length} total = ${n("hatch")} service hatch, ${n("door")} door${n("door") === 1 ? "" : "s"}, ${n("window")} windows`,
+		`Roof items: ${roof}`,
+		"The roadside has no openings. The roof has no openings other than the listed roof items.",
+		"Do not draw an opening that is not in this list. It does not exist.",
+	];
+}

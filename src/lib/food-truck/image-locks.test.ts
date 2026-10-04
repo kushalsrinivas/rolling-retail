@@ -90,7 +90,7 @@ describe("continuity locks", () => {
 			geometry: geometryFor("airstream"),
 		});
 		expect(seen.parts).toHaveLength(3);
-		expect(seen.text).toContain("Reference image 1 is the same truck");
+		expect(seen.text).toContain("Reference image 1 is the same trailer");
 		expect(seen.text).toContain("interior layout");
 		expect(seen.text).toContain("Reference image 2 is the APPROVED MASTER");
 		expect(seen.text).toContain("Reference image 3 is a photograph");

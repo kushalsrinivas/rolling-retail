@@ -218,7 +218,12 @@ export const Route = createFileRoute("/api/agent/chat")({
 											brain.menuKeywords,
 										).equipment,
 										serveMode,
+										brief: session.brief,
+										openings: currentDesign(session)?.spec.openings ?? null,
 										brainNote: [
+											session.brief?.notes
+												? `buyer must-haves: ${session.brief.notes}`
+												: null,
 											brain.businessType
 												? `${brain.businessType} menu (${brain.menuKeywords.slice(0, 4).join(", ") || "house menu"})`
 												: null,

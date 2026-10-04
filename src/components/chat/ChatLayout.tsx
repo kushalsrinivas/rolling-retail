@@ -63,8 +63,7 @@ export default function ChatLayout() {
 	// — a blank prompt box is the point most people bounce at. It waits for
 	// rehydration first, so a returning buyer is not shown intake they have
 	// already completed just because the messages are still loading.
-	const showIntake =
-		chat.hydrated && !intakeDone && chat.messages.length <= 1;
+	const showIntake = chat.hydrated && !intakeDone && chat.messages.length <= 1;
 
 	const buildPanel = (
 		<BrandReportPanel
@@ -140,7 +139,7 @@ export default function ChatLayout() {
 							}
 						})();
 					}}
-					onComplete={(brief, answers, _image, picks) => {
+					onComplete={(brief, answers, image, picks, designBrief) => {
 						setIntakeDone(true);
 						// Seed the pickers so the panel and the renders agree with the
 						// brief before the first reply lands.
@@ -148,25 +147,31 @@ export default function ChatLayout() {
 						if (answers.vehicleId) chat.setVehicleId(answers.vehicleId);
 						if (answers.businessType)
 							chat.setBusinessType(answers.businessType);
-						// Structured intake writes the design record directly —
-						// the prose brief alone would lose "sage"/"birria" to regex.
-						// The full signal (business + vehicle + colors + vibe)
-						// trips brainReady on this first message, so the single
-						// auto-render round fires without further questions.
+						// Structured intake writes the design record, the brain and
+						// the operating brief directly. It must land BEFORE the first
+						// chat turn: that turn is what fires the auto-render, and it
+						// used to race this request — the renders then read a brain
+						// rebuilt by regex from the prose brief instead of the answers.
 						void (async () => {
 							try {
 								const sessionId = await chat.ensureSession();
 								await fetch("/api/agent/intake", {
 									method: "POST",
 									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({ sessionId, answers, quiz: picks }),
+									body: JSON.stringify({
+										sessionId,
+										answers,
+										quiz: picks,
+										brief: designBrief,
+										inspirationImage: image,
+									}),
 								});
 								await chat.refreshDesign();
 							} catch {
 								/* record is best-effort — chat still carries the brief */
 							}
+							chat.sendMessage(brief);
 						})();
-						chat.sendMessage(brief);
 					}}
 					onSkip={() => setIntakeDone(true)}
 				/>

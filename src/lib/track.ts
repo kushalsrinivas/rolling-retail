@@ -9,6 +9,8 @@ export type TrackEvent =
 	| "quiz_started"
 	| "quiz_step"
 	| "quiz_completed"
+	| "quiz_resumed"
+	| "quiz_photo_added"
 	| "design_approved";
 
 export function track(event: TrackEvent, props?: Record<string, unknown>) {

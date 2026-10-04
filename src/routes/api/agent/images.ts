@@ -122,7 +122,13 @@ export const Route = createFileRoute("/api/agent/images")({
 							brain?.menuKeywords ?? [],
 						).equipment,
 						serveMode,
-						brainNote: body.brainNote,
+						brief: session.brief,
+						openings: currentDesign(session)?.spec.openings ?? null,
+						brainNote:
+							body.brainNote ||
+							(session.brief?.notes
+								? `buyer must-haves: ${session.brief.notes}`
+								: undefined),
 						charge: !isRetry,
 					});
 					session.creditsUsed = run.creditsUsed;

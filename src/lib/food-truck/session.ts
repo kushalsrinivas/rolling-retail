@@ -1,4 +1,5 @@
 import type { ProjectBrain } from "./brain";
+import type { DesignBrief } from "./brief";
 import { FREE_VISUAL_CREDITS, RENDER_VIEWS } from "./constants";
 import type {
 	DesignSpec,
@@ -101,6 +102,11 @@ export interface TruckSession {
 	approvals: DesignApproval[];
 	/** Style-quiz answers per step — the CMS record of every buyer run. */
 	quizSteps: QuizStepEntry[];
+	/**
+	 * Operating brief from the quiz — where and when the truck trades, the
+	 * wrap finish and the exterior features. Renders and video read it.
+	 */
+	brief: DesignBrief | null;
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -130,6 +136,7 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			designVersions: [],
 			approvals: [],
 			quizSteps: [],
+			brief: null,
 		};
 		sessions.set(id, s);
 		// Best-effort restore from disk — a restart must not lose the design.
@@ -192,6 +199,7 @@ function normalizeSnapshot(snap: TruckSession): TruckSession {
 	snap.approvals = Array.isArray(snap.approvals) ? snap.approvals : [];
 	snap.quizSteps = Array.isArray(snap.quizSteps) ? snap.quizSteps : [];
 	snap.images = snap.images ?? {};
+	snap.brief = snap.brief ?? null;
 	snap.videos = snap.videos ?? [];
 	restored.add(snap);
 	return snap;

@@ -1,8 +1,18 @@
 import {
+	type DesignBrief,
+	featurePhrases,
+	finishPhraseFor,
+	hasFeature,
+	sceneFor,
+} from "./brief";
+import {
 	CONCEPT_VIEWS,
 	type ConceptView,
 	geometryFor,
+	geometryItemsFor,
+	getBusiness,
 	MENU_VIEW,
+	toFt,
 } from "./constants";
 import {
 	buildReferences,
@@ -12,10 +22,19 @@ import {
 	type RenderReference,
 } from "./continuity";
 import { lineProfileFor } from "./line-profile";
-import { liveryPhrase } from "./livery";
+import { liverySteLines } from "./livery";
 import { type MenuDesign, menuBoardPrompt } from "./menu";
-import { defaultOpenings, openingsPhrase } from "./openings";
+import { defaultOpenings, type Opening, openingsSteLines } from "./openings";
+import { paletteFor } from "./palette";
 import { factoryReference } from "./references";
+import {
+	row,
+	type SteSection,
+	steDocument,
+	termsSection,
+	warning,
+} from "./ste";
+import { resolveWrap } from "./wrap-color";
 
 /**
  * Truck concept image generation.
@@ -105,7 +124,7 @@ export async function generateTruckImage(
 	}
 
 	const lock = continuityLock(attached, args.geometry, args.allowedChanges);
-	const text = lock ? `${args.prompt} ${lock}` : args.prompt;
+	const text = lock ? `${args.prompt}\n\n${lock}` : args.prompt;
 	try {
 		const res = await fetch(
 			`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
@@ -167,9 +186,13 @@ export interface ConceptPromptArgs {
 	/** Version stamp, e.g. "CONCEPT · v4 · not for construction". */
 	versionStamp?: string | null;
 	/** Explicit openings — defaults to the body template when omitted. */
-	openingsPhrase?: string | null;
-	/** Livery template brief — defaults to the body template when omitted. */
-	liveryPhrase?: string | null;
+	openings?: readonly Opening[] | null;
+	/**
+	 * How and where the truck trades, and the features it carries. Sets the
+	 * hero's scene, the wrap finish and the exterior fittings. Omitted for
+	 * older sessions — the prompts then fall back to the pre-quiz defaults.
+	 */
+	brief?: DesignBrief | null;
 }
 
 /** Turn raw equipment ids (e.g. "griddle-chargrill") into readable phrases. */
@@ -289,37 +312,72 @@ export function emblemFor(
 		: "a stylized chef's hat with clean lines and a folded silhouette, in two or three flat spot colors, sharp edges, no gradients";
 }
 
-function bodyPhrase(body: VehicleBody): string {
+function bodyName(body: VehicleBody): string {
 	return body === "airstream"
-		? "polished silver aluminum rounded Airstream-style travel trailer"
-		: "modern square-profile stainless-steel food trailer";
+		? "rounded riveted polished-aluminium Airstream-style travel trailer"
+		: "square-profile food trailer with flat vertical side walls";
 }
 
-function servePhrase(mode: ServeMode): string {
+function serviceName(mode: ServeMode): string {
 	if (mode === "walk-in")
-		return "walk-in interior service where customers step inside";
-	if (mode === "hybrid")
-		return "hybrid service with a walk-in aisle and a serve hatch";
-	return "hatch-serve with a wide service window and no public entry";
+		return "walk-in; customers step inside to order at an interior counter";
+	if (mode === "hybrid") return "hybrid; a walk-in aisle and a service hatch";
+	return "hatch-serve; customers order outside at the service hatch; no public entry";
 }
 
 /**
- * Medium lock, appended to every photographic view.
+ * Medium lock, written into every photographic view.
  *
  * Run-to-run drift was a change of *medium*, not content: the same brief
- * came back as a photograph, a blueprint, or an isometric sectional. The
- * camera wording ("high-angle three-quarter overhead") read like an
- * axonometric drawing brief, and nothing in the shared context forbade the
- * model from picking a drawing. This names the medium once, positively and
- * negatively, in identical words on every photo view so the medium stops
- * being a per-run decision.
+ * came back as a photograph, a blueprint, or an isometric sectional. This
+ * names the medium once, positively and negatively, in identical words on
+ * every photo view so the medium stops being a per-run decision.
  */
-export const PHOTO_LOCK =
-	"MEDIUM: a photoreal photograph taken with a real camera — not a 3D render, illustration, blueprint, technical drawing, floor plan, sectional view, cutaway, dollhouse view, isometric, axonometric, or wireframe. Real light on real materials.";
+export const PHOTO_LOCK_LINES = [
+	"Medium: photoreal photograph from a real full-frame camera; real light on real materials",
+	"It is not a 3D render, illustration, blueprint, technical drawing, floor plan, sectional, cutaway, dollhouse, isometric, axonometric or wireframe view.",
+] as const;
+
+export const PHOTO_LOCK = PHOTO_LOCK_LINES.join(". ");
+
+function splitColors(colors: string): string[] {
+	return colors
+		.split(/,|\band\b|;/)
+		.map((c) => c.trim())
+		.filter(Boolean);
+}
 
 /**
- * Build a complete concept set from the project brain. Every view is
- * detailed and consistent so the buyer sees the full truck inside and out.
+ * Palette as data rows with roles and hex targets. "Teal" alone is a range
+ * of a hundred greens to an image model; a role and a hex value are one
+ * color. Words the wrap catalog does not know keep the buyer's word only,
+ * never an invented hex.
+ */
+function paletteRows(colors: string): string[] {
+	const palette = paletteFor(splitColors(colors));
+	const rows: string[] = [];
+	for (const role of ["primary", "secondary", "accent", "neutral"] as const) {
+		const r = palette[role];
+		if (!r) continue;
+		const known = resolveWrap([r.name]);
+		rows.push(
+			known
+				? `Color, ${role}: ${r.name}, target ${r.hex.toUpperCase()}`
+				: `Color, ${role}: ${r.name}`,
+		);
+	}
+	if (rows.length === 0) return [`Colors: ${colors}`];
+	return [...rows, "Match each hex target as closely as the film allows."];
+}
+
+/**
+ * Build a complete concept set from the project brain.
+ *
+ * Each view is an ASD-STE100 specification: the same Terms, Subject data,
+ * Shell geometry and Warnings on every view, word for word, and only the
+ * Task, Camera, Light and Scene sections change. Identical shared sections
+ * are the text-side half of continuity — the reference images are the
+ * other half.
  */
 export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	label: string;
@@ -341,83 +399,599 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 		brainNote,
 	} = args;
 
-	const body = bodyPhrase(vehicleBody);
+	const hasBrand = Boolean(args.hasBrand ?? true);
+	const brief = args.brief ?? null;
 	const menu =
 		menuKeywords.length > 0
 			? menuKeywords.slice(0, 5).join(", ")
 			: "house menu";
 	const equip = equipmentPhrase(equipment);
-	const serve = servePhrase(serveMode);
 	const emblem = emblemFor(businessType, menuKeywords);
 	const line = lineProfileFor(businessType, menuKeywords);
-	const openings =
-		args.openingsPhrase ??
-		openingsPhrase(defaultOpenings(vehicleBody, lengthM));
-	const livery = args.liveryPhrase ?? liveryPhrase(vehicleBody);
+	const openings = args.openings ?? defaultOpenings(vehicleBody, lengthM);
 	const stamp = args.versionStamp ?? "CONCEPT · not for construction";
+	const businessLabel = getBusiness(businessType)?.label ?? businessType;
+	const roofSign = hasFeature(brief, "roof-sign");
+	const features = featurePhrases(brief);
+	const scene = sceneFor(brief);
+	const doorCount = openings.filter((o) => o.type === "door").length;
 
-	const hasBrand = Boolean(args.hasBrand ?? true);
-	// Signage phrasing, so an unnamed business gets blank panels rather than a
-	// placeholder painted down the side of the trailer. Six views letter the
-	// truck independently of the instruction in ctx.
-	const roofSign = hasBrand
-		? `illuminated roof blade sign reading "${brand}"`
-		: "illuminated roof blade sign left blank, no lettering";
-	const wordmark = hasBrand
-		? `complete wrap livery with the "${brand}" wordmark`
-		: "complete wrap livery with the signage panel left blank and unlettered";
-	const counterBadge = hasBrand
-		? `An illuminated "${brand}" badge mounted on the counter front.`
-		: "An illuminated blank badge panel on the counter front, awaiting branding.";
+	// ── Shared sections: identical on every view ──
 
-	const ctx = `Photorealistic concept render for ${hasBrand ? `"${brand}"` : "an as-yet-unnamed business"} — a ${businessType} food truck built on a ${lengthM}m ${body} (${vehicleLabel}, ${lengthM} × ${widthM}m × ${heightM}h). Menu: ${menu}. Equipment line: ${equip}. Service model: ${serve}. Brand palette: ${colors}. Vibe: ${vibe}.${brainNote ? ` Design notes: ${brainNote}.` : ""} Keep the body shape consistent across all views. EXACT GEOMETRY — style it, don't change it: ${openings}. LIVERY TEMPLATE: ${livery}. Status: ${stamp}. THE LINE: ${line.forbid} SIDES: the curbside is the side with the service hatch and the entry door; the roadside wall has no hatch and no door. The livery carries the brand's illustrated emblem — ${emblem} — executed entirely in flat spot-color vinyl shapes, the kind of crisp geometry a commercial wrap shop cuts from a 54-inch printer roll: solid fills, sharp cut edges, no gradients, no photorealistic rendering, no paint-stroke or brush texture, no airbrushed shading. Weather-proof by design: minimal layers, bold shapes, nothing intricate that shows wear or traps dirt. NO PEOPLE: the scene is completely unoccupied — no customers, staff, chefs, passers-by, silhouettes or hands; the design is the only subject. Photorealistic photograph, professional commercial photography, high detail. ${
-		hasBrand
-			? `The only text allowed is the brand name "${brand}" — no other words, no gibberish.`
-			: "The buyer has not named the business yet: leave the signage panels clean and unlettered, ready for branding. No text anywhere on the vehicle, no placeholder words, no gibberish."
-	}`;
+	const terms = termsSection([
+		"trailer",
+		"curbside",
+		"roadside",
+		"front",
+		"hatch",
+		"wrap",
+		"line",
+	]);
+
+	const subject: SteSection = {
+		title: "Subject data",
+		lines: [
+			row("Brand", hasBrand ? `"${brand}"` : "not named yet"),
+			row("Business", businessLabel),
+			row("Menu", menu),
+			row("Trailer model", vehicleLabel),
+			row("Body", bodyName(vehicleBody)),
+			row(
+				"Box size",
+				`${lengthM} m long × ${widthM} m wide × ${heightM} m tall (${toFt(lengthM)} × ${toFt(widthM)} × ${toFt(heightM)} ft)`,
+			),
+			row("Service model", serviceName(serveMode)),
+			row("Equipment line", equip),
+			row("Style", vibe),
+			row("Design notes", brainNote),
+			row("Forbidden in this trailer", line.forbid),
+			row("Status", stamp),
+		],
+	};
+
+	const geometry: SteSection = {
+		title: "Shell geometry",
+		lines: [
+			...geometryItemsFor(vehicleBody).map((g) => `Shell: ${g}`),
+			...openingsSteLines(openings, vehicleBody),
+			"Keep the shell geometry identical in each view. Change only the surface finish and the wrap.",
+		],
+	};
+
+	const livery: SteSection = {
+		title: "Wrap and livery",
+		lines: [
+			...paletteRows(colors),
+			row("Film finish", finishPhraseFor(brief)),
+			...liverySteLines(vehicleBody),
+			row("Emblem", emblem),
+			"Cut the emblem from flat spot-color vinyl with sharp edges.",
+			"Do not use gradients, brush texture, airbrush shading or photoreal rendering in the emblem.",
+			"Keep the shapes bold and few. A commercial wash must not show wear on them.",
+			hasBrand
+				? `Put the "${brand}" wordmark on the logo panel zone, next to the emblem.`
+				: "Leave the logo panel zone clean and unlettered.",
+		],
+	};
+
+	const exteriorFeatures: SteSection = {
+		title: "Exterior features",
+		lines: [
+			...features.map((f) => `Feature: ${f}`),
+			roofSign && !hasBrand ? "Leave the roof sign face blank." : null,
+			features.length === 0
+				? "Fit no exterior items other than the shell geometry."
+				: "Fit no exterior items other than these features and the shell geometry.",
+		],
+	};
+
+	const text: SteSection = {
+		title: "Text on the trailer",
+		lines: hasBrand
+			? [
+					`The only permitted text is the brand name "${brand}".`,
+					"Spell the brand name exactly. Use the same letterforms in each position.",
+					"Do not write other words, numbers or random characters.",
+				]
+			: [
+					"The buyer has not named the business yet.",
+					"Leave each sign panel clean and unlettered, ready for branding.",
+					"Do not write text, placeholder words or random characters on the trailer.",
+				],
+	};
+
+	const peopleWarning = warning(
+		"NO PEOPLE. Do not show a person.",
+		"The design is the only subject. This includes customers, staff, chefs, passers-by, silhouettes and hands.",
+	);
+
+	const photoMedium: SteSection = {
+		title: "Medium",
+		lines: [...PHOTO_LOCK_LINES],
+	};
+
+	const check = (extra: readonly string[] = []): SteSection => ({
+		title: "Output check",
+		lines: [
+			"Do these checks before you output the image.",
+			"Check: the shell matches the shell geometry.",
+			...extra,
+			"Check: no person is visible.",
+			hasBrand
+				? `Check: each lettered item reads "${brand}" with correct spelling.`
+				: "Check: there is no text on the trailer.",
+		],
+	});
+
+	const exteriorCheck = check([
+		`Check: the curbside shows 1 service hatch and ${doorCount === 2 ? "1 entry door" : `${doorCount} door`}.`,
+		"Check: the roadside shows no openings.",
+		"Check: the image is a photograph, not a drawing.",
+	]);
+
+	const interior: SteSection = {
+		title: "Interior line",
+		lines: [
+			row("Line, left to right along the curbside wall", line.galley),
+			line.hot
+				? "Put only the named cooking equipment under the stainless extraction canopy."
+				: "There is no extraction canopy, hood or cooking equipment in this interior.",
+			row(
+				"Finishes",
+				"brushed stainless counters with upstands; easy-clean wall panels; tiled splashback; non-slip floor with coved skirting",
+			),
+			row(
+				"Aisle",
+				"800 mm clear working aisle; each unit is tight against a wall",
+			),
+			row("Water", "fresh and gray water tanks below the counter"),
+			row(
+				"Brand colors inside",
+				"accent panels, the hatch frame and the counter front only",
+			),
+		],
+	};
+
+	const doc = (title: string, sections: SteSection[]) =>
+		steDocument({ kind: "RENDER SPECIFICATION", title, sections });
+
+	const lightFor = (time: "golden" | "afternoon" | "night") =>
+		time === "golden"
+			? [
+					row(
+						"Light",
+						"golden hour; low sun 15° above the horizon, behind the camera on the left",
+					),
+					row("Color temperature", "3500 K sun; 6500 K sky fill"),
+				]
+			: time === "afternoon"
+				? [
+						row(
+							"Light",
+							"late afternoon; sun 30° above the horizon, from the front of the trailer",
+						),
+						row("Color temperature", "4500 K sun; 6500 K sky fill"),
+					]
+				: [
+						row(
+							"Light",
+							"night; the open service hatch glows warm from inside",
+						),
+						row(
+							"Color temperature",
+							"3000 K interior and sign light; 7000 K blue night sky",
+						),
+					];
 
 	return [
 		{
 			label: "exterior_hero",
-			prompt: `${ctx} EXTERIOR HERO SHOT: three-quarter front angle of the CURBSIDE at golden hour, so the service hatch and the entry door are both in view. Full wrap livery visible, service hatch open showing a glimpse of ${line.heroGlimpse}, ${roofSign}, the counter and forecourt clean and empty. Urban street-food setting, 35mm lens, shallow depth of field. ${PHOTO_LOCK}`,
+			prompt: doc("EXTERIOR HERO — CURBSIDE", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal photograph of the trailer from the CURBSIDE.",
+						"Show the open service hatch and the entry door in the same frame.",
+						`Through the open hatch, show ${line.heroGlimpse}.`,
+					],
+				},
+				terms,
+				subject,
+				geometry,
+				livery,
+				exteriorFeatures,
+				{
+					title: "Camera",
+					lines: [
+						row("Camera", "full-frame, 35 mm lens, f/5.6, ISO 100, 1/250 s"),
+						row(
+							"Position",
+							"curbside, three-quarter front view, 35° from the long axis, 7 m from the service hatch",
+						),
+						row("Height", "1.6 m; level; verticals straight"),
+						row(
+							"Framing",
+							"the full trailer, tongue to rear end, with a 10% margin each side",
+						),
+						row("Focus", "the trailer is sharp; the background is soft"),
+					],
+				},
+				{ title: "Light", lines: lightFor("golden") },
+				{
+					title: "Scene",
+					lines: [
+						row("Setting", scene),
+						"Keep the counter and the forecourt clean and empty.",
+					],
+				},
+				text,
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				exteriorCheck,
+			]),
 		},
 		{
 			label: "exterior_rear",
-			prompt: `${ctx} EXTERIOR REAR: three-quarter rear angle from the ROADSIDE, so the curbside hatch and entry door are hidden — this wall has no hatch and no door. ${
-				vehicleBody === "airstream"
-					? "The rounded rear end cap is a solid curved panel with no door in it."
-					: "The rear wall carries the single rear door described in the body lock, and nothing else."
-			} Show the heavy-duty shore power camlock inlet mounted low on the back, the roof-mounted commercial HVAC unit, and the back of the illuminated roof blade sign. Stabilizer jacks deployed, clean pavement, late afternoon light, 35mm lens. ${PHOTO_LOCK}`,
+			prompt: doc("EXTERIOR REAR — ROADSIDE", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal photograph of the trailer from the rear corner of the ROADSIDE.",
+						"The curbside service hatch and the entry door are not visible in this view.",
+						"The roadside has no hatch and no door.",
+						vehicleBody === "airstream"
+							? "The rounded rear end cap is a solid curved panel with no door in it."
+							: "The rear wall has the single rear door from the shell geometry and nothing else.",
+						"Show the shore-power camlock inlet low on the rear.",
+						"Show the rooftop HVAC unit.",
+						roofSign ? "Show the rear face of the roof blade sign." : null,
+						"Deploy the stabilizer jacks.",
+					],
+				},
+				terms,
+				subject,
+				geometry,
+				livery,
+				exteriorFeatures,
+				{
+					title: "Camera",
+					lines: [
+						row("Camera", "full-frame, 35 mm lens, f/5.6, ISO 100, 1/250 s"),
+						row(
+							"Position",
+							"roadside, three-quarter rear view, 40° from the long axis, 7 m from the rear corner",
+						),
+						row("Height", "1.6 m; level; verticals straight"),
+						row("Framing", "the full trailer with a 10% margin each side"),
+					],
+				},
+				{ title: "Light", lines: lightFor("afternoon") },
+				{
+					title: "Scene",
+					lines: [row("Setting", scene), "Keep the ground clean and empty."],
+				},
+				text,
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				check([
+					"Check: the roadside shows no openings.",
+					"Check: the image is a photograph, not a drawing.",
+				]),
+			]),
 		},
 		{
 			label: "side_elevation",
-			prompt: `${ctx} CURBSIDE VIEW: flat side-on concept illustration of the curbside, no perspective. Full side profile of the trailer, ${wordmark}, the service hatch shown open with its accent-colored frame and the entry door behind it, roof blade sign on top, wheels and stabilizer jacks at the bottom. Clean white background, flat vector-style presentation illustration, sharp edges, no shadows, no people, no blueprint grid or background. This is a presentation illustration, not a drawing: no dimension lines, no measurements, no callouts, no labels, no title block, no blueprint, no technical drawing, no sectional or isometric view.`,
+			prompt: doc("CURBSIDE ELEVATION — PRESENTATION ILLUSTRATION", [
+				{
+					title: "Task",
+					lines: [
+						"Make one flat side-on illustration of the CURBSIDE with no perspective.",
+						"Show the full side profile of the trailer.",
+						"Show the service hatch open, with its accent-color frame, and the entry door behind it.",
+						"Show the wheels and the stabilizer jacks at the bottom.",
+					],
+				},
+				terms,
+				subject,
+				geometry,
+				livery,
+				exteriorFeatures,
+				{
+					title: "Medium",
+					lines: [
+						row(
+							"Medium",
+							"flat vector-style presentation illustration on a clean white background",
+						),
+						"Use sharp edges and no shadows.",
+						"This is a presentation illustration, not a drawing.",
+						"Use no dimension lines, no measurements, no callouts, no labels and no title block.",
+						"Do not make a blueprint, a technical drawing, a sectional view or an isometric view.",
+						"Do not add a blueprint grid or a background scene.",
+					],
+				},
+				text,
+				{ title: "Warnings", lines: [peopleWarning] },
+				check([
+					`Check: the curbside shows 1 service hatch and ${doorCount === 2 ? "1 entry door" : `${doorCount} door`}.`,
+				]),
+			]),
 		},
 		{
 			label: "interior_layout",
-			prompt: `${ctx} INTERIOR LAYOUT — PROFESSIONAL KITCHEN PHOTOGRAPH: eye-level wide-angle photograph taken from just inside the rear of the unit looking forward along the full working aisle, showing the FULL linear run end to end inside the ${lengthM}m × ${widthM}m box. 18mm rectilinear wide-angle lens, camera 1.5m high, verticals straight, ceiling and non-slip commercial floor both visible, walls and roof intact — no roof removed, no wall cut away, no dollhouse, sectional, or overhead view. Left to right along the hatch wall: ${line.galley}. ${
-				line.hot
-					? "Only the cooking equipment named here sits under a stainless extraction canopy; nothing else is under it."
-					: "There is no extraction canopy, hood or cooking equipment anywhere in this interior."
-			} Back wall: easy-clean panels, tiled splashback, non-slip commercial flooring with coved skirting. Brushed stainless counters with upstands, warm 4000K LED strip task lighting, cool daylight through the open hatch. Every unit hard up against the walls with a clear 800mm working aisle, fresh/grey water tanks below counter. Nobody inside — an empty, ready-to-trade interior with product prepped, shot like a trade-magazine kitchen feature. ${PHOTO_LOCK}`,
+			prompt: doc("INTERIOR LAYOUT — FULL LINE", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal eye-level photograph inside the trailer.",
+						"Show the full working aisle and the full line from end to end.",
+						"The interior is empty of people and ready to trade, with product prepped.",
+					],
+				},
+				terms,
+				subject,
+				interior,
+				{
+					title: "Camera",
+					lines: [
+						row(
+							"Camera",
+							"full-frame, 18mm rectilinear wide-angle lens, f/8, ISO 400",
+						),
+						row(
+							"Position",
+							"inside, at the rear end of the aisle, looking forward",
+						),
+						row("Height", "1.5 m eye-level; level; verticals straight"),
+						row(
+							"Framing",
+							`the full line inside the ${lengthM} m × ${widthM} m box; the ceiling and the floor are both visible`,
+						),
+						"Keep the walls and the roof intact.",
+						"Do not show a dollhouse, sectional, cutaway or overhead view.",
+					],
+				},
+				{
+					title: "Light",
+					lines: [
+						row(
+							"Light",
+							"warm LED strip task lights above the counters; cool daylight through the open service hatch",
+						),
+						row("Color temperature", "4000 K task light; 6500 K daylight"),
+						row("Style", "trade-magazine commercial kitchen photograph"),
+					],
+				},
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				check([
+					"Check: each unit in the line is present, in the stated order.",
+					"Check: the image is a photograph, not a drawing.",
+				]),
+			]),
 		},
 		{
 			label: "front_elevation",
-			prompt: `${ctx} FRONT ELEVATION: dead-on straight photograph from outside the open service hatch at eye level, 35mm lens. Full width of the hatch visible, framed in accent color, clear glass sneeze-guard running its length. Inside, left to right: ${line.frontRun}. ${counterBadge} Symmetrical, dead-on composition. ${PHOTO_LOCK}`,
+			prompt: doc("FRONT ELEVATION — THROUGH THE HATCH", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal photograph from outside the open service hatch, square to the hatch.",
+						"Show the full width of the hatch, with its accent-color frame.",
+						"A clear glass sneeze guard runs the full hatch width.",
+						hasBrand
+							? `Mount an illuminated "${brand}" badge on the counter front.`
+							: "Mount an illuminated blank badge panel on the counter front.",
+					],
+				},
+				terms,
+				subject,
+				{
+					title: "Interior line",
+					lines: [
+						row("Visible inside, left to right", line.frontRun),
+						line.hot
+							? "Put only the named cooking equipment under the extraction canopy."
+							: "There is no extraction canopy, hood or cooking equipment in this interior.",
+					],
+				},
+				{
+					title: "Camera",
+					lines: [
+						row("Camera", "full-frame, 35 mm lens, f/8, ISO 200"),
+						row(
+							"Position",
+							"curbside, on the hatch centerline, 3 m from the trailer",
+						),
+						row("Height", "1.6 m eye-level; level"),
+						row(
+							"Framing",
+							"symmetrical; the hatch frame fills 70% of the width",
+						),
+					],
+				},
+				{ title: "Light", lines: lightFor("afternoon") },
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				check(["Check: the image is a photograph, not a drawing."]),
+			]),
 		},
 		{
 			label: "assembly_theater",
-			prompt: `${ctx} ASSEMBLY THEATER: eye-level photograph, POV from the counter looking through the open service hatch at the working line, 35mm lens — ${line.counterMoment}, and ${line.signature} sitting ready on the counter. No staff and no hands in frame; the line reads as if the team just stepped away. Warm appetizing lighting on the product, shallow depth of field, golden-hour ambiance. ${PHOTO_LOCK}`,
+			prompt: doc("ASSEMBLY THEATER — THE COUNTER", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal close photograph of the line through the open service hatch.",
+						"No staff and no hands are in frame.",
+						"The line looks as if the team stepped away a moment ago.",
+					],
+				},
+				terms,
+				subject,
+				{
+					title: "Action and product",
+					lines: [
+						row("On the line", line.counterMoment),
+						row("On the counter", line.signature),
+					],
+				},
+				{
+					title: "Camera",
+					lines: [
+						row("Camera", "full-frame, 35 mm lens, f/2.8, ISO 400"),
+						row(
+							"Position",
+							"at the counter, looking through the open hatch at the line",
+						),
+						row("Height", "1.4 m; level"),
+						row(
+							"Focus",
+							"the product on the counter is sharp; the line behind is soft",
+						),
+					],
+				},
+				{
+					title: "Light",
+					lines: [
+						row(
+							"Light",
+							"warm light on the product; golden-hour ambient through the hatch",
+						),
+						row("Color temperature", "3200 K on the product"),
+					],
+				},
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				check(["Check: the image is a photograph, not a drawing."]),
+			]),
 		},
 		{
 			label: "night_exterior",
-			prompt: `${ctx} NIGHT EXTERIOR: nighttime urban setting, wet pavement reflecting lights. Service hatch open and glowing warmly from inside, illuminated roof blade sign glowing, accent-colored hatch frame catching the interior light, the forecourt empty. Moody, cinematic, premium street-food-at-night vibe, bokeh from distant streetlights, 35mm lens. ${PHOTO_LOCK}`,
+			prompt: doc("NIGHT EXTERIOR — CURBSIDE", [
+				{
+					title: "Task",
+					lines: [
+						"Make one photoreal night photograph of the trailer from the CURBSIDE.",
+						"Show the service hatch open and lit from inside.",
+						roofSign ? "Show the roof blade sign lit." : null,
+						"The accent-color hatch frame catches the interior light.",
+						hasFeature(brief, "night-lighting")
+							? "Turn on the hatch LED strip and the wall downlights."
+							: null,
+						"Keep the forecourt empty.",
+					],
+				},
+				terms,
+				subject,
+				geometry,
+				livery,
+				exteriorFeatures,
+				{
+					title: "Camera",
+					lines: [
+						row("Camera", "full-frame, 35 mm lens, f/2, ISO 1600, 1/60 s"),
+						row(
+							"Position",
+							"curbside, three-quarter front view, 35° from the long axis, 7 m from the service hatch",
+						),
+						row("Height", "1.6 m; level; verticals straight"),
+						"Expose for the wrap. The wrap colors must stay identifiable.",
+					],
+				},
+				{ title: "Light", lines: lightFor("night") },
+				{
+					title: "Scene",
+					lines: [
+						row(
+							"Setting",
+							`${scene}; at night, the ground is wet and reflects the lights`,
+						),
+						row("Background", "distant streetlights as soft bokeh"),
+					],
+				},
+				text,
+				photoMedium,
+				{ title: "Warnings", lines: [peopleWarning] },
+				exteriorCheck,
+			]),
 		},
 		{
 			label: "brand_mark",
 			prompt: hasBrand
-				? `Clean brand identity mockup for "${brand}", a ${businessType} food truck — a flat graphic presentation, not a photograph of a physical sign. Centered logo: a flat vector emblem of ${emblem}, rendered as a modern vinyl-ready logo — bold solid shapes cut from a single roll, two or three spot colors, sharp edges, no gradients, no brush strokes, no texture, no photorealistic rendering. Sitting above a bold wordmark "${brand}" in ${colors} on a deep neutral background drawn from the palette (${colors}), the emblem and wordmark locked up as one badge. Memorable at 30 feet and at 3 feet: high contrast, minimal layers, nothing intricate. Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges, high contrast. No extra text.`
-				: `Brand direction board for an unnamed ${businessType} food truck — a flat graphic presentation, not a photograph. Three large colour swatches in ${colors} stacked with their proportions, a flat vector emblem of ${emblem} centred above them — crisp cut-vinyl shapes, two or three spot colors, no gradients, no texture — and a blank rectangular panel where a wordmark would sit. Deep neutral background drawn from the palette (${colors}). Premium, crafted, street-food-meets-design-studio aesthetic. Crisp edges. Absolutely no text or lettering anywhere.`,
+				? doc("BRAND IDENTITY MOCKUP", [
+						{
+							title: "Task",
+							lines: [
+								`Make one flat brand identity mockup for "${brand}", a ${businessLabel} food trailer.`,
+								"This is a flat graphic presentation, not a photograph of a physical sign.",
+							],
+						},
+						{
+							title: "Content",
+							lines: [
+								row("Emblem", emblem),
+								row("Wordmark", `"${brand}", below the emblem`),
+								...paletteRows(colors),
+								row("Background", "a deep neutral color from the palette"),
+								"Lock the emblem and the wordmark together as one badge, centered.",
+							],
+						},
+						{
+							title: "Craft",
+							lines: [
+								"Make the badge clear at 30 ft and at 3 ft.",
+								"Use bold solid shapes, 2 or 3 spot colors and sharp edges.",
+								"Cut each shape from one vinyl roll color.",
+								"Do not use gradients, brush strokes, texture or photoreal rendering.",
+							],
+						},
+						{
+							title: "Warnings",
+							lines: [
+								warning(
+									"Do not add text other than the brand name.",
+									"Each extra word is an error.",
+								),
+							],
+						},
+					])
+				: doc("BRAND DIRECTION BOARD", [
+						{
+							title: "Task",
+							lines: [
+								`Make one brand direction board for an unnamed ${businessLabel} food trailer.`,
+								"This is a flat graphic presentation, not a photograph.",
+							],
+						},
+						{
+							title: "Content",
+							lines: [
+								...paletteRows(colors),
+								"Show the colors as three large swatches, stacked, at their proportions.",
+								row("Emblem", emblem),
+								"Center the emblem above the swatches.",
+								"Put a blank rectangular panel where a wordmark goes.",
+								row("Background", "a deep neutral color from the palette"),
+							],
+						},
+						{
+							title: "Craft",
+							lines: [
+								"Use crisp cut-vinyl shapes, 2 or 3 spot colors and sharp edges.",
+								"Do not use gradients or texture.",
+							],
+						},
+						{
+							title: "Warnings",
+							lines: [
+								warning(
+									"Do not write text or letters anywhere.",
+									"The business has no name yet.",
+								),
+							],
+						},
+					]),
 		},
 	];
 }
@@ -453,6 +1027,12 @@ export interface StarterConceptArgs {
 	equipment?: readonly string[];
 	serveMode?: ServeMode;
 	brainNote?: string;
+	/** Operating brief from the quiz — scene, finish and exterior features. */
+	brief?: DesignBrief | null;
+	/** Openings from the design record, when one exists. */
+	openings?: readonly Opening[] | null;
+	/** Version stamp of the design record this round renders. */
+	versionStamp?: string | null;
 	/** Resolves the factory catalog photo; falls back to the body folder. */
 	vehicleId?: string | null;
 	/** A photo the buyer uploaded, used for styling direction only. */
@@ -540,6 +1120,9 @@ export async function runStarterConcepts(
 		serveMode,
 		brainNote,
 		hasBrand,
+		brief: args.brief ?? null,
+		openings: args.openings ?? null,
+		versionStamp: args.versionStamp ?? null,
 	});
 	const promptFor = new Map(prompts.map((p) => [p.label, p.prompt]));
 
@@ -669,7 +1252,8 @@ export async function runStarterConcepts(
 	// already paid for (and works with no credits left), and a round where
 	// nothing rendered delivered nothing.
 	const charged =
-		(args.charge ?? !args.only?.length) && images.some((i) => i.status === "ready");
+		(args.charge ?? !args.only?.length) &&
+		images.some((i) => i.status === "ready");
 	return {
 		images,
 		creditsUsed: creditsUsed + (charged ? 1 : 0),

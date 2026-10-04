@@ -12,6 +12,7 @@
  * The shape is config rather than markup so the next client gets their own
  * questions without a rewrite — the fields below are Food Truck Factory's.
  */
+import { briefSummary, type DesignBrief } from "./brief";
 import { BUSINESS_TYPES, VEHICLES } from "./constants";
 
 export type IntakeFieldType =
@@ -235,6 +236,8 @@ export type IntakeAnswers = Record<string, string>;
 export function composeBrief(
 	answers: IntakeAnswers,
 	config: IntakeConfig = FOOD_TRUCK_INTAKE,
+	/** Operating brief from the quiz — where, when, volume, finish, features. */
+	brief?: DesignBrief | null,
 ): string {
 	const get = (id: string) => answers[id]?.trim();
 	const labelFor = (fieldId: string, value: string) => {
@@ -272,6 +275,7 @@ export function composeBrief(
 				: "Customers order at the hatch.",
 		);
 	}
+	parts.push(...briefSummary(brief));
 	if (get("notes")) parts.push(`Must-haves: ${get("notes")}.`);
 
 	if (parts.length <= 1) {
