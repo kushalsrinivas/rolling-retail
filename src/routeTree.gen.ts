@@ -10,10 +10,26 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReportRouteImport } from './routes/report'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ResourcesIndexRouteImport } from './routes/resources.index'
+import { Route as ResourcesSlugRouteImport } from './routes/resources.$slug'
+import { Route as StoriesIndexRouteImport } from './routes/stories.index'
+import { Route as StoriesSlugRouteImport } from './routes/stories.$slug'
+import { Route as TrucksIndexRouteImport } from './routes/trucks.index'
+import { Route as TrucksSlugRouteImport } from './routes/trucks.$slug'
+import { Route as UseCasesIndexRouteImport } from './routes/use-cases.index'
+import { Route as UseCasesSlugRouteImport } from './routes/use-cases.$slug'
 import { Route as ApiAgentApproveRouteImport } from './routes/api/agent/approve'
 import { Route as ApiAgentChatRouteImport } from './routes/api/agent/chat'
 import { Route as ApiAgentDesignRouteImport } from './routes/api/agent/design'
@@ -42,6 +58,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -52,14 +73,89 @@ const ChatRoute = ChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportRoute = ReportRouteImport.update({
   id: '/report',
   path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesIndexRoute = ResourcesIndexRouteImport.update({
+  id: '/resources/',
+  path: '/resources/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesSlugRoute = ResourcesSlugRouteImport.update({
+  id: '/resources/$slug',
+  path: '/resources/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoriesIndexRoute = StoriesIndexRouteImport.update({
+  id: '/stories/',
+  path: '/stories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoriesSlugRoute = StoriesSlugRouteImport.update({
+  id: '/stories/$slug',
+  path: '/stories/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrucksIndexRoute = TrucksIndexRouteImport.update({
+  id: '/trucks/',
+  path: '/trucks/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrucksSlugRoute = TrucksSlugRouteImport.update({
+  id: '/trucks/$slug',
+  path: '/trucks/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UseCasesIndexRoute = UseCasesIndexRouteImport.update({
+  id: '/use-cases/',
+  path: '/use-cases/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UseCasesSlugRoute = UseCasesSlugRouteImport.update({
+  id: '/use-cases/$slug',
+  path: '/use-cases/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentApproveRoute = ApiAgentApproveRouteImport.update({
@@ -175,10 +271,26 @@ const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
+  '/pricing': typeof PricingRoute
   '/report': typeof ReportRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/resources/$slug': typeof ResourcesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRoute
+  '/trucks/$slug': typeof TrucksSlugRoute
+  '/use-cases/$slug': typeof UseCasesSlugRoute
+  '/resources/': typeof ResourcesIndexRoute
+  '/stories/': typeof StoriesIndexRoute
+  '/trucks/': typeof TrucksIndexRoute
+  '/use-cases/': typeof UseCasesIndexRoute
   '/api/agent/approve': typeof ApiAgentApproveRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/design': typeof ApiAgentDesignRoute
@@ -204,10 +316,26 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
+  '/pricing': typeof PricingRoute
   '/report': typeof ReportRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/resources/$slug': typeof ResourcesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRoute
+  '/trucks/$slug': typeof TrucksSlugRoute
+  '/use-cases/$slug': typeof UseCasesSlugRoute
+  '/resources': typeof ResourcesIndexRoute
+  '/stories': typeof StoriesIndexRoute
+  '/trucks': typeof TrucksIndexRoute
+  '/use-cases': typeof UseCasesIndexRoute
   '/api/agent/approve': typeof ApiAgentApproveRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/design': typeof ApiAgentDesignRoute
@@ -234,10 +362,26 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
+  '/pricing': typeof PricingRoute
   '/report': typeof ReportRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/resources/$slug': typeof ResourcesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRoute
+  '/trucks/$slug': typeof TrucksSlugRoute
+  '/use-cases/$slug': typeof UseCasesSlugRoute
+  '/resources/': typeof ResourcesIndexRoute
+  '/stories/': typeof StoriesIndexRoute
+  '/trucks/': typeof TrucksIndexRoute
+  '/use-cases/': typeof UseCasesIndexRoute
   '/api/agent/approve': typeof ApiAgentApproveRoute
   '/api/agent/chat': typeof ApiAgentChatRoute
   '/api/agent/design': typeof ApiAgentDesignRoute
@@ -265,10 +409,26 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/admin'
     | '/chat'
+    | '/faq'
+    | '/how-it-works'
+    | '/llms-full.txt'
+    | '/llms.txt'
+    | '/pricing'
     | '/report'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/studio'
+    | '/resources/$slug'
+    | '/stories/$slug'
+    | '/trucks/$slug'
+    | '/use-cases/$slug'
+    | '/resources/'
+    | '/stories/'
+    | '/trucks/'
+    | '/use-cases/'
     | '/api/agent/approve'
     | '/api/agent/chat'
     | '/api/agent/design'
@@ -294,10 +454,26 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/admin'
     | '/chat'
+    | '/faq'
+    | '/how-it-works'
+    | '/llms-full.txt'
+    | '/llms.txt'
+    | '/pricing'
     | '/report'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/studio'
+    | '/resources/$slug'
+    | '/stories/$slug'
+    | '/trucks/$slug'
+    | '/use-cases/$slug'
+    | '/resources'
+    | '/stories'
+    | '/trucks'
+    | '/use-cases'
     | '/api/agent/approve'
     | '/api/agent/chat'
     | '/api/agent/design'
@@ -323,10 +499,26 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/admin'
     | '/chat'
+    | '/faq'
+    | '/how-it-works'
+    | '/llms-full.txt'
+    | '/llms.txt'
+    | '/pricing'
     | '/report'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/studio'
+    | '/resources/$slug'
+    | '/stories/$slug'
+    | '/trucks/$slug'
+    | '/use-cases/$slug'
+    | '/resources/'
+    | '/stories/'
+    | '/trucks/'
+    | '/use-cases/'
     | '/api/agent/approve'
     | '/api/agent/chat'
     | '/api/agent/design'
@@ -353,10 +545,26 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
+  FaqRoute: typeof FaqRoute
+  HowItWorksRoute: typeof HowItWorksRoute
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
+  PricingRoute: typeof PricingRoute
   ReportRoute: typeof ReportRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StudioRoute: typeof StudioRoute
+  ResourcesSlugRoute: typeof ResourcesSlugRoute
+  StoriesSlugRoute: typeof StoriesSlugRoute
+  TrucksSlugRoute: typeof TrucksSlugRoute
+  UseCasesSlugRoute: typeof UseCasesSlugRoute
+  ResourcesIndexRoute: typeof ResourcesIndexRoute
+  StoriesIndexRoute: typeof StoriesIndexRoute
+  TrucksIndexRoute: typeof TrucksIndexRoute
+  UseCasesIndexRoute: typeof UseCasesIndexRoute
   ApiAgentApproveRoute: typeof ApiAgentApproveRoute
   ApiAgentChatRoute: typeof ApiAgentChatRoute
   ApiAgentDesignRoute: typeof ApiAgentDesignRoute
@@ -390,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -404,6 +619,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/report': {
       id: '/report'
       path: '/report'
@@ -411,11 +661,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio': {
       id: '/studio'
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources/': {
+      id: '/resources/'
+      path: '/resources'
+      fullPath: '/resources/'
+      preLoaderRoute: typeof ResourcesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources/$slug': {
+      id: '/resources/$slug'
+      path: '/resources/$slug'
+      fullPath: '/resources/$slug'
+      preLoaderRoute: typeof ResourcesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stories/': {
+      id: '/stories/'
+      path: '/stories'
+      fullPath: '/stories/'
+      preLoaderRoute: typeof StoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stories/$slug': {
+      id: '/stories/$slug'
+      path: '/stories/$slug'
+      fullPath: '/stories/$slug'
+      preLoaderRoute: typeof StoriesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trucks/': {
+      id: '/trucks/'
+      path: '/trucks'
+      fullPath: '/trucks/'
+      preLoaderRoute: typeof TrucksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trucks/$slug': {
+      id: '/trucks/$slug'
+      path: '/trucks/$slug'
+      fullPath: '/trucks/$slug'
+      preLoaderRoute: typeof TrucksSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/use-cases/': {
+      id: '/use-cases/'
+      path: '/use-cases'
+      fullPath: '/use-cases/'
+      preLoaderRoute: typeof UseCasesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/use-cases/$slug': {
+      id: '/use-cases/$slug'
+      path: '/use-cases/$slug'
+      fullPath: '/use-cases/$slug'
+      preLoaderRoute: typeof UseCasesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent/approve': {
@@ -577,10 +897,26 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
+  FaqRoute: FaqRoute,
+  HowItWorksRoute: HowItWorksRoute,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
+  PricingRoute: PricingRoute,
   ReportRoute: ReportRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StudioRoute: StudioRoute,
+  ResourcesSlugRoute: ResourcesSlugRoute,
+  StoriesSlugRoute: StoriesSlugRoute,
+  TrucksSlugRoute: TrucksSlugRoute,
+  UseCasesSlugRoute: UseCasesSlugRoute,
+  ResourcesIndexRoute: ResourcesIndexRoute,
+  StoriesIndexRoute: StoriesIndexRoute,
+  TrucksIndexRoute: TrucksIndexRoute,
+  UseCasesIndexRoute: UseCasesIndexRoute,
   ApiAgentApproveRoute: ApiAgentApproveRoute,
   ApiAgentChatRoute: ApiAgentChatRoute,
   ApiAgentDesignRoute: ApiAgentDesignRoute,

@@ -14,7 +14,10 @@ import { useTRPC } from "#/integrations/trpc/react";
  * Moved off "/" when that became the Rolling Retail landing page; kept intact
  * rather than deleted because the wizard and its tRPC pipeline still work.
  */
-export const Route = createFileRoute("/report")({ component: App });
+export const Route = createFileRoute("/report")({
+	component: App,
+	head: () => ({ meta: [{ title: "Location report — Rolling Retail" }, { name: "robots", content: "noindex, nofollow" }] }),
+});
 
 /* ─── Types ─── */
 

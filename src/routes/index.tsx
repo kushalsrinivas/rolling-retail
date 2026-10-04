@@ -1,151 +1,117 @@
 /**
  * Rolling Retail — the homepage.
  *
- * Narrative order, per the review: show what is possible, state the problem in
- * enough detail that a sales lead recognises their own week in it, then the
- * solution (visibly shorter than the problem), what it plugs into, proof, and
- * one clear way to get in touch.
+ * Narrative, buyer-first: what we do in one sentence, the product working
+ * (a trailer you can turn around), what one brief gets you, the six bodies,
+ * why us, proof, guides, answers, and one clear way to start.
  *
- * The vehicle leads. Everything else is typographic and paced by scroll — the
- * motion is there to make the argument land, not to decorate it.
+ * Every claim on this page is one the product or the factory backs: the
+ * deliverables are the designer's real outputs, the trucks are the six
+ * bodies in the catalog, the numbers are labelled planning ranges, and the
+ * stories are labelled illustrative until real ones replace them.
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, Check } from "lucide-react";
 import { type CSSProperties, lazy, Suspense } from "react";
-import { ProcessList, type Step } from "#/components/landing/ProcessList";
 import { Reveal } from "#/components/landing/Reveal";
+import { FaqList } from "#/components/site/ContentBody";
+import { CtaBand, Eyebrow, SiteShell } from "#/components/site/SiteChrome";
+import { TrailerArt } from "#/components/site/TrailerArt";
+import { ARTICLES } from "#/content/articles";
+import { HOME_FAQS } from "#/content/faqs";
+import { STORIES } from "#/content/stories";
+import { rangeLabel, TRUCKS, truckSpecs } from "#/content/trucks";
+import { USE_CASES } from "#/content/use-cases";
 import { useReveal } from "#/hooks/use-reveal";
-import { GALLERY, hasGallery } from "#/lib/landing-gallery";
+import {
+	designerAppLd,
+	faqLd,
+	organizationLd,
+	pageHead,
+	SITE,
+	websiteLd,
+} from "#/lib/site";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+	component: Home,
+	head: () =>
+		pageHead({
+			title: "Rolling Retail — Custom food trailers, designed online and built in the USA",
+			description:
+				"Design a custom food trailer online in minutes — Airstream or square concession trailer — and see photoreal renders, an equipment layout, a wrap plan and a planning estimate. Then we build it.",
+			path: "/",
+			jsonLd: [organizationLd(), websiteLd(), designerAppLd(), faqLd(HOME_FAQS)],
+		}),
+});
 
 const HeroShowcase = lazy(() => import("#/components/landing/HeroShowcase"));
 
-const HEADLINE = [
-	"White-label design software",
-	"that cuts the time it takes",
-	"to build with your partners.",
+const HEADLINE = ["Design your food trailer online.", "We build exactly that."];
+
+const PROOF = [
+	"5 free render rounds",
+	"No account needed",
+	"6–10 week builds",
+	"Delivered nationwide",
 ];
 
-const WE_BUILD = [
-	"Food trucks",
-	"Coffee carts",
-	"Mobile bars",
-	"Merch trailers",
-	"Airstream conversions",
-	"Pop-up kiosks",
-	"Bookshops",
-	"Demo units",
-	"Activation vehicles",
-	"Ice cream vans",
-	"Barber trailers",
-	"Anything on wheels",
-];
-
-/** One inquiry as it runs today. Five entries are the same word on purpose. */
-const TODAY: Step[] = [
-	{ id: "inquiry", label: "Inquiry arrives" },
-	{ id: "brief-call", label: "Call to understand the brief" },
-	{ id: "draft", label: "Designer drafts a layout" },
-	{ id: "rev-1", label: "Revision" },
-	{ id: "rev-2", label: "Revision" },
-	{ id: "clarify", label: "Call to resolve what the drawing did not say" },
-	{ id: "rev-3", label: "Revision" },
-	{ id: "rev-4", label: "Revision" },
-	{ id: "rev-5", label: "Revision" },
-	{ id: "quote", label: "Quote" },
-	{ id: "deposit", label: "Deposit" },
-];
-
-const AFTER: Step[] = [
-	{ id: "inquiry", label: "Inquiry arrives" },
-	{ id: "design", label: "Customer designs it themselves" },
-	{ id: "quote", label: "Quote" },
-	{ id: "deposit", label: "Deposit" },
-];
-
-const FRICTIONS = [
+const STEPS = [
 	{
-		t: "Two-dimensional ambiguity",
-		d: "A side elevation and an isometric can disagree and both look correct. The customer signs off on one reading, the factory builds the other.",
+		n: "01",
+		t: "Answer a three-minute brief",
+		d: "What you serve, where you trade, your busiest hour and the looks you love. Skip anything you haven't decided.",
 	},
 	{
-		t: "The conversation lives in WhatsApp",
-		d: "Photos, voice notes and a PDF from three weeks ago. Nobody can tell which version is current, so someone asks again.",
+		n: "02",
+		t: "See your trailer, inside and out",
+		d: "Photoreal concepts of your build — exterior, curbside, interior line — on a body our factory actually makes. Change anything in plain English.",
 	},
 	{
-		t: "Designer capacity is the ceiling",
-		d: "Every inquiry costs the same scarce person the same hours, whether it closes or not. Growth makes this worse, not better.",
-	},
-	{
-		t: "The quote waits on all of it",
-		d: "No specification, no bill of materials, no number. The deposit sits behind the drawing.",
+		n: "03",
+		t: "Get a spec, a quote and a build date",
+		d: "A specification sheet with layout, equipment, wrap and power. Our team turns it into a quote, and the factory builds it.",
 	},
 ];
 
-const CAPABILITIES = [
-	"Walk around the vehicle, inside and out",
-	"Choose equipment and move the layout",
-	"Share inspiration images and see them reflected",
-	"Watch every angle update together",
-	"Save it, change it, send it back to you",
-];
-
-/** Our own vehicle, our own numbers — see the disclaimer under the table. */
-const EXAMPLE_BOM = [
+const DIFFERENTIATORS = [
 	{
-		item: "Airstream shell, 20 ft",
-		spec: "riveted aluminium monocoque",
-		qty: "1",
-	},
-	{ item: "Wrap film", spec: "3M cast, overlaminated", qty: "409 sq ft" },
-	{ item: "Griddle + chargrill", spec: "single line, 10.8 kW", qty: "1" },
-	{ item: "Extraction canopy", spec: "stainless, Ansul suppression", qty: "1" },
-	{ item: "Refrigerated make-rail", spec: "6-pan, under-counter", qty: "1" },
-	{ item: "Hand sink + tanks", spec: "fresh 30 gal / grey 40 gal", qty: "1" },
-	{ item: "Shore inlet", spec: "50A / 240V, generator inlet", qty: "1" },
-];
-
-const SALES_VIEW = [
-	{
-		t: "Where each customer is",
-		d: "Who is still choosing a body, who has a layout, who is one question from a deposit.",
+		t: "You can only design what we can build",
+		d: "Six bodies with fixed, factory-proven geometry. No render you fall for will be walked back by a salesperson later.",
 	},
 	{
-		t: "What they keep coming back to",
-		d: "The build they have opened four times, and the question they have not asked you yet.",
+		t: "Compliance is designed in, not bolted on",
+		d: "Hand sink at the line entry, NSF-listed equipment, hood and UL 300 suppression on hot lines, water sized for service — the things plan review checks.",
 	},
 	{
-		t: "What the market wants",
-		d: "Which categories are being configured this month, and which components come up often enough to negotiate on.",
+		t: "Builder doctrine, applied to your brief",
+		d: "One hot station per compact body. Cooking on propane. Power that closes on paper before anyone renders. We'll tell you when smaller is better.",
+	},
+	{
+		t: "Honest numbers",
+		d: "Planning ranges you can budget against from the first session — always labelled as ranges until our team quotes your final spec.",
 	},
 ];
 
-function Rule() {
-	return <hr className="border-0 border-t border-stone-200" />;
-}
+const DOCTRINE = [
+	["Compact beats big", "Less weight and a smaller power system beat floor space. Oversizing is the most common first-time mistake."],
+	["One hot station", "One griddle, fryer or oven per compact body — under one hood, on propane."],
+	["Power closes first", "If the electrics exceed a 50A feed, we drop equipment. We never add power to fix a layout."],
+	["Drinks are margin", "A drinks station is a merchandising decision, placed so it never waits on the grill."],
+] as const;
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-	return (
-		<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone-500">
-			{children}
-		</p>
-	);
-}
-
-/** The headline, lifting line by line from behind its own baseline. */
 function Headline() {
-	const { ref, shown } = useReveal<HTMLHeadingElement>({ threshold: 0.4 });
+	const { ref, shown } = useReveal<HTMLHeadingElement>({ threshold: 0.3 });
 	return (
 		<h1
 			ref={ref}
-			className="max-w-4xl text-[34px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[48px] lg:text-[58px]"
+			className="max-w-4xl text-[38px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[56px] lg:text-[68px]"
 		>
 			{HEADLINE.map((line, i) => (
 				<span key={line} className="rr-line-mask">
 					<span
-						className="rr-line"
+						className={i === 1 ? "rr-line text-stone-500" : "rr-line"}
 						data-shown={shown}
-						style={{ "--rr-delay": `${i * 110}ms` } as CSSProperties}
+						style={{ "--rr-delay": `${i * 120}ms` } as CSSProperties}
 					>
 						{line}
 					</span>
@@ -155,414 +121,394 @@ function Headline() {
 	);
 }
 
-function Home() {
+/** A sample of the designer's real outputs for one build, laid out as a sheet. */
+function DeliverablesPreview() {
 	return (
-		<div className="rr-landing min-h-dvh bg-[#f7f6f3] text-stone-900 antialiased">
-			{/* ── Nav: two links, as agreed. Nothing else earns a slot. ── */}
-			<header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-				<span className="font-mono text-[13px] font-medium tracking-tight">
-					Rolling&nbsp;Retail
-				</span>
-				<nav className="flex items-center gap-6 text-[13px]">
-					<a href="#story" className="rr-underline text-stone-600">
-						Our story
-					</a>
-					<a
-						href="#partner"
-						className="rr-underline font-medium text-stone-900"
-						style={{ backgroundSize: "100% 1px" }}
-					>
-						Partner with us
-					</a>
-				</nav>
-			</header>
-
-			{/* ── Hero ── */}
-			<section className="mx-auto max-w-6xl px-6 pb-12 pt-8 sm:pt-14">
-				<Headline />
-				<Reveal delay={420}>
-					<p className="mt-6 max-w-xl text-[17px] leading-relaxed text-stone-600">
-						Your customers configure their own vehicle — inside and out — before
-						anyone opens a drawing. You get a specification you can quote from,
-						and the revisions stop.
+		<div className="grid gap-3 lg:grid-cols-[1.25fr_1fr]">
+			<div className="overflow-hidden rounded-sm border border-stone-200 bg-white">
+				<div className="flex items-center justify-between border-b border-stone-200 px-4 py-2.5">
+					<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">
+						Concept · exterior hero
 					</p>
-				</Reveal>
-				<Reveal delay={540}>
-					<div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-						<a
-							href="#problem"
-							className="group rounded-sm bg-stone-900 px-5 py-3 text-[14px] font-medium text-stone-50 transition-colors hover:bg-stone-700"
-						>
-							See why this is needed
-							<span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">
-								→
-							</span>
-						</a>
-						<Link
-							to="/chat"
-							className="rr-underline text-[14px] text-stone-600"
-						>
-							Open the designer
-						</Link>
-					</div>
-				</Reveal>
-			</section>
-
-			{/* ── The vehicle, immediately. ── */}
-			<Suspense
-				fallback={
-					<div className="h-[58vh] min-h-[380px] w-full animate-pulse bg-stone-200 sm:h-[66vh]" />
-				}
-			>
-				<HeroShowcase />
-			</Suspense>
-
-			{/* ── Ticker: the breadth, without a paragraph about it. ── */}
-			<div className="rr-marquee-viewport overflow-hidden border-b border-stone-200 py-4">
-				<div className="rr-marquee">
-					{[0, 1].map((copy) => (
-						<div key={copy} className="flex shrink-0" aria-hidden={copy === 1}>
-							{WE_BUILD.map((x) => (
-								<span
-									key={x}
-									className="flex items-center whitespace-nowrap px-6 text-[14px] text-stone-500"
-								>
-									{x}
-									<span className="ml-6 h-1 w-1 rounded-full bg-stone-300" />
-								</span>
-							))}
-						</div>
+					<p className="font-mono text-[10.5px] text-stone-400">v1 · not for construction</p>
+				</div>
+				<div className="bg-gradient-to-b from-[#f3e6d3] to-[#efe9df] px-6 pb-4 pt-8">
+					<TrailerArt
+						vehicleId="square-4m"
+						primary="#e8641b"
+						accent="#1c1c1e"
+						className="w-full text-stone-900"
+						title="Concept drawing of a 13 ft square taco trailer with an orange wrap band and the service hatch open"
+					/>
+				</div>
+				<div className="grid grid-cols-3 divide-x divide-stone-200 border-t border-stone-200 text-center">
+					{["Exterior", "Curbside", "Interior line"].map((v) => (
+						<p key={v} className="py-2.5 font-mono text-[10.5px] uppercase tracking-wider text-stone-500">
+							{v}
+						</p>
 					))}
 				</div>
 			</div>
+			<div className="grid gap-3">
+				<div className="rounded-sm border border-stone-200 bg-white p-4">
+					<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">Equipment line · left to right</p>
+					<ol className="mt-3 space-y-1.5 text-[13.5px] text-stone-700">
+						{[
+							"Hand sink at the line entry",
+							"Plancha + steam wells under hood",
+							"Salsa and garnish rail",
+							"Tortilla warmer at the pass",
+							"Drinks station with ice",
+						].map((x, i) => (
+							<li key={x} className="flex gap-2.5">
+								<span className="font-mono text-[11px] text-stone-400">{String(i + 1).padStart(2, "0")}</span>
+								{x}
+							</li>
+						))}
+					</ol>
+				</div>
+				<div className="grid grid-cols-2 gap-3">
+					<div className="rounded-sm border border-stone-200 bg-white p-4">
+						<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">Wrap plan</p>
+						<div className="mt-3 space-y-1.5">
+							{[
+								["#E8641B", "Orange · primary"],
+								["#1C1C1F", "Matte black"],
+								["#EFE4CF", "Cream · neutral"],
+							].map(([hex, name]) => (
+								<div key={hex} className="flex items-center gap-2">
+									<span className="h-4 w-4 rounded-[2px] border border-stone-200" style={{ background: hex }} />
+									<span className="text-[12px] text-stone-600">{name}</span>
+								</div>
+							))}
+						</div>
+					</div>
+					<div className="rounded-sm border border-stone-200 bg-white p-4">
+						<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">Planning estimate</p>
+						<p className="mt-3 text-[22px] font-semibold tracking-tight text-stone-900">$60k–$95k</p>
+						<p className="mt-1 text-[11.5px] leading-snug text-stone-500">Range, not a quote · 6–10 weeks after sign-off</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
 
-			{/* ── Problem. The long section, on purpose. ── */}
-			<section
-				id="problem"
-				className="mx-auto max-w-6xl scroll-mt-6 px-6 py-24"
-			>
+function Home() {
+	const guides = ARTICLES.filter((a) => a.category !== "Behind the build").slice(0, 3);
+	return (
+		<SiteShell>
+			{/* ── Hero ── */}
+			<section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-16">
 				<Reveal>
-					<SectionLabel>The problem</SectionLabel>
-					<h2 className="mt-3 max-w-2xl text-[28px] font-semibold leading-tight tracking-tight sm:text-[38px]">
-						The problem is not demand. It is everything that happens after the
-						inquiry.
-					</h2>
-					<p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-stone-600">
-						A vehicle is the most configurable thing you sell. Two customers
-						asking for &ldquo;a coffee truck&rdquo; want different bodies,
-						different equipment and different power. Until somebody draws it, no
-						one in the conversation is sure what was agreed — so it gets drawn
-						again.
+					<Eyebrow>Custom food trailers · Built in the USA</Eyebrow>
+				</Reveal>
+				<div className="mt-4">
+					<Headline />
+				</div>
+				<Reveal delay={360}>
+					<p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-stone-600 sm:text-[19px]">
+						Answer a short brief and see photoreal renders of your trailer — inside and out — with an equipment layout, a wrap plan and a planning estimate. When it&rsquo;s right, our factory builds it.
 					</p>
 				</Reveal>
-
-				<div className="mt-14 grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-					<div>
-						<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-							One inquiry, today
-						</p>
-						<ProcessList steps={TODAY} tone="today" />
-						<Reveal delay={200}>
-							<p className="mt-4 text-[13.5px] leading-relaxed text-stone-500">
-								Five of those eleven steps are the same step. That is where the
-								designer&rsquo;s week goes.
-							</p>
-						</Reveal>
+				<Reveal delay={480}>
+					<div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+						<Link
+							to="/chat"
+							className="group inline-flex items-center gap-2 rounded-sm bg-stone-900 px-6 py-3.5 text-[15px] font-medium text-stone-50 shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors hover:bg-stone-700"
+						>
+							Design your trailer — free
+							<ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+						</Link>
+						<Link to="/trucks" className="rr-underline text-[15px] text-stone-700">
+							Explore the six trucks
+						</Link>
 					</div>
-
-					<dl className="space-y-8 md:pt-8">
-						{FRICTIONS.map((x, i) => (
-							<Reveal key={x.t} delay={i * 90}>
-								<dt className="text-[16px] font-medium">{x.t}</dt>
-								<dd className="mt-1.5 text-[15px] leading-relaxed text-stone-600">
-									{x.d}
-								</dd>
-							</Reveal>
+				</Reveal>
+				<Reveal delay={600}>
+					<ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-stone-500">
+						{PROOF.map((p) => (
+							<li key={p} className="flex items-center gap-1.5">
+								<Check className="h-3.5 w-3.5 text-[#e8641b]" aria-hidden />
+								{p}
+							</li>
 						))}
-					</dl>
-				</div>
+					</ul>
+				</Reveal>
 			</section>
 
-			{/* ── Solution. Short, and it arrives fast. ── */}
-			<section className="border-y border-stone-200 bg-[#111110] text-stone-100">
-				<div className="mx-auto max-w-6xl px-6 py-24">
-					<Reveal>
-						<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone-500">
-							The solution
-						</p>
-						<h2 className="mt-3 max-w-2xl text-[28px] font-semibold leading-tight tracking-tight text-stone-50 sm:text-[38px]">
-							Send a link. Get back a specification.
-						</h2>
-					</Reveal>
-
-					<div className="mt-12 grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-						<div>
-							<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-								The same inquiry
-							</p>
-							<ol className="mt-4 space-y-px">
-								{AFTER.map((step, i) => (
-									<Reveal key={step.id} delay={i * 110}>
-										<li className="flex items-baseline gap-3 border-l-2 border-stone-100 py-2 pl-3 text-[15px] text-stone-100">
-											<span className="font-mono text-[11px] text-stone-500">
-												{String(i + 1).padStart(2, "0")}
-											</span>
-											{step.label}
-										</li>
-									</Reveal>
-								))}
-							</ol>
-							<Reveal delay={520}>
-								<p className="mt-4 text-[13.5px] leading-relaxed text-stone-500">
-									The designer is not in this list until there is a deposit
-									behind it.
-								</p>
-							</Reveal>
-						</div>
-
-						<ul className="space-y-3 text-[15px] leading-relaxed text-stone-300 md:pt-8">
-							{CAPABILITIES.map((x, i) => (
-								<Reveal key={x} delay={i * 80}>
-									<li className="flex gap-3">
-										<span className="mt-[9px] h-px w-4 shrink-0 bg-stone-600" />
-										{x}
-									</li>
-								</Reveal>
-							))}
-						</ul>
-					</div>
-				</div>
+			{/* ── The product, immediately: a trailer you can turn around. ── */}
+			<section aria-label="Interactive 3D trailer showcase">
+				<Suspense
+					fallback={<div className="h-[58vh] min-h-[380px] w-full animate-pulse bg-[#111110] sm:h-[66vh]" />}
+				>
+					<HeroShowcase />
+				</Suspense>
 			</section>
 
-			{/* ── Configured to what the partner actually builds ── */}
-			<section className="mx-auto max-w-6xl px-6 py-24">
-				<div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-					<Reveal>
-						<SectionLabel>Configured to your shop</SectionLabel>
-						<h2 className="mt-3 text-[28px] font-semibold leading-tight tracking-tight sm:text-[34px]">
-							Customers can only design what you can build.
-						</h2>
-						<p className="mt-5 text-[16px] leading-relaxed text-stone-600">
-							The catalogue is yours. Bodies you stock, materials you work in,
-							wrap films and colours from the suppliers you already buy from,
-							equipment you are willing to fit. If you do not build in timber,
-							timber is not on the menu.
-						</p>
-						<p className="mt-4 text-[16px] leading-relaxed text-stone-600">
-							That is the difference between a configurator and a wish list. A
-							customer never designs something you have to walk back — which
-							would cost you the revision cycle this was meant to remove.
-						</p>
-					</Reveal>
-
-					<Reveal delay={120}>
-						<div className="flex items-baseline justify-between">
-							<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-								Example bill of materials
-							</p>
-							<p className="hidden font-mono text-[11px] text-stone-400 sm:block">
-								Grill line · 20 ft Airstream
-							</p>
-						</div>
-						<div className="-mx-6 mt-3 overflow-x-auto px-6 sm:mx-0 sm:px-0">
-							<table className="w-full min-w-[420px] border-collapse text-left">
-								<thead>
-									<tr className="border-b border-stone-300">
-										<th className="py-2 font-mono text-[10px] font-normal uppercase tracking-wider text-stone-500">
-											Item
-										</th>
-										<th className="py-2 font-mono text-[10px] font-normal uppercase tracking-wider text-stone-500">
-											Specification
-										</th>
-										<th className="py-2 text-right font-mono text-[10px] font-normal uppercase tracking-wider text-stone-500">
-											Qty
-										</th>
-									</tr>
-								</thead>
-								<tbody>
-									{EXAMPLE_BOM.map((row) => (
-										<tr
-											key={row.item}
-											className="border-b border-stone-200 transition-colors hover:bg-stone-100/70"
-										>
-											<td className="py-2.5 text-[14px]">{row.item}</td>
-											<td className="py-2.5 text-[13.5px] text-stone-600">
-												{row.spec}
-											</td>
-											<td className="py-2.5 text-right font-mono text-[13px] text-stone-700">
-												{row.qty}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-						{/* Legible on purpose: an engineer reading invented numbers is
-						    the fastest way to lose the room. */}
-						<p className="mt-4 border-l-2 border-stone-400 bg-stone-100 py-3 pl-3 pr-3 text-[13.5px] leading-relaxed text-stone-700">
-							<strong className="font-medium text-stone-900">
-								This is one of our own vehicles.
-							</strong>{" "}
-							These are our components and our numbers, shown to illustrate the
-							output. Your report is generated against your bodies, your
-							suppliers and your engineering specifications — not ours.
-						</p>
-					</Reveal>
-				</div>
-			</section>
-
-			<Rule />
-
-			{/* ── What sales sees ── */}
-			<section className="mx-auto max-w-6xl px-6 py-24">
+			{/* ── How it works ── */}
+			<section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
 				<Reveal>
-					<SectionLabel>What your sales team sees</SectionLabel>
-					<h2 className="mt-3 max-w-2xl text-[28px] font-semibold leading-tight tracking-tight sm:text-[34px]">
-						You know what they are designing before you pick up the phone.
+					<Eyebrow>How it works</Eyebrow>
+					<h2 className="mt-3 max-w-2xl text-[30px] font-semibold leading-tight tracking-[-0.02em] sm:text-[40px]">
+						From idea to build sheet in one sitting.
 					</h2>
 				</Reveal>
-				<div className="mt-12 grid gap-8 sm:grid-cols-3">
-					{SALES_VIEW.map((x, i) => (
-						<Reveal key={x.t} delay={i * 110}>
-							<div className="border-t border-stone-300 pt-4">
-								<h3 className="text-[16px] font-medium">{x.t}</h3>
-								<p className="mt-2 text-[15px] leading-relaxed text-stone-600">
-									{x.d}
-								</p>
-							</div>
+				<ol className="mt-12 grid gap-8 md:grid-cols-3">
+					{STEPS.map((s, i) => (
+						<Reveal key={s.n} delay={i * 110}>
+							<li className="border-t-2 border-stone-900 pt-5">
+								<span className="font-mono text-[12px] text-stone-400">{s.n}</span>
+								<h3 className="mt-2 text-[18px] font-semibold tracking-tight">{s.t}</h3>
+								<p className="mt-2 text-[15px] leading-relaxed text-stone-600">{s.d}</p>
+							</li>
 						</Reveal>
 					))}
-				</div>
-			</section>
-
-			<Rule />
-
-			{/* ── Proof ── */}
-			<section id="story" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-24">
-				<Reveal>
-					<SectionLabel>Where we have been</SectionLabel>
-					<h2 className="mt-3 max-w-2xl text-[28px] font-semibold leading-tight tracking-tight sm:text-[38px]">
-						Retail should be able to roll into any location.
-					</h2>
-					<p className="mt-5 max-w-xl text-[16px] leading-relaxed text-stone-600">
-						We build these, which is why we know where the hours go. Every unit
-						below is one we designed and put on the road.
-					</p>
+				</ol>
+				<Reveal delay={200}>
+					<Link to="/how-it-works" className="rr-underline mt-10 inline-block text-[14px] text-stone-700">
+						The full process, from brief to delivery →
+					</Link>
 				</Reveal>
-
-				{hasGallery ? (
-					<div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{GALLERY.map((shot, i) => (
-							<Reveal key={shot.src} delay={i * 80}>
-								<figure className="group">
-									<div className="aspect-[4/3] overflow-hidden rounded-sm bg-stone-200">
-										<img
-											src={shot.src}
-											alt={shot.alt}
-											loading="lazy"
-											className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
-										/>
-									</div>
-									<figcaption className="mt-2 flex items-baseline justify-between gap-3">
-										<span className="text-[14px] text-stone-800">
-											{shot.title}
-										</span>
-										<span className="font-mono text-[11px] text-stone-500">
-											{shot.place}
-										</span>
-									</figcaption>
-								</figure>
-							</Reveal>
-						))}
-					</div>
-				) : (
-					<Reveal delay={120}>
-						<div className="mt-12 rounded-sm border border-dashed border-stone-300 bg-stone-100/60 px-6 py-14 text-center">
-							<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-								Photography pending
-							</p>
-							<p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-stone-600">
-								Real builds, in real locations, go here. Drop them in{" "}
-								<code className="rounded-sm bg-stone-200 px-1 py-0.5 font-mono text-[12.5px]">
-									public/gallery/
-								</code>{" "}
-								and list them in{" "}
-								<code className="rounded-sm bg-stone-200 px-1 py-0.5 font-mono text-[12.5px]">
-									src/lib/landing-gallery.ts
-								</code>
-								.
-							</p>
-						</div>
-					</Reveal>
-				)}
 			</section>
 
-			{/* ── Call to action ── */}
-			<section
-				id="partner"
-				className="scroll-mt-6 border-t border-stone-200 bg-[#111110] text-stone-100"
-			>
-				<div className="mx-auto max-w-6xl px-6 py-28">
-					<div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+			{/* ── What one brief gets you ── */}
+			<section className="border-y border-stone-200 bg-[#efece6]">
+				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+					<div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
 						<Reveal>
-							<h2 className="text-[44px] font-semibold leading-[1.02] tracking-[-0.03em] text-stone-50 sm:text-[64px]">
-								Got wheels?
+							<Eyebrow>What one brief gets you</Eyebrow>
+							<h2 className="mt-3 text-[30px] font-semibold leading-tight tracking-[-0.02em] sm:text-[38px]">
+								Not a mood board. A trailer you can quote.
 							</h2>
-							<p className="mt-5 max-w-md text-[17px] leading-relaxed text-stone-400">
-								If you build anything your customers can park somewhere and sell
-								out of, we can put a configurator in front of it.
+							<p className="mt-5 text-[16px] leading-relaxed text-stone-600">
+								Every session produces the same set of deliverables our build team works from — so the conversation with sales starts at the specification, not at &ldquo;so, what were you thinking?&rdquo;
 							</p>
-							<a
-								href="mailto:team@latechspace.com?subject=Rolling%20Retail%20—%20partnership"
-								className="group mt-9 inline-flex items-center gap-2 rounded-sm bg-stone-50 px-5 py-3 text-[14px] font-medium text-stone-900 transition-colors hover:bg-white"
-							>
-								Partner with us
-								<span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
-									→
-								</span>
-							</a>
-						</Reveal>
-
-						<Reveal delay={140}>
-							<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-								What we put on wheels
-							</p>
-							<ul className="mt-4 flex flex-wrap gap-2">
-								{WE_BUILD.map((x) => (
-									<li
-										key={x}
-										className="rounded-full border border-white/15 px-3 py-1.5 text-[13.5px] text-stone-400 transition-colors hover:border-white/40 hover:text-stone-100"
-									>
+							<ul className="mt-6 space-y-2.5 text-[15px] text-stone-700">
+								{[
+									"Photoreal concepts that stay consistent view to view",
+									"Equipment layout in the order your line works",
+									"Wrap plan with colors matched to real vinyl film",
+									"Power table that closes before anything is rendered",
+									"Planning estimate and a downloadable spec sheet",
+								].map((x) => (
+									<li key={x} className="flex gap-2.5">
+										<Check className="mt-1 h-4 w-4 shrink-0 text-[#e8641b]" aria-hidden />
 										{x}
 									</li>
 								))}
 							</ul>
 						</Reveal>
-					</div>
-				</div>
-
-				<div className="border-t border-white/10">
-					<div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-8 text-[13px] text-stone-500 sm:flex-row sm:items-center sm:justify-between">
-						<p>
-							Rolling Retail is a product of LA Techspace. All email reaches us
-							at{" "}
-							<a
-								href="mailto:team@latechspace.com"
-								className="rr-underline text-stone-300"
-							>
-								team@latechspace.com
-							</a>
-							.
-						</p>
-						<Link
-							to="/chat"
-							className="rr-underline font-mono text-[11px] uppercase tracking-wider text-stone-500"
-						>
-							Open the designer
-						</Link>
+						<Reveal delay={150}>
+							<DeliverablesPreview />
+							<p className="mt-3 text-[12px] text-stone-500">
+								Example output for a 13 ft taco trailer. Drawings on this site are illustrations; the designer renders photoreal concepts.
+							</p>
+						</Reveal>
 					</div>
 				</div>
 			</section>
-		</div>
+
+			{/* ── The six trucks ── */}
+			<section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+				<div className="flex flex-wrap items-end justify-between gap-6">
+					<Reveal>
+						<Eyebrow>The lineup</Eyebrow>
+						<h2 className="mt-3 max-w-xl text-[30px] font-semibold leading-tight tracking-[-0.02em] sm:text-[38px]">
+							Six bodies. Every one built in our factory.
+						</h2>
+					</Reveal>
+					<Link to="/trucks" className="rr-underline text-[14px] text-stone-700">
+						Compare all trucks →
+					</Link>
+				</div>
+				<div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{TRUCKS.map((t, i) => {
+						const s = truckSpecs(t);
+						return (
+							<Reveal key={t.slug} delay={(i % 3) * 90}>
+								<Link
+									to="/trucks/$slug"
+									params={{ slug: t.slug }}
+									className="group flex h-full flex-col rounded-sm border border-stone-200 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.25)]"
+								>
+									<div className="flex h-28 items-end justify-center">
+										<TrailerArt
+											vehicleId={t.vehicleId}
+											primary={i % 2 ? "#1f7a8c" : "#e8641b"}
+											className="max-h-28 w-full text-stone-900"
+										/>
+									</div>
+									<h3 className="mt-5 text-[17px] font-semibold tracking-tight">{t.name}</h3>
+									<p className="mt-1 text-[14px] leading-snug text-stone-600">{t.headline}</p>
+									<dl className="mt-4 grid grid-cols-2 gap-y-1 border-t border-stone-100 pt-3 text-[12.5px]">
+										<dt className="text-stone-500">Length</dt>
+										<dd className="text-right font-mono text-stone-800">{s?.lengthFt} ft</dd>
+										<dt className="text-stone-500">Best for</dt>
+										<dd className="text-right text-stone-800">{t.bestFor[0]}</dd>
+										<dt className="text-stone-500">Planning range</dt>
+										<dd className="text-right font-mono text-stone-800">{rangeLabel(t.planningRange)}</dd>
+									</dl>
+									<span className="mt-auto pt-4 text-[13px] font-medium text-stone-900">
+										View specs <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+									</span>
+								</Link>
+							</Reveal>
+						);
+					})}
+				</div>
+			</section>
+
+			{/* ── Use cases ── */}
+			<section className="border-t border-stone-200">
+				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+					<Reveal>
+						<Eyebrow>Built for what you sell</Eyebrow>
+						<h2 className="mt-3 max-w-2xl text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
+							The line is designed around your menu — not the other way round.
+						</h2>
+					</Reveal>
+					<div className="mt-10 grid gap-px overflow-hidden rounded-sm border border-stone-200 bg-stone-200 sm:grid-cols-2 lg:grid-cols-4">
+						{USE_CASES.map((u) => (
+							<Link
+								key={u.slug}
+								to="/use-cases/$slug"
+								params={{ slug: u.slug }}
+								className="group bg-[#f7f6f3] p-5 transition-colors hover:bg-white"
+							>
+								<p className="text-[15.5px] font-semibold">{u.name}</p>
+								<p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-stone-500">{u.zones[1] ?? u.intro}</p>
+								<span className="mt-3 inline-block text-[12.5px] text-stone-700 transition-transform group-hover:translate-x-0.5">
+									See the build →
+								</span>
+							</Link>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* ── Why us ── */}
+			<section className="bg-[#111110] text-stone-100">
+				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+					<Reveal>
+						<Eyebrow className="text-stone-500">Why Rolling Retail</Eyebrow>
+						<h2 className="mt-3 max-w-2xl text-[30px] font-semibold leading-tight tracking-[-0.02em] text-stone-50 sm:text-[40px]">
+							A designer that thinks like a builder — because a builder made it.
+						</h2>
+					</Reveal>
+					<div className="mt-14 grid gap-x-12 gap-y-10 md:grid-cols-2">
+						{DIFFERENTIATORS.map((x, i) => (
+							<Reveal key={x.t} delay={i * 90}>
+								<div className="border-t border-white/15 pt-5">
+									<h3 className="text-[18px] font-semibold text-stone-50">{x.t}</h3>
+									<p className="mt-2 text-[15px] leading-relaxed text-stone-400">{x.d}</p>
+								</div>
+							</Reveal>
+						))}
+					</div>
+					<Reveal delay={120}>
+						<div className="mt-16 rounded-sm border border-white/10 p-6 sm:p-8">
+							<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone-500">Our builder doctrine</p>
+							<dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+								{DOCTRINE.map(([t, d]) => (
+									<div key={t}>
+										<dt className="text-[15px] font-semibold text-stone-50">{t}</dt>
+										<dd className="mt-1.5 text-[13.5px] leading-relaxed text-stone-400">{d}</dd>
+									</div>
+								))}
+							</dl>
+						</div>
+					</Reveal>
+				</div>
+			</section>
+
+			{/* ── Stories ── */}
+			<section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+				<div className="flex flex-wrap items-end justify-between gap-6">
+					<Reveal>
+						<Eyebrow>Stories</Eyebrow>
+						<h2 className="mt-3 max-w-xl text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
+							How operators use the designer.
+						</h2>
+						<p className="mt-3 max-w-xl text-[14px] text-stone-500">
+							Illustrative examples based on typical builds — not real customers.
+						</p>
+					</Reveal>
+					<Link to="/stories" className="rr-underline text-[14px] text-stone-700">
+						All stories →
+					</Link>
+				</div>
+				<div className="mt-10 grid gap-4 md:grid-cols-3">
+					{STORIES.map((s, i) => (
+						<Reveal key={s.slug} delay={i * 90}>
+							<Link
+								to="/stories/$slug"
+								params={{ slug: s.slug }}
+								className="group flex h-full flex-col rounded-sm border border-stone-200 bg-white p-6 transition-colors hover:border-stone-300"
+							>
+								<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-400">Illustrative · {s.location.replace(" (example)", "")}</p>
+								<blockquote className="mt-4 text-[16px] leading-snug text-stone-800">&ldquo;{s.quote.text}&rdquo;</blockquote>
+								<p className="mt-4 text-[13px] text-stone-500">{s.business}</p>
+								<span className="mt-auto pt-5 text-[13px] font-medium">
+									Read the story <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+								</span>
+							</Link>
+						</Reveal>
+					))}
+				</div>
+			</section>
+
+			{/* ── Guides ── */}
+			<section className="border-t border-stone-200">
+				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+					<div className="flex flex-wrap items-end justify-between gap-6">
+						<Reveal>
+							<Eyebrow>Guides from the build team</Eyebrow>
+							<h2 className="mt-3 max-w-xl text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
+								Know what you&rsquo;re buying before you buy it.
+							</h2>
+						</Reveal>
+						<Link to="/resources" className="rr-underline text-[14px] text-stone-700">
+							All guides →
+						</Link>
+					</div>
+					<div className="mt-10 grid gap-8 md:grid-cols-3">
+						{guides.map((a) => (
+							<Link key={a.slug} to="/resources/$slug" params={{ slug: a.slug }} className="group border-t border-stone-300 pt-5">
+								<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">
+									{a.category} · {a.readingMinutes} min
+								</p>
+								<h3 className="mt-2 text-[18px] font-semibold leading-snug tracking-tight group-hover:underline group-hover:decoration-stone-400 group-hover:underline-offset-4">
+									{a.title}
+								</h3>
+								<p className="mt-2 text-[14px] leading-relaxed text-stone-600">{a.description}</p>
+							</Link>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* ── FAQ ── */}
+			<section className="border-t border-stone-200">
+				<div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+					<div>
+						<Eyebrow>Questions</Eyebrow>
+						<h2 className="mt-3 text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
+							What buyers ask us first.
+						</h2>
+						<p className="mt-4 text-[15px] text-stone-600">
+							More in the <Link to="/faq" className="underline underline-offset-4">full FAQ</Link>, or email{" "}
+							<a href={`mailto:${SITE.email}`} className="underline underline-offset-4">
+								{SITE.email}
+							</a>
+							.
+						</p>
+					</div>
+					<FaqList faqs={HOME_FAQS} />
+				</div>
+			</section>
+
+			<CtaBand />
+		</SiteShell>
 	);
 }

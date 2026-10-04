@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type ComponentType, useEffect, useState } from "react";
 
-export const Route = createFileRoute("/studio")({ component: StudioPage });
+export const Route = createFileRoute("/studio")({
+	component: StudioPage,
+	head: () => ({ meta: [{ title: "3D studio — Rolling Retail" }, { name: "robots", content: "noindex, nofollow" }] }),
+});
 
 function StudioPage() {
 	const [Rodin, setRodin] = useState<ComponentType | null>(null);
