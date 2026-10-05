@@ -23,6 +23,7 @@ import {
 	X,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { sceneFromSpec } from "#/lib/food-truck/build-scene";
 import { createPortal } from "react-dom";
 import { EQUIPMENT_LABELS } from "#/content/use-cases";
 import {
@@ -43,6 +44,7 @@ import { cn } from "#/lib/utils";
 import { downloadDataUrl, watermarkImage } from "#/lib/watermark";
 import MenuBuilder from "./MenuBuilder";
 
+const BriefCompanion = lazy(() => import("./BriefCompanion"));
 const TruckConfigurator = lazy(
 	() => import("#/components/truck/TruckConfigurator"),
 );
@@ -132,6 +134,30 @@ export default function DesignCanvas({
 	const approvedVersion = design?.approvals?.[0]?.version;
 	const isApprovedCurrent = current && approvedVersion === current.version;
 	const spec = (current?.spec ?? null) as SpecShape | null;
+	// The trailer the brief built, shown until the first photoreal render lands.
+	const briefScene = useMemo(
+		() => (spec ? sceneFromSpec(spec, design?.brief) : null),
+		[spec, design?.brief],
+	);
+	// No real pixels yet (nothing rendered, or every view failed): the
+	// trailer the brief built holds the stage.
+	const showBrief =
+		Boolean(briefScene) && !images.some((i) => i.status === "ready");
+	const briefModel = (caption: string, cls?: string) =>
+		briefScene ? (
+			<Suspense
+				fallback={
+					<div
+						className={cn(
+							"h-full w-full animate-pulse bg-[var(--ftf-well)]",
+							cls,
+						)}
+					/>
+				}
+			>
+				<BriefCompanion scene={briefScene} caption={caption} className={cls} />
+			</Suspense>
+		) : null;
 
 	// The stage follows the chat: a thumbnail tapped there opens here.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: only a new selection should switch tabs, not a tab change
@@ -211,7 +237,60 @@ export default function DesignCanvas({
 
 			{tab === "design" && (
 				<div className="flex-1 overflow-y-auto px-4 pb-10 pt-4 sm:px-6">
-					{images.length === 0 && !isGeneratingImages ? (
+					{showBrief ? (
+						// One persistent stage for the brief-built trailer, from the end of
+						// the brief until the first photoreal render actually lands.
+						<div>
+							<div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border-2 border-[var(--ftf-ink)] shadow-[6px_6px_0_var(--ftf-ink)]">
+								{briefModel(
+									isGeneratingImages
+										? "Built from your brief — photoreal renders on the way"
+										: "Built from your brief",
+									"rounded-none border-0 shadow-none",
+								)}
+								{isGeneratingImages && (
+									<div className="pointer-events-none absolute right-3 top-3 flex items-center gap-2 rounded-full border-2 border-[var(--ftf-ink)] bg-white px-3 py-1.5 text-[12px] font-bold">
+										<Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--ftf-orange-500)]" />
+										{progress.step || "Rendering"}
+										{progress.rendersTotal > 0 && (
+											<span className="tabular-nums text-[var(--ftf-ink-3)]">
+												{progress.rendersDone}/{progress.rendersTotal}
+											</span>
+										)}
+									</div>
+								)}
+							</div>
+							{!isGeneratingImages && (
+								<div className="mt-5 flex flex-wrap items-center gap-3">
+									{failed.length > 0 ? (
+										<>
+											<span className="text-[13px] text-[var(--ftf-ink-2)]">
+												The photoreal renders didn&apos;t come back this time.
+											</span>
+											<button
+												type="button"
+												onClick={() => retryFailedRenders()}
+												className="ftf-cta inline-flex items-center gap-1.5 px-5 py-2.5 text-[14px]"
+											>
+												<RotateCcw className="h-4 w-4" /> Try again — free
+											</button>
+										</>
+									) : (
+										<button
+											type="button"
+											onClick={() => renderViews(undefined, "regenerate")}
+											className="ftf-cta px-5 py-2.5 text-[14px]"
+										>
+											Render it photoreal
+										</button>
+									)}
+									<button type="button" onClick={onOpenChat} className={GHOST}>
+										Change something first
+									</button>
+								</div>
+							)}
+						</div>
+					) : images.length === 0 && !isGeneratingImages ? (
 						<div className={cn(CARD, "mx-auto mt-6 max-w-lg p-8 text-center")}>
 							<p className="ftf-display text-[34px]">Your trailer goes here</p>
 							<p className="mt-3 text-[14px] leading-relaxed text-[var(--ftf-ink-2)]">
@@ -648,6 +727,7 @@ export default function DesignCanvas({
 			{tab === "spec" && (
 				<SpecTab
 					spec={spec}
+					brief={design?.brief}
 					layout={layout}
 					estimate={estimate}
 					sessionId={sessionId}
@@ -723,6 +803,7 @@ function Lightbox({
 
 function SpecTab({
 	spec,
+	brief,
 	layout,
 	estimate,
 	sessionId,
@@ -730,6 +811,7 @@ function SpecTab({
 	onAsk,
 }: {
 	spec: SpecShape | null;
+	brief?: { features?: string[]; wrapFinish?: string | null } | null;
 	layout: ReturnType<typeof useChat>["layout"];
 	estimate: ReturnType<typeof useChat>["estimate"];
 	sessionId: string | null;
@@ -875,6 +957,9 @@ function SpecTab({
 									vehicleId={vehicle.id}
 									equipmentIds={spec.equipment ?? []}
 									wrapColors={spec.colors ?? null}
+									brandName={spec.hasBrand ? spec.brand : ""}
+									features={brief?.features ?? []}
+									finish={brief?.wrapFinish ?? null}
 								/>
 							</Suspense>
 							<p className="border-t-2 border-[var(--ftf-ink)] bg-white px-3 py-2 text-[11.5px] text-[var(--ftf-ink-3)]">

@@ -25,7 +25,7 @@ import {
 	Star,
 	X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
 	BUDGETS,
 	CREW_SIZES,
@@ -55,9 +55,18 @@ import {
 	type QuizPicks,
 	quizToDirect,
 } from "#/lib/food-truck/quiz";
+import { useMediaQuery } from "#/hooks/use-media-query";
+import {
+	type BuildScene,
+	describeChange,
+	sceneFromDraft,
+} from "#/lib/food-truck/build-scene";
 import { fileToDataUrl } from "#/lib/image-file";
 import { track } from "#/lib/track";
 import { cn } from "#/lib/utils";
+
+/** three.js stays out of the quiz's first paint. */
+const BriefCompanion = lazy(() => import("./BriefCompanion"));
 
 export interface StyleQuizFlowProps {
 	onComplete: (
@@ -231,6 +240,26 @@ export default function StyleQuizFlow({
 		[d.businessType, d.service, d.peakVolume, d.tradingContexts],
 	);
 
+	// The live 3D build: every answer changes what the companion shows.
+	const scene = useMemo(
+		() =>
+			sceneFromDraft(
+				d,
+				recommendation?.vehicleId ?? null,
+				Math.max(0, stepIndex),
+			),
+		[d, recommendation, stepIndex],
+	);
+	const prevScene = useRef<BuildScene | null>(null);
+	const [caption, setCaption] = useState<string | null>(null);
+	useEffect(() => {
+		const c = describeChange(prevScene.current, scene);
+		if (c) setCaption(c);
+		prevScene.current = scene;
+	}, [scene]);
+	const wide = useMediaQuery("(min-width: 1024px)");
+	const [sheetOpen, setSheetOpen] = useState(false);
+
 	const designBrief = (): DesignBrief =>
 		parseBrief({
 			tradingContexts: d.tradingContexts,
@@ -345,17 +374,92 @@ export default function StyleQuizFlow({
 
 	/* ── Building blocks ─────────────────────────────────────────────── */
 
-	const shell = (children: React.ReactNode) => (
-		<div className="flex h-full w-full flex-col overflow-y-auto bg-[var(--ftf-paper-2)] px-4 py-8">
-			<div className="mx-auto my-auto w-full max-w-2xl">
-				<div className="overflow-hidden rounded border border-[var(--ftf-line)] bg-white shadow-[var(--ftf-shadow-lg)]">
-					<div className="h-1 bg-[var(--ftf-blue-800)]" />
-					<div className="px-5 py-7 sm:px-8">{children}</div>
+	const companion = (cls?: string) => (
+		<Suspense
+			fallback={
+				<div
+					className={cn(
+						"grid h-full w-full place-items-center rounded-2xl border-2 border-[var(--ftf-ink)] bg-[#17130f] text-[13px] text-white/60",
+						cls,
+					)}
+				>
+					Warming up the workshop…
 				</div>
-				<p className="mt-4 text-center text-[11px] text-[var(--ftf-ink-4)]">
-					Free concept renders · no account needed · your design stays private
-				</p>
+			}
+		>
+			<BriefCompanion scene={scene} caption={caption} className={cls} />
+		</Suspense>
+	);
+
+	const shell = (children: React.ReactNode) => (
+		<div className="flex h-full w-full overflow-hidden bg-[var(--ftf-paper-2)]">
+			<div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-4 py-8">
+				<div className="mx-auto my-auto w-full max-w-2xl">
+					<div className="overflow-hidden rounded border border-[var(--ftf-line)] bg-white shadow-[var(--ftf-shadow-lg)]">
+						<div className="h-1 bg-[var(--ftf-blue-800)]" />
+						<div className="px-5 py-7 sm:px-8">{children}</div>
+					</div>
+					<p className="mt-4 text-center text-[11px] text-[var(--ftf-ink-4)]">
+						Free concept renders · no account needed · your design stays private
+					</p>
+				</div>
 			</div>
+			{wide ? (
+				<aside
+					className="w-[min(46vw,680px)] shrink-0 py-6 pr-6"
+					aria-label="Your trailer, building live"
+				>
+					{companion()}
+				</aside>
+			) : (
+				<>
+					<button
+						type="button"
+						onClick={() => setSheetOpen(true)}
+						className="ftf-cta fixed bottom-5 right-4 z-40 flex items-center gap-2 px-4 py-3 text-[14px]"
+						style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+					>
+						See your trailer
+						{scene.equipmentIds.length > 0 && (
+							<span className="rounded-full bg-[var(--ftf-ink)] px-2 py-0.5 text-[11px] text-white">
+								{Object.values(scene.done).filter(Boolean).length}/5
+							</span>
+						)}
+					</button>
+					{sheetOpen && (
+						<div
+							className="fixed inset-0 z-50 flex flex-col bg-[#17130f]/70"
+							role="dialog"
+							aria-modal="true"
+							aria-label="Your trailer"
+						>
+							<button
+								type="button"
+								className="flex-1"
+								aria-label="Close"
+								onClick={() => setSheetOpen(false)}
+							/>
+							<div className="h-[78dvh] rounded-t-3xl border-t-2 border-[var(--ftf-ink)] bg-[var(--ftf-paper-2)] p-3">
+								<div className="mb-2 flex items-center justify-between px-1">
+									<p className="text-[13px] font-extrabold">
+										Your trailer, so far
+									</p>
+									<button
+										type="button"
+										onClick={() => setSheetOpen(false)}
+										className="rounded-full border-2 border-[var(--ftf-ink)] bg-white px-3 py-1 text-[12px] font-bold"
+									>
+										Back to the brief
+									</button>
+								</div>
+								<div className="h-[calc(100%-2.5rem)]">
+									{companion("shadow-none")}
+								</div>
+							</div>
+						</div>
+					)}
+				</>
+			)}
 		</div>
 	);
 

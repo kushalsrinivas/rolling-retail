@@ -32,6 +32,7 @@ import {
 } from "#/lib/food-truck/equipment";
 import type { VehicleBody } from "#/lib/food-truck/images";
 import { defaultOpenings } from "#/lib/food-truck/openings";
+import { OVERHEAD_Y, partFor } from "./parts";
 
 export interface TruckDimensions {
 	lengthM: number;
@@ -63,13 +64,20 @@ function hexOr(hex: string, fallback: string) {
 	return /^#[0-9a-f]{6}$/i.test(hex) ? hex : fallback;
 }
 
-/** Half-width of the skin at height y (local), for curved Airstream walls. */
-function skinZAt(dims: TruckDimensions, y: number) {
-	const { widthM: W, heightM: H, body } = dims;
+/**
+ * Half-width of the skin at height y (local), for curved Airstream walls.
+ * Pass x to also follow the domed nose and tail, which pinch in lengthwise.
+ */
+function skinZAt(dims: TruckDimensions, y: number, x = 0) {
+	const { lengthM: L, widthM: W, heightM: H, body } = dims;
 	if (body !== "airstream") return W / 2;
 	const cy = FLOOR_Y + (H - BELLY) / 2;
-	const t = Math.min(0.98, Math.abs(y - cy) / ((H + BELLY) / 2));
-	return (W / 2) * Math.sqrt(1 - t * t);
+	const t = Math.abs(y - cy) / ((H + BELLY) / 2);
+	// Same proportions as useAirstreamGeometry: domes kx/2 long.
+	const kx = Math.max(1, 1.3 * H);
+	const straightHalf = (Math.max(0.05, L / kx - 1) * kx) / 2;
+	const u = Math.max(0, Math.abs(x) - straightHalf) / (kx / 2);
+	return (W / 2) * Math.sqrt(Math.max(0.0004, 1 - t * t - u * u));
 }
 
 /* ── Shell ─────────────────────────────────────────────────────────────── */
@@ -241,11 +249,13 @@ function Hatch({
 	open,
 	trim,
 	clipTop,
+	hidePanel = false,
 }: {
 	dims: TruckDimensions;
 	open: boolean;
 	trim: string;
 	clipTop: THREE.Plane | null;
+	hidePanel?: boolean;
 }) {
 	const o = defaultOpenings(dims.body, dims.lengthM).find(
 		(x) => x.type === "hatch",
@@ -308,19 +318,19 @@ function Hatch({
 			{/* counter shelf */}
 			<mesh position={[x, sillY - 0.02, z + 0.15]} castShadow>
 				<boxGeometry args={[w + 0.1, 0.035, 0.3]} />
-				<meshStandardMaterial {...STAINLESS_TOP} />
+				<meshStandardMaterial {...STAINLESS_TOP} clippingPlanes={planes} />
 			</mesh>
 			{/* hatch door, hinged on its top edge — hidden in the cutaway, where it
 			    would hang straight across the view into the line */}
 			<group
 				ref={panel}
-				visible={!clipTop}
+				visible={!hidePanel}
 				position={[x, topY, z + 0.02]}
 				rotation={[open ? -1.15 : 0, 0, 0]}
 			>
 				<mesh position={[0, -h / 2, 0.015]} castShadow>
 					<boxGeometry args={[w + 0.06, h + 0.04, 0.035]} />
-					<meshStandardMaterial {...STAINLESS} />
+					<meshStandardMaterial {...STAINLESS} clippingPlanes={planes} />
 				</mesh>
 			</group>
 			{/* warm light from inside */}
@@ -516,7 +526,15 @@ function RunningGear({ dims }: { dims: TruckDimensions }) {
 	);
 }
 
-function Roof({ dims, clipped }: { dims: TruckDimensions; clipped: boolean }) {
+function Roof({
+	dims,
+	clipped,
+	planes,
+}: {
+	dims: TruckDimensions;
+	clipped: boolean;
+	planes: THREE.Plane[];
+}) {
 	if (clipped) return null;
 	const roofY = FLOOR_Y + dims.heightM;
 	return (
@@ -527,7 +545,11 @@ function Roof({ dims, clipped }: { dims: TruckDimensions; clipped: boolean }) {
 				position={[-dims.lengthM * 0.05, roofY + 0.1, 0]}
 				castShadow
 			>
-				<meshStandardMaterial color="#f2f2f0" roughness={0.55} />
+				<meshStandardMaterial
+					color="#f2f2f0"
+					roughness={0.55}
+					clippingPlanes={planes}
+				/>
 			</RoundedBox>
 			{[dims.lengthM * 0.28, -dims.lengthM * 0.3].map((x) => (
 				<mesh
@@ -536,7 +558,11 @@ function Roof({ dims, clipped }: { dims: TruckDimensions; clipped: boolean }) {
 					castShadow
 				>
 					<boxGeometry args={[0.36, 0.1, 0.36]} />
-					<meshStandardMaterial color="#e4e4e7" roughness={0.6} />
+					<meshStandardMaterial
+						color="#e4e4e7"
+						roughness={0.6}
+						clippingPlanes={planes}
+					/>
 				</mesh>
 			))}
 		</group>
@@ -545,68 +571,62 @@ function Roof({ dims, clipped }: { dims: TruckDimensions; clipped: boolean }) {
 
 /* ── Equipment ────────────────────────────────────────────────────────── */
 
-function topDetail(id: string, w: number, d: number) {
-	if (/griddle|plancha|chargrill|hot-station/.test(id))
-		return (
-			<mesh position={[0, 0.012, 0]}>
-				<boxGeometry args={[w * 0.86, 0.02, d * 0.7]} />
-				<meshStandardMaterial
-					color="#1b1b1f"
-					metalness={0.6}
-					roughness={0.45}
-				/>
+function prefersReducedMotion() {
+	return (
+		typeof window !== "undefined" &&
+		window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+	);
+}
+
+/** One unit: drops into place when it is added, outlined when active. */
+function Unit({
+	children,
+	position,
+	w,
+	h,
+	d,
+	highlight,
+	handlers,
+	label,
+}: {
+	children: React.ReactNode;
+	position: [number, number, number];
+	w: number;
+	h: number;
+	d: number;
+	highlight: boolean;
+	handlers: Record<string, (e: { stopPropagation: () => void }) => void>;
+	label: React.ReactNode;
+}) {
+	const ref = useRef<THREE.Group>(null);
+	const still = useMemo(prefersReducedMotion, []);
+	useFrame((_, dt) => {
+		const g = ref.current;
+		if (!g || still) return;
+		g.position.y = THREE.MathUtils.damp(g.position.y, position[1], 7, dt);
+		const s = THREE.MathUtils.damp(g.scale.x, 1, 7, dt);
+		g.scale.setScalar(s);
+	});
+	return (
+		<group
+			ref={ref}
+			position={[
+				position[0],
+				still ? position[1] : position[1] + 0.9,
+				position[2],
+			]}
+			scale={still ? 1 : 0.55}
+		>
+			{children}
+			{/* invisible hit box: hover, click and the outline */}
+			<mesh position={[0, h / 2, 0]} {...handlers}>
+				<boxGeometry args={[w + 0.02, h + 0.02, d + 0.02]} />
+				<meshBasicMaterial transparent opacity={0} depthWrite={false} />
+				{highlight && <Edges color="#ff5a1f" />}
 			</mesh>
-		);
-	if (/fryer/.test(id))
-		return (
-			<group>
-				{[-0.2, 0.2].map((f) => (
-					<mesh key={f} position={[w * f, 0.01, 0]}>
-						<boxGeometry args={[w * 0.32, 0.02, d * 0.6]} />
-						<meshStandardMaterial color="#3a2a12" roughness={0.4} />
-					</mesh>
-				))}
-			</group>
-		);
-	if (/espresso|coffee/.test(id))
-		return (
-			<RoundedBox
-				args={[w * 0.8, 0.42, d * 0.7]}
-				radius={0.04}
-				position={[0, 0.22, 0]}
-			>
-				<meshStandardMaterial
-					color="#c8ccd1"
-					metalness={0.95}
-					roughness={0.2}
-				/>
-			</RoundedBox>
-		);
-	if (/pizza-oven/.test(id))
-		return (
-			<RoundedBox
-				args={[w * 0.9, 0.5, d * 0.85]}
-				radius={0.05}
-				position={[0, 0.26, 0]}
-			>
-				<meshStandardMaterial color="#2b2b30" metalness={0.5} roughness={0.5} />
-			</RoundedBox>
-		);
-	if (/display|dipping/.test(id))
-		return (
-			<mesh position={[0, 0.2, 0]}>
-				<boxGeometry args={[w * 0.95, 0.38, d * 0.9]} />
-				<meshPhysicalMaterial
-					color="#dff3ff"
-					transmission={0.7}
-					roughness={0.05}
-					thickness={0.02}
-					transparent
-					opacity={0.6}
-				/>
-			</mesh>
-		);
-	return null;
+			{label}
+		</group>
+	);
 }
 
 function EquipmentUnits({
@@ -619,6 +639,7 @@ function EquipmentUnits({
 	palette,
 	showLabels,
 	cutaway = false,
+	roofUp = true,
 }: {
 	layout: GalleyLayout;
 	dims: TruckDimensions;
@@ -629,6 +650,7 @@ function EquipmentUnits({
 	palette: TruckPalette;
 	showLabels: boolean;
 	cutaway?: boolean;
+	roofUp?: boolean;
 }) {
 	const { lengthM, widthM } = dims;
 	const runStart = -lengthM / 2 + layout.marginM;
@@ -636,15 +658,37 @@ function EquipmentUnits({
 		<group>
 			{layout.placed.map((p) => {
 				const { spec } = p;
-				const w = spec.widthM;
-				const d = spec.depthM;
-				const h = spec.heightM;
-				const x = runStart + p.offsetM + w / 2;
-				const zSign = p.wall === "curbside" ? 1 : -1;
-				const inner = skinZAt(dims, FLOOR_Y + 0.9);
-				const z = zSign * (Math.min(inner, widthM / 2) - d / 2 - 0.08);
 				const mount = spec.mount ?? "floor";
 				if (mount === "subfloor") return null;
+				// Overhead units hang from the roof: with the walls cut away or not
+				// yet built they would float in mid-air.
+				if (mount === "overhead" && (cutaway || !roofUp)) return null;
+				const Part = partFor(spec.id);
+				const w = spec.widthM;
+				const d = spec.depthM;
+				const zSign = p.wall === "curbside" ? 1 : -1;
+				// Against the wall at the unit's own height: an Airstream's skin
+				// curves in toward the roof, so overhead units sit further inboard.
+				// Check the tightest corner — the top, at the end nearest a dome.
+				const x = runStart + p.offsetM + w / 2;
+				const topY =
+					mount === "overhead"
+						? FLOOR_Y + (OVERHEAD_Y[spec.id] ?? 1.8) + spec.heightM + 0.15
+						: FLOOR_Y + Math.max(0.9, spec.heightM + 0.05);
+				const outerX = Math.abs(x) + w / 2;
+				const inner = Math.min(skinZAt(dims, topY, outerX), widthM / 2);
+				const z = zSign * Math.max(0, inner - d / 2 - 0.08);
+				const face = -zSign as 1 | -1;
+				const h =
+					mount === "overhead"
+						? spec.heightM
+						: mount === "counter"
+							? 0.9 + spec.heightM
+							: Math.max(spec.heightM, 0.9);
+				const y =
+					mount === "overhead"
+						? FLOOR_Y + (OVERHEAD_Y[spec.id] ?? 1.8)
+						: FLOOR_Y + 0.02;
 				const active = selectedId === spec.id;
 				const hover = hoveredId === spec.id;
 				const accent = ZONE_COLOR[spec.zone];
@@ -663,120 +707,331 @@ function EquipmentUnits({
 						document.body.style.cursor = "";
 					},
 				};
-				const glow = active ? 0.35 : hover ? 0.18 : 0;
-				// Above the cut line an overhead unit would float in mid-air.
-				if (mount === "overhead" && cutaway) return null;
-				if (mount === "overhead") {
-					return (
-						<group
-							key={`${spec.id}-${p.offsetM}`}
-							position={[x, FLOOR_Y + 1.95, z]}
-							{...handlers}
-						>
-							<mesh castShadow>
-								<boxGeometry args={[w, 0.32, d]} />
-								<meshStandardMaterial
-									{...STAINLESS}
-									emissive="#ff5a1f"
-									emissiveIntensity={glow}
-								/>
-								{(active || hover) && <Edges color="#ff5a1f" />}
-							</mesh>
-						</group>
-					);
-				}
-				const baseY = mount === "counter" ? FLOOR_Y + 0.9 : FLOOR_Y;
-				const bodyH = mount === "counter" ? h : Math.max(0.3, h - 0.04);
-				const aisleFace = -zSign * (d / 2 + 0.001);
 				return (
-					<group
+					<Unit
 						key={`${spec.id}-${p.wall}-${p.offsetM}`}
-						position={[x, baseY, z]}
-						{...handlers}
+						position={[x, y, z]}
+						w={w}
+						h={h}
+						d={d}
+						highlight={active || hover}
+						handlers={handlers}
+						label={
+							showLabels && (active || hover) ? (
+								<Html
+									position={[0, h + 0.45, 0]}
+									center
+									distanceFactor={8}
+									zIndexRange={[20, 0]}
+								>
+									<div
+										style={{
+											background: "#17130f",
+											color: "#fff6e9",
+											padding: "6px 10px",
+											borderRadius: 999,
+											fontSize: 12,
+											fontWeight: 700,
+											whiteSpace: "nowrap",
+											border: "2px solid #ff5a1f",
+											fontFamily: "Inter, system-ui, sans-serif",
+										}}
+									>
+										{spec.label}
+										{spec.fuel === "propane"
+											? " · propane"
+											: spec.watts > 0
+												? ` · ${(spec.watts / 1000).toFixed(1)} kW`
+												: ""}
+									</div>
+								</Html>
+							) : null
+						}
 					>
-						{/* cabinet */}
-						<mesh position={[0, bodyH / 2, 0]} castShadow receiveShadow>
-							<boxGeometry args={[w - 0.01, bodyH, d]} />
-							<meshStandardMaterial
-								{...STAINLESS}
-								emissive="#ff5a1f"
-								emissiveIntensity={glow}
-							/>
-							{(active || hover) && <Edges color="#ff5a1f" />}
-						</mesh>
-						{mount === "floor" && (
-							<>
-								{/* worktop */}
-								<mesh position={[0, bodyH + 0.02, 0]} castShadow>
-									<boxGeometry args={[w + 0.01, 0.04, d + 0.03]} />
-									<meshStandardMaterial {...STAINLESS_TOP} />
-								</mesh>
-								<group position={[0, bodyH + 0.04, 0]}>
-									{topDetail(spec.id, w, d)}
-								</group>
-								{/* kick plate */}
-								<mesh position={[0, 0.05, aisleFace]}>
-									<boxGeometry args={[w - 0.02, 0.1, 0.01]} />
-									<meshStandardMaterial color="#26262b" roughness={0.8} />
-								</mesh>
-								{/* door seam + handle on the aisle face */}
-								<mesh position={[0, bodyH * 0.5, aisleFace]}>
-									<boxGeometry args={[0.006, bodyH * 0.7, 0.006]} />
-									<meshStandardMaterial color="#5a5e64" />
-								</mesh>
-								<mesh
-									position={[0, bodyH * 0.82, aisleFace - zSign * 0.02]}
-									rotation={[0, 0, Math.PI / 2]}
-								>
-									<cylinderGeometry
-										args={[0.012, 0.012, Math.min(0.4, w * 0.6), 10]}
-									/>
-									<meshStandardMaterial {...STAINLESS_TOP} />
-								</mesh>
-								{palette === "zones" && (
-									<mesh position={[0, bodyH - 0.06, aisleFace]}>
-										<boxGeometry args={[w - 0.04, 0.03, 0.006]} />
-										<meshStandardMaterial
-											color={accent}
-											emissive={accent}
-											emissiveIntensity={0.4}
-										/>
-									</mesh>
-								)}
-							</>
+						<Part w={w} d={d} h={spec.heightM} face={face} />
+						{palette === "zones" && mount !== "overhead" && (
+							<mesh position={[0, 0.82, face * (d / 2 + 0.004)]}>
+								<boxGeometry args={[w - 0.06, 0.025, 0.004]} />
+								<meshStandardMaterial
+									color={accent}
+									emissive={accent}
+									emissiveIntensity={0.4}
+								/>
+							</mesh>
 						)}
-						{showLabels && (active || hover) && (
-							<Html
-								position={[0, bodyH + 0.55, 0]}
-								center
-								distanceFactor={8}
-								zIndexRange={[20, 0]}
-							>
-								<div
-									style={{
-										background: "#17130f",
-										color: "#fff6e9",
-										padding: "6px 10px",
-										borderRadius: 999,
-										fontSize: 12,
-										fontWeight: 700,
-										whiteSpace: "nowrap",
-										border: "2px solid #ff5a1f",
-										fontFamily: "Inter, system-ui, sans-serif",
-									}}
-								>
-									{spec.label}
-									{spec.fuel === "propane"
-										? " · propane"
-										: spec.watts > 0
-											? ` · ${(spec.watts / 1000).toFixed(1)} kW`
-											: ""}
-								</div>
-							</Html>
-						)}
-					</group>
+					</Unit>
 				);
 			})}
+		</group>
+	);
+}
+
+/* ── Features and lettering ───────────────────────────────────────────── */
+
+function useWordmarkTexture(text: string, color: string) {
+	return useMemo(() => {
+		if (!text || typeof document === "undefined") return null;
+		const c = document.createElement("canvas");
+		c.width = 1024;
+		c.height = 256;
+		const ctx = c.getContext("2d");
+		if (!ctx) return null;
+		ctx.clearRect(0, 0, c.width, c.height);
+		ctx.fillStyle = color;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		let size = 170;
+		ctx.font = `400 ${size}px Anton, Impact, "Arial Narrow", sans-serif`;
+		while (
+			ctx.measureText(text.toUpperCase()).width > c.width * 0.94 &&
+			size > 40
+		) {
+			size -= 8;
+			ctx.font = `400 ${size}px Anton, Impact, "Arial Narrow", sans-serif`;
+		}
+		ctx.fillText(text.toUpperCase(), c.width / 2, c.height / 2 + 6);
+		const t = new THREE.CanvasTexture(c);
+		t.colorSpace = THREE.SRGBColorSpace;
+		t.anisotropy = 4;
+		return t;
+	}, [text, color]);
+}
+
+function Features({
+	dims,
+	features,
+	colors,
+	brandName,
+	planes,
+	night,
+}: {
+	dims: TruckDimensions;
+	features: readonly string[];
+	colors: ReturnType<typeof colorPlan>;
+	brandName: string;
+	planes: THREE.Plane[];
+	night: boolean;
+}) {
+	const hatch = defaultOpenings(dims.body, dims.lengthM).find(
+		(o) => o.type === "hatch",
+	);
+	const band = hexOr(colors.band.hex, "#ff5a1f");
+	const trim = hexOr(colors.trim.hex, BLACK);
+	const onLight =
+		dims.body === "airstream"
+			? hexOr(colors.panel.hex, "#efe4cf")
+			: hexOr(colors.base.hex, "#f5f5f5");
+	const darkBase = /^#[0-3]/i.test(onLight);
+	const wordmark = useWordmarkTexture(brandName, darkBase ? "#fff6e9" : band);
+	const signText = useWordmarkTexture(brandName, "#fff6e9");
+	if (!hatch) return null;
+	const hx = -dims.lengthM / 2 + hatch.xFromFront + hatch.width / 2;
+	const sill = FLOOR_Y + hatch.sillHeight;
+	const top = sill + hatch.height;
+	const zAt = (y: number) => skinZAt(dims, y) + 0.01;
+	const roofY = FLOOR_Y + dims.heightM;
+	const has = (f: string) => features.includes(f);
+	// Wordmark between the front corner and the hatch, on the upper wall.
+	const wmCenterX =
+		(-dims.lengthM / 2 + (hx - hatch.width / 2)) / 2 +
+		(dims.body === "airstream" ? 0.25 : 0);
+	const wmWidth = Math.max(
+		0.8,
+		Math.min(1.8, hx - hatch.width / 2 - -dims.lengthM / 2 - 0.35),
+	);
+	const wmY =
+		dims.body === "airstream" ? sill + 0.65 : FLOOR_Y + dims.heightM * 0.72;
+	return (
+		<group>
+			{wordmark && (
+				<>
+					{dims.body === "airstream" && (
+						<mesh position={[wmCenterX, wmY, zAt(wmY) - 0.002]}>
+							<planeGeometry args={[wmWidth + 0.15, wmWidth * 0.32]} />
+							<meshStandardMaterial
+								color={onLight}
+								roughness={0.6}
+								clippingPlanes={planes}
+							/>
+						</mesh>
+					)}
+					<mesh position={[wmCenterX, wmY, zAt(wmY) + 0.004]}>
+						<planeGeometry args={[wmWidth, wmWidth / 4]} />
+						<meshStandardMaterial
+							map={wordmark}
+							transparent
+							roughness={0.5}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+					{/* roadside: an unbroken wall, so the wordmark runs larger */}
+					<mesh
+						position={[0, wmY, -zAt(wmY) - 0.004]}
+						rotation={[0, Math.PI, 0]}
+					>
+						<planeGeometry
+							args={[
+								Math.min(dims.lengthM * 0.6, 2.6),
+								Math.min(dims.lengthM * 0.6, 2.6) / 4,
+							]}
+						/>
+						<meshStandardMaterial
+							map={wordmark}
+							transparent
+							roughness={0.5}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+				</>
+			)}
+			{has("awning") && (
+				<group position={[hx, top + 0.12, zAt(top)]}>
+					<mesh position={[0, -0.12, 0.55]} rotation={[0.42, 0, 0]} castShadow>
+						<boxGeometry args={[hatch.width + 0.4, 0.03, 1.15]} />
+						<meshStandardMaterial
+							color={trim === BLACK ? band : trim}
+							roughness={0.85}
+							side={THREE.DoubleSide}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+					{[-1, 1].map((sgn) => (
+						<mesh
+							key={sgn}
+							position={[sgn * (hatch.width / 2 + 0.15), -0.42, 0.5]}
+							rotation={[-0.75, 0, 0]}
+						>
+							<cylinderGeometry args={[0.015, 0.015, 0.95, 8]} />
+							<meshStandardMaterial
+								color="#9aa0a6"
+								metalness={0.8}
+								roughness={0.3}
+								clippingPlanes={planes}
+							/>
+						</mesh>
+					))}
+				</group>
+			)}
+			{has("roof-sign") && (
+				<group position={[-dims.lengthM * 0.18, roofY + 0.38, 0]}>
+					<mesh castShadow>
+						<boxGeometry args={[1.25, 0.42, 0.14]} />
+						<meshStandardMaterial
+							color={band}
+							emissive={band}
+							emissiveIntensity={night ? 0.6 : 0.15}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+					{signText &&
+						[1, -1].map((sgn) => (
+							<mesh
+								key={sgn}
+								position={[0, 0, sgn * 0.072]}
+								rotation={[0, sgn > 0 ? 0 : Math.PI, 0]}
+							>
+								<planeGeometry args={[1.15, 0.29]} />
+								<meshBasicMaterial
+									map={signText}
+									transparent
+									clippingPlanes={planes}
+								/>
+							</mesh>
+						))}
+					<mesh position={[0, -0.28, 0]}>
+						<boxGeometry args={[0.06, 0.16, 0.06]} />
+						<meshStandardMaterial color={BLACK} clippingPlanes={planes} />
+					</mesh>
+				</group>
+			)}
+			{has("night-lighting") && (
+				<group>
+					<mesh position={[hx, top + 0.04, zAt(top) + 0.03]}>
+						<boxGeometry args={[hatch.width, 0.025, 0.03]} />
+						<meshStandardMaterial
+							color="#fff3d6"
+							emissive="#ffe2a8"
+							emissiveIntensity={night ? 3 : 1.2}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+					{[-1, 1].map((sgn) => (
+						<group
+							key={sgn}
+							position={[
+								hx + sgn * (hatch.width / 2 + 0.35),
+								top + 0.15,
+								zAt(top + 0.15) + 0.06,
+							]}
+						>
+							<mesh>
+								<cylinderGeometry args={[0.045, 0.06, 0.08, 12]} />
+								<meshStandardMaterial color={BLACK} clippingPlanes={planes} />
+							</mesh>
+							{night && (
+								<spotLight
+									position={[0, -0.05, 0]}
+									angle={0.7}
+									penumbra={0.6}
+									intensity={6}
+									distance={4}
+									color="#ffd9a0"
+								/>
+							)}
+						</group>
+					))}
+				</group>
+			)}
+			{has("menu-board") && (
+				<group
+					position={[
+						hx + hatch.width / 2 + 0.55,
+						sill + 0.35,
+						zAt(sill + 0.35) + 0.02,
+					]}
+				>
+					<mesh>
+						<boxGeometry args={[0.7, 0.95, 0.04]} />
+						<meshStandardMaterial
+							color={trim}
+							roughness={0.5}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+					<mesh position={[0, 0, 0.022]}>
+						<planeGeometry args={[0.62, 0.86]} />
+						<meshStandardMaterial
+							color="#1c1f1d"
+							roughness={0.9}
+							clippingPlanes={planes}
+						/>
+					</mesh>
+				</group>
+			)}
+			{has("condiment-shelf") && (
+				<mesh position={[hx, sill - 0.32, zAt(sill - 0.32) + 0.12]} castShadow>
+					<boxGeometry args={[hatch.width * 0.7, 0.03, 0.22]} />
+					<meshStandardMaterial
+						color="#dde1e5"
+						metalness={0.95}
+						roughness={0.22}
+						clippingPlanes={planes}
+					/>
+				</mesh>
+			)}
+			{has("visible-kitchen") && (
+				<mesh position={[hx, sill + 0.28, zAt(sill + 0.28) + 0.12]}>
+					<boxGeometry args={[hatch.width - 0.1, 0.5, 0.01]} />
+					<meshPhysicalMaterial
+						color="#e6f4ff"
+						transmission={0.8}
+						roughness={0.05}
+						transparent
+						opacity={0.35}
+						clippingPlanes={planes}
+					/>
+				</mesh>
+			)}
 		</group>
 	);
 }
@@ -802,6 +1057,17 @@ export interface TruckModelProps {
 	showLabels?: boolean;
 	/** "gloss" | "matte" | "satin" — the wrap's film finish. */
 	finish?: string | null;
+	/**
+	 * How much of the shell is built: 0 = chassis, deck and line only,
+	 * 1 = full body. Changes animate as the walls rising.
+	 */
+	reveal?: number;
+	/** Brief feature ids: awning, roof-sign, night-lighting, menu-board… */
+	features?: readonly string[];
+	/** Lettered on both long walls and the roof sign. */
+	brandName?: string;
+	/** Night service: signs and lights glow. */
+	night?: boolean;
 }
 
 export default function TruckModel({
@@ -817,6 +1083,10 @@ export default function TruckModel({
 	hatchOpen = true,
 	showLabels = false,
 	finish,
+	reveal = 1,
+	features = [],
+	brandName = "",
+	night = false,
 }: TruckModelProps) {
 	const { gl } = useThree();
 	useEffect(() => {
@@ -837,14 +1107,30 @@ export default function TruckModel({
 	const roughness =
 		finish === "matte" ? 0.78 : finish === "satin" ? 0.45 : 0.24;
 	const yOffset = -(FLOOR_Y + dims.heightM) / 2;
-	// Cut just above the counters: walls stay, the roof and upper walls go.
-	const clipTop = useMemo(
-		() =>
-			cutaway
-				? new THREE.Plane(new THREE.Vector3(0, -1, 0), FLOOR_Y + 1.2 + yOffset)
-				: null,
-		[cutaway, yOffset],
+
+	// One clipping plane drives both the cutaway and the build-up: its
+	// height eases toward the target every frame, so the walls rise (or the
+	// cut drops) instead of popping.
+	const clip = useMemo(
+		() => new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000),
+		[],
 	);
+	const target = cutaway
+		? FLOOR_Y + 1.2 + yOffset
+		: reveal >= 1
+			? FLOOR_Y + dims.heightM + 2 + yOffset
+			: FLOOR_Y + 0.03 + (dims.heightM + 2) * Math.max(0, reveal) + yOffset;
+	const still = useMemo(prefersReducedMotion, []);
+	const first = useRef(true);
+	useFrame((_, dt) => {
+		if (first.current || still) {
+			clip.constant = target;
+			first.current = false;
+			return;
+		}
+		clip.constant = THREE.MathUtils.damp(clip.constant, target, 2.6, dt);
+	});
+	const shellVisible = cutaway || reveal > 0;
 
 	return (
 		<group
@@ -855,7 +1141,7 @@ export default function TruckModel({
 				dims={dims}
 				colors={colors}
 				finishRoughness={roughness}
-				clipTop={clipTop}
+				clipTop={clip}
 			/>
 			{/* deck */}
 			<mesh position={[0, FLOOR_Y + 0.012, 0]} receiveShadow>
@@ -867,7 +1153,7 @@ export default function TruckModel({
 					]}
 				/>
 				<meshStandardMaterial
-					color={cutaway ? "#5b5d63" : "#2c2c31"}
+					color={cutaway || !shellVisible ? "#6b6d73" : "#2c2c31"}
 					roughness={0.9}
 				/>
 			</mesh>
@@ -875,20 +1161,21 @@ export default function TruckModel({
 				dims={dims}
 				open={hatchOpen}
 				trim={colors.trim.hex}
-				clipTop={clipTop}
+				clipTop={clip}
+				hidePanel={cutaway}
 			/>
-			{/* Cutaway: light the galley like a kitchen, so the line reads. */}
-			{cutaway && (
+			{/* Cutaway / open deck: light the galley like a kitchen, so the line reads. */}
+			{(cutaway || reveal < 1) && (
 				<>
 					<pointLight
 						position={[-dims.lengthM * 0.25, FLOOR_Y + 2.2, 0]}
-						intensity={6}
+						intensity={5}
 						distance={6}
 						color="#fff1dd"
 					/>
 					<pointLight
 						position={[dims.lengthM * 0.25, FLOOR_Y + 2.2, 0]}
-						intensity={6}
+						intensity={5}
 						distance={6}
 						color="#fff1dd"
 					/>
@@ -897,9 +1184,17 @@ export default function TruckModel({
 			<Doors
 				dims={dims}
 				color={hexOr(colors.band.hex, "#d4d4d8")}
-				clipTop={clipTop}
+				clipTop={clip}
 			/>
-			<Roof dims={dims} clipped={cutaway} />
+			<Roof dims={dims} clipped={cutaway} planes={[clip]} />
+			<Features
+				dims={dims}
+				features={features}
+				colors={colors}
+				brandName={brandName}
+				planes={[clip]}
+				night={night}
+			/>
 			<RunningGear dims={dims} />
 			<EquipmentUnits
 				layout={layout}
@@ -911,6 +1206,7 @@ export default function TruckModel({
 				palette={palette}
 				showLabels={showLabels}
 				cutaway={cutaway}
+				roofUp={reveal >= 1}
 			/>
 		</group>
 	);

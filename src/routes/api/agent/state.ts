@@ -75,6 +75,7 @@ export const Route = createFileRoute("/api/agent/state")({
 							stamp: current
 								? versionStamp(current.version, current.state)
 								: null,
+							brief: s.brief,
 						},
 						lead: s.lead,
 						spec: s.spec,

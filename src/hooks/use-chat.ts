@@ -201,6 +201,13 @@ export interface DesignState {
 		createdAt: number;
 	}>;
 	stamp?: string | null;
+	/** Operating brief — features, finish, pitch — for the brief-built 3D model. */
+	brief?: {
+		features?: string[];
+		wrapFinish?: string | null;
+		tradingContexts?: string[];
+		servicePeriod?: string | null;
+	} | null;
 }
 
 type IncomingImage = {

@@ -40,6 +40,8 @@ export const Route = createFileRoute("/api/agent/design")({
 					versions: s.designVersions,
 					approvals: approvalsFor(s),
 					stamp: current ? versionStamp(current.version, current.state) : null,
+					// The brief rebuilds the 3D model the workspace shows before renders land.
+					brief: s.brief,
 				});
 			},
 			POST: async ({ request }) => {

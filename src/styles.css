@@ -926,3 +926,23 @@ html {
     color: var(--foreground);
   }
 }
+
+/* Brief companion: each new build caption slides in. */
+.ftf-caption {
+  animation: ftf-caption-in 0.45s var(--ftf-ease) both;
+}
+@keyframes ftf-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ftf-caption {
+    animation: none;
+  }
+}

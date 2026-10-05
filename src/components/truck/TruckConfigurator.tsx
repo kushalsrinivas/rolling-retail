@@ -124,6 +124,8 @@ export interface TruckConfiguratorProps {
 	equipmentIds: string[];
 	wrapColors?: string[] | null;
 	finish?: string | null;
+	brandName?: string;
+	features?: readonly string[];
 	className?: string;
 }
 
@@ -132,6 +134,8 @@ export default function TruckConfigurator({
 	equipmentIds,
 	wrapColors,
 	finish,
+	brandName,
+	features,
 	className,
 }: TruckConfiguratorProps) {
 	const [selected, setSelected] = useState<string | null>(null);
@@ -229,6 +233,8 @@ export default function TruckConfigurator({
 							onHoverEquipment={setHovered}
 							wrapColors={wrapColors}
 							finish={finish}
+							brandName={brandName}
+							features={features}
 							palette="zones"
 							showLabels
 						/>
