@@ -22,8 +22,8 @@ export interface TrailerArtProps {
 
 export function TrailerArt({
 	vehicleId,
-	primary = "#e8641b",
-	accent = "#111110",
+	primary = "#ff5a1f",
+	accent = "#17130f",
 	className,
 	title,
 }: TrailerArtProps) {
@@ -76,7 +76,14 @@ export function TrailerArt({
 			/>
 			<circle cx={bodyLeft - 60} cy={bodyBottom + 7} r={6} fill={accent} />
 			{/* jack */}
-			<rect x={bodyLeft - 30} y={bodyBottom - 4} width={5} height={groundY - bodyBottom} fill={accent} opacity={0.7} />
+			<rect
+				x={bodyLeft - 30}
+				y={bodyBottom - 4}
+				width={5}
+				height={groundY - bodyBottom}
+				fill={accent}
+				opacity={0.7}
+			/>
 			{/* body */}
 			<rect
 				x={bodyLeft}
@@ -102,11 +109,14 @@ export function TrailerArt({
 						opacity={0.55}
 					/>
 					{/* rivet seams */}
-					{Array.from({ length: Math.floor(W / 70) }, (_, i) => (
+					{Array.from(
+						{ length: Math.floor(W / 70) },
+						(_, i) => bodyLeft + 70 * (i + 1),
+					).map((x) => (
 						<line
-							key={`seam-${bodyLeft + 70 * (i + 1)}`}
-							x1={bodyLeft + 70 * (i + 1)}
-							x2={bodyLeft + 70 * (i + 1)}
+							key={`seam-${x}`}
+							x1={x}
+							x2={x}
 							y1={bodyTop + 6}
 							y2={bodyBottom - 6}
 							stroke="#9aa1a8"
@@ -117,26 +127,55 @@ export function TrailerArt({
 			)}
 			{/* wrap band / lower third */}
 			<clipPath id={`clip-${vehicleId}`}>
-				<rect x={bodyLeft} y={bodyTop} width={W} height={bodyBottom - bodyTop} rx={r} />
+				<rect
+					x={bodyLeft}
+					y={bodyTop}
+					width={W}
+					height={bodyBottom - bodyTop}
+					rx={r}
+				/>
 			</clipPath>
 			<rect
 				clipPath={`url(#clip-${vehicleId})`}
 				x={bodyLeft}
-				y={airstream ? hatchBottom + 8 : bodyBottom - (bodyBottom - bodyTop) * 0.34}
+				y={
+					airstream
+						? hatchBottom + 8
+						: bodyBottom - (bodyBottom - bodyTop) * 0.34
+				}
 				width={W}
 				height={airstream ? 26 : (bodyBottom - bodyTop) * 0.34}
 				fill={primary}
 			/>
 			{/* hatch opening */}
-			<rect x={hatchX} y={hatchTop} width={hatchW} height={hatchBottom - hatchTop} fill="#1c1c1e" />
-			<rect x={hatchX + 8} y={hatchTop + 10} width={hatchW - 16} height={6} fill="#f6c97a" opacity={0.85} />
+			<rect
+				x={hatchX}
+				y={hatchTop}
+				width={hatchW}
+				height={hatchBottom - hatchTop}
+				fill="#1c1c1e"
+			/>
+			<rect
+				x={hatchX + 8}
+				y={hatchTop + 10}
+				width={hatchW - 16}
+				height={6}
+				fill="#f6c97a"
+				opacity={0.85}
+			/>
 			{/* hatch door propped open upward */}
 			<path
 				d={`M${hatchX - 4} ${hatchTop} L${hatchX + hatchW + 4} ${hatchTop} L${hatchX + hatchW + 18} ${hatchTop - 34} L${hatchX - 18} ${hatchTop - 34} Z`}
 				fill={accent}
 			/>
 			{/* fold-down counter */}
-			<rect x={hatchX - 6} y={hatchBottom} width={hatchW + 12} height={6} fill="#9aa1a8" />
+			<rect
+				x={hatchX - 6}
+				y={hatchBottom}
+				width={hatchW + 12}
+				height={6}
+				fill="#9aa1a8"
+			/>
 			{/* door */}
 			<rect
 				x={doorX}
@@ -149,13 +188,34 @@ export function TrailerArt({
 				strokeOpacity={0.6}
 				strokeWidth={2}
 			/>
-			<circle cx={doorX + 34} cy={bodyTop + (bodyBottom - bodyTop) * 0.55} r={3} fill={accent} />
+			<circle
+				cx={doorX + 34}
+				cy={bodyTop + (bodyBottom - bodyTop) * 0.55}
+				r={3}
+				fill={accent}
+			/>
 			{/* roof HVAC */}
-			<rect x={bodyLeft + W * 0.55} y={bodyTop - 16} width={56} height={18} rx={3} fill="#c9ccd0" stroke={accent} strokeOpacity={0.3} />
+			<rect
+				x={bodyLeft + W * 0.55}
+				y={bodyTop - 16}
+				width={56}
+				height={18}
+				rx={3}
+				fill="#c9ccd0"
+				stroke={accent}
+				strokeOpacity={0.3}
+			/>
 			{/* wheel */}
 			<circle cx={axleX} cy={groundY - 18} r={20} fill="#1c1c1e" />
 			<circle cx={axleX} cy={groundY - 18} r={8} fill="#9aa1a8" />
-			<line x1={0} x2={viewW} y1={groundY + 2} y2={groundY + 2} stroke="currentColor" strokeOpacity={0.12} />
+			<line
+				x1={0}
+				x2={viewW}
+				y1={groundY + 2}
+				y2={groundY + 2}
+				stroke="currentColor"
+				strokeOpacity={0.12}
+			/>
 		</svg>
 	);
 }

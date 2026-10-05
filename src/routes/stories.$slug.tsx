@@ -1,6 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ContentBody } from "#/components/site/ContentBody";
-import { CtaBand, IllustrativeNotice, PageHero, SiteShell } from "#/components/site/SiteChrome";
+import {
+	CtaBand,
+	IllustrativeNotice,
+	PageHero,
+	SiteShell,
+} from "#/components/site/SiteChrome";
 import { TrailerArt } from "#/components/site/TrailerArt";
 import { getStory } from "#/content/stories";
 import { getTruck } from "#/content/trucks";
@@ -22,7 +27,13 @@ export const Route = createFileRoute("/stories/$slug")({
 			path,
 			type: "article",
 			jsonLd: [
-				articleLd({ title: s.title, description: s.description, path, published: "2026-10-04", section: "Stories" }),
+				articleLd({
+					title: s.title,
+					description: s.description,
+					path,
+					published: "2026-10-04",
+					section: "Stories",
+				}),
 				breadcrumbLd([
 					{ name: "Home", path: "/" },
 					{ name: "Stories", path: "/stories" },
@@ -55,26 +66,58 @@ function StoryPage() {
 				<div className="max-w-[720px]">
 					<ContentBody blocks={s.body} />
 					<figure className="mt-12 border-l-2 border-stone-900 pl-6">
-						<blockquote className="text-[22px] font-medium leading-snug tracking-tight text-stone-900">&ldquo;{s.quote.text}&rdquo;</blockquote>
-						<figcaption className="mt-3 text-[13.5px] text-stone-500">{s.quote.who}</figcaption>
+						<blockquote className="text-[22px] font-medium leading-snug tracking-tight text-stone-900">
+							&ldquo;{s.quote.text}&rdquo;
+						</blockquote>
+						<figcaption className="mt-3 text-[13.5px] text-stone-500">
+							{s.quote.who}
+						</figcaption>
 					</figure>
 				</div>
 				<aside className="space-y-4">
 					{truck && (
-						<div className="rounded-sm border border-stone-200 bg-white p-5">
-							<TrailerArt vehicleId={truck.vehicleId} className="w-full text-stone-900" />
+						<div className="sf-card p-5">
+							<TrailerArt
+								vehicleId={truck.vehicleId}
+								className="w-full text-stone-900"
+							/>
 							<dl className="mt-5 space-y-2 text-[13.5px]">
 								{s.stats.map((st) => (
-									<div key={st.label} className="flex justify-between gap-4"><dt className="text-stone-500">{st.label}</dt><dd className="text-right font-medium">{st.value}</dd></div>
+									<div key={st.label} className="flex justify-between gap-4">
+										<dt className="text-stone-500">{st.label}</dt>
+										<dd className="text-right font-medium">{st.value}</dd>
+									</div>
 								))}
 							</dl>
 						</div>
 					)}
-					<div className="rounded-sm border border-stone-200 bg-white p-5 text-[14px]">
-						<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">Related</p>
+					<div className="sf-card p-5 text-[14px]">
+						<p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
+							Related
+						</p>
 						<ul className="mt-3 space-y-2">
-							{truck && <li><Link to="/trucks/$slug" params={{ slug: truck.slug }} className="underline underline-offset-4">{truck.name} specs</Link></li>}
-							{useCase && <li><Link to="/use-cases/$slug" params={{ slug: useCase.slug }} className="underline underline-offset-4">{useCase.name} builds</Link></li>}
+							{truck && (
+								<li>
+									<Link
+										to="/trucks/$slug"
+										params={{ slug: truck.slug }}
+										className="underline underline-offset-4"
+									>
+										{truck.name} specs
+									</Link>
+								</li>
+							)}
+							{useCase && (
+								<li>
+									<Link
+										to="/use-cases/$slug"
+										params={{ slug: useCase.slug }}
+										className="underline underline-offset-4"
+									>
+										{useCase.name} builds
+									</Link>
+								</li>
+							)}
 						</ul>
 					</div>
 				</aside>

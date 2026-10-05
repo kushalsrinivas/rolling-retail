@@ -295,17 +295,11 @@ const WARNINGS: readonly string[] = [
 
 /** Grade and glass, held constant across the exterior clips. */
 const CRAFT_OUTSIDE: readonly string[] = [
-	row(
-		"Camera",
-		"cinema camera, 35 mm equivalent lens, 24 fps, 1/48 s shutter",
-	)!,
-	row("Support", "motorized gimbal or dolly; never handheld")!,
-	row(
-		"Focus",
-		"shallow depth of field on close shots; deep focus on wide shots",
-	)!,
-	row("Grade", "natural; clean whites; no crushed blacks")!,
-	row("Audio and text", "no dialogue; no on-screen text")!,
+	"Camera: cinema camera, 35 mm equivalent lens, 24 fps, 1/48 s shutter",
+	`Support: motorized gimbal or dolly; never handheld`,
+	"Focus: shallow depth of field on close shots; deep focus on wide shots",
+	`Grade: natural; clean whites; no crushed blacks`,
+	`Audio and text: no dialogue; no on-screen text`,
 ];
 
 /**
@@ -313,14 +307,11 @@ const CRAFT_OUTSIDE: readonly string[] = [
  * "35mm" and "24mm" in the same prompt taught the model to average them.
  */
 const CRAFT_INSIDE: readonly string[] = [
-	row(
-		"Camera",
-		"cinema camera, 24mm ultra-wide equivalent lens, 24 fps, 1/48 s shutter",
-	)!,
-	row("Support", "dolly on the aisle at chest height")!,
-	row("Focus", "deep focus for the full clip")!,
-	row("Grade", "natural; clean whites; no crushed blacks")!,
-	row("Audio and text", "no dialogue; no on-screen text")!,
+	"Camera: cinema camera, 24mm ultra-wide equivalent lens, 24 fps, 1/48 s shutter",
+	`Support: dolly on the aisle at chest height`,
+	`Focus: deep focus for the full clip`,
+	`Grade: natural; clean whites; no crushed blacks`,
+	`Audio and text: no dialogue; no on-screen text`,
 ];
 
 /**

@@ -15,7 +15,7 @@ const src = (p: string) =>
 describe("session rehydration", () => {
 	it("the hook rehydrates from a persisted session id", () => {
 		const hook = src("hooks/use-chat.ts");
-		expect(hook).toContain('localStorage.getItem(SESSION_KEY)');
+		expect(hook).toContain("localStorage.getItem(SESSION_KEY)");
 		expect(hook).toContain("/api/agent/state?");
 		expect(hook).toContain("hydrated");
 	});
@@ -41,8 +41,9 @@ describe("session rehydration", () => {
 	it("ready clips keep their served file URL across snapshots", () => {
 		const session = src("lib/food-truck/session.ts");
 		expect(session).toMatch(/startsWith\("\/api\/assets\/"\)/);
-		expect(session.match(/url: v\.url && !v\.url\.startsWith\("data:"\)/))
-			.toBeTruthy();
+		expect(
+			session.match(/url: v\.url && !v\.url\.startsWith\("data:"\)/),
+		).toBeTruthy();
 	});
 
 	it("the intake gate waits for rehydration", () => {

@@ -39,7 +39,11 @@ export const BUILD_ARTICLES: Article[] = [
 				head: ["Position", "Station", "Why there"],
 				rows: [
 					["1", "Hand sink", "Inspector's first look; staff wash in on entry"],
-					["2", "Plancha and steam wells under the hood", "All heat in one place, one hood"],
+					[
+						"2",
+						"Plancha and steam wells under the hood",
+						"All heat in one place, one hood",
+					],
 					["3", "Salsa and garnish rail", "Assembly right beside the heat"],
 					["4", "Tortilla warmer and pass", "Plates finish at the window"],
 					["5", "Drinks with ice", "Served by the order-taker, never the cook"],
@@ -67,7 +71,10 @@ export const BUILD_ARTICLES: Article[] = [
 				label: "Design my layout",
 			},
 		],
-		related: ["what-size-food-trailer-do-i-need", "food-truck-health-permit-plan-review"],
+		related: [
+			"what-size-food-trailer-do-i-need",
+			"food-truck-health-permit-plan-review",
+		],
 	},
 	{
 		slug: "food-truck-wrap-design-guide",
@@ -99,8 +106,16 @@ export const BUILD_ARTICLES: Article[] = [
 				type: "table",
 				head: ["Finish", "Looks", "Watch out for"],
 				rows: [
-					["Gloss", "Bright, classic, easy to clean", "Shows scratches and swirl marks"],
-					["Matte", "Modern, no glare in photos", "Holds dirt; needs gentle washing"],
+					[
+						"Gloss",
+						"Bright, classic, easy to clean",
+						"Shows scratches and swirl marks",
+					],
+					[
+						"Matte",
+						"Modern, no glare in photos",
+						"Holds dirt; needs gentle washing",
+					],
 					["Satin", "Soft sheen, premium", "Slightly higher cost"],
 				],
 			},
@@ -127,7 +142,10 @@ export const BUILD_ARTICLES: Article[] = [
 				text: "Not sure where to start? The designer proposes a palette and emblem from the looks you star — [try it](/chat).",
 			},
 		],
-		related: ["airstream-vs-square-concession-trailer", "how-much-does-a-food-trailer-cost"],
+		related: [
+			"airstream-vs-square-concession-trailer",
+			"how-much-does-a-food-trailer-cost",
+		],
 	},
 	{
 		slug: "food-truck-health-permit-plan-review",
@@ -168,13 +186,28 @@ export const BUILD_ARTICLES: Article[] = [
 				type: "table",
 				head: ["Item", "What they look for"],
 				rows: [
-					["Hand sink", "Dedicated, accessible, hot and cold water, soap and towels"],
-					["Ware washing", "Many counties require a three-compartment sink; some accept commissary washing"],
-					["Water", "Fresh tank sized for your service; gray tank larger than fresh"],
+					[
+						"Hand sink",
+						"Dedicated, accessible, hot and cold water, soap and towels",
+					],
+					[
+						"Ware washing",
+						"Many counties require a three-compartment sink; some accept commissary washing",
+					],
+					[
+						"Water",
+						"Fresh tank sized for your service; gray tank larger than fresh",
+					],
 					["Surfaces", "Smooth, durable, easy to clean; sealed seams"],
 					["Equipment", "Commercial, NSF/ANSI-listed where required"],
-					["Refrigeration", "Thermometers in each unit, holding at safe temperatures"],
-					["Hood and suppression", "Hot lines: listed system, inspection tag, K-class extinguisher"],
+					[
+						"Refrigeration",
+						"Thermometers in each unit, holding at safe temperatures",
+					],
+					[
+						"Hood and suppression",
+						"Hot lines: listed system, inspection tag, K-class extinguisher",
+					],
 					["Propane", "Secured cylinders, approved lines, leak-tested"],
 				],
 			},
@@ -202,7 +235,8 @@ export const BUILD_ARTICLES: Article[] = [
 	},
 	{
 		slug: "how-we-built-the-designer",
-		title: "How we built a food trailer designer that only draws what we can build",
+		title:
+			"How we built a food trailer designer that only draws what we can build",
 		description:
 			"Behind the build: why our AI designer is constrained to six bodies, how renders stay consistent across views, and why our image prompts read like technical manuals.",
 		category: "Behind the build",

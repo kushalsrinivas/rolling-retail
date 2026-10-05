@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { TruckSession } from "#/lib/food-truck/session";
-import {
-	currentDesign,
-	listConcepts,
-} from "#/lib/food-truck/session";
+import { currentDesign, listConcepts } from "#/lib/food-truck/session";
 import {
 	listStoredSessions,
 	loadSessionSnapshot,

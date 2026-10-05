@@ -354,7 +354,13 @@ export const USE_CASES: UseCase[] = [
 			"Walk-in retail trailers for brands, boutiques and product tours: display wall, till by the door, lockable stock storage and lighting that sells.",
 		intro:
 			"A pop-up store is about dwell time, not queue speed. Customers step inside the Large Airstream, browse a lit display wall, and pay at a till placed near the door for flow.",
-		equipment: ["display-wall", "till", "secure-storage", "led-track-lights", "hvac-optional"],
+		equipment: [
+			"display-wall",
+			"till",
+			"secure-storage",
+			"led-track-lights",
+			"hvac-optional",
+		],
 		zones: [
 			"Entry and queue outside with A-board menu",
 			"Display wall with lockable overnight storage",

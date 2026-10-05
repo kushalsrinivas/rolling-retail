@@ -17,9 +17,7 @@ describe("vehicle roles", () => {
 	});
 
 	it("fits hot food on Small/Mid hatch-serve", () => {
-		expect(layoutFor("grill", "airstream-m", false, []).vehicleFit).toBe(
-			"fit",
-		);
+		expect(layoutFor("grill", "airstream-m", false, []).vehicleFit).toBe("fit");
 		expect(layoutFor("mexican", "airstream-s", false, []).vehicleFit).toBe(
 			"fit",
 		);

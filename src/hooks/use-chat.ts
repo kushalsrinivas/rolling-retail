@@ -499,7 +499,8 @@ export function useChat() {
 	// The half-built menu survives reloads too — losing a typed menu was the
 	// second-most-restart-frustration after losing the design itself.
 	useEffect(() => {
-		if (menuDraft) localStorage.setItem(MENU_DRAFT_KEY, JSON.stringify(menuDraft));
+		if (menuDraft)
+			localStorage.setItem(MENU_DRAFT_KEY, JSON.stringify(menuDraft));
 	}, [menuDraft]);
 
 	/** Open a slot per view so the grid shows the whole round immediately. */

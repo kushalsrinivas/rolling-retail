@@ -142,6 +142,136 @@ a:not(.rr-landing a):not(.ftf a):hover {
 
 .rr-landing {
   --rr-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Street-food palette: cream paper, hard ink, loud orange, sun yellow. */
+  --sf-paper: #fff6e9;
+  --sf-ink: #17130f;
+  --sf-orange: #ff5a1f;
+  --sf-yellow: #ffc83d;
+  --sf-teal: #0f8b8d;
+  --sf-pink: #ff7ab6;
+}
+
+@layer components {
+/* Display type: condensed, uppercase, shouted. */
+.sf-display {
+  font-family: "Anton", "Impact", "Arial Narrow Bold", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  line-height: 0.95;
+}
+
+/* Chunky card: thick ink border, hard offset shadow, lifts on hover. */
+.sf-card {
+  background: #fff;
+  border: 2px solid var(--sf-ink);
+  border-radius: 14px;
+  box-shadow: 5px 5px 0 var(--sf-ink);
+  transition:
+    transform 0.2s var(--rr-ease),
+    box-shadow 0.2s var(--rr-ease);
+}
+
+a.sf-card:hover,
+button.sf-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--sf-ink);
+}
+
+a.sf-card:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--sf-ink);
+}
+
+/* Buttons share the card's hard edge. */
+.sf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 2px solid var(--sf-ink);
+  border-radius: 999px;
+  background: var(--sf-orange);
+  color: var(--sf-ink);
+  font-weight: 700;
+  box-shadow: 4px 4px 0 var(--sf-ink);
+  transition:
+    transform 0.15s var(--rr-ease),
+    box-shadow 0.15s var(--rr-ease);
+}
+
+.sf-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--sf-ink);
+}
+
+.sf-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--sf-ink);
+}
+
+.sf-btn-ghost {
+  background: #fff;
+}
+
+.sf-btn-ink {
+  background: var(--sf-ink);
+  color: var(--sf-paper);
+  box-shadow: 4px 4px 0 var(--sf-orange);
+}
+
+.sf-btn-ink:hover {
+  box-shadow: 6px 6px 0 var(--sf-orange);
+}
+
+/* Sticker badge: tilted, bordered, a little sticky. */
+.sf-sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 2px solid var(--sf-ink);
+  border-radius: 999px;
+  background: var(--sf-yellow);
+  color: var(--sf-ink);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 0.3rem 0.8rem;
+  box-shadow: 2px 2px 0 var(--sf-ink);
+}
+
+.sf-sticker:nth-child(3n + 2) {
+  transform: rotate(-2deg);
+  background: #fff;
+}
+
+.sf-sticker:nth-child(3n + 3) {
+  transform: rotate(1.5deg);
+  background: var(--sf-pink);
+}
+
+/* Highlighter swash behind a word in a headline. */
+.sf-mark {
+  background: linear-gradient(transparent 12%, var(--sf-orange) 12%, var(--sf-orange) 92%, transparent 92%);
+  padding: 0 0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Checkerboard strip — the diner-floor accent. */
+.sf-checker {
+  height: 18px;
+  background-image:
+    linear-gradient(45deg, var(--sf-ink) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--sf-ink) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--sf-ink) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--sf-ink) 75%);
+  background-size: 18px 18px;
+  background-position:
+    0 0,
+    0 9px,
+    9px -9px,
+    -9px 0;
+  background-color: var(--sf-paper);
+}
 }
 
 .rr-reveal {
@@ -273,6 +403,11 @@ a:not(.rr-landing a):not(.ftf a):hover {
   .rr-line {
     opacity: 1;
     transform: none;
+    transition: none;
+  }
+
+  .sf-card,
+  .sf-btn {
     transition: none;
   }
 

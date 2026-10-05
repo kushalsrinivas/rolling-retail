@@ -26,7 +26,8 @@ export const PLANNING_ARTICLES: Article[] = [
 			{ type: "h2", text: "Typical all-in ranges by body" },
 			{
 				type: "table",
-				caption: "Planning ranges for an equipped build with a standard wrap. Not a quote.",
+				caption:
+					"Planning ranges for an equipped build with a standard wrap. Not a quote.",
 				head: ["Body", "Typical use", "Planning range"],
 				rows: [
 					["Square 10 ft", "Coffee, boba, ice cream", "$45k–$70k"],
@@ -141,12 +142,28 @@ export const PLANNING_ARTICLES: Article[] = [
 				type: "table",
 				head: ["", "Food trailer", "Food truck"],
 				rows: [
-					["Upfront cost", "Lower for the same kitchen", "Higher — includes chassis and engine"],
-					["Maintenance", "Axle, brakes, tires", "Full vehicle service plus kitchen"],
+					[
+						"Upfront cost",
+						"Lower for the same kitchen",
+						"Higher — includes chassis and engine",
+					],
+					[
+						"Maintenance",
+						"Axle, brakes, tires",
+						"Full vehicle service plus kitchen",
+					],
 					["Breakdowns", "Swap the tow vehicle", "Kitchen is off the road too"],
 					["Moving often", "Hitch and unhitch each time", "Drive and serve"],
-					["Parking", "Leave it on site; use the tow vehicle", "One vehicle does everything"],
-					["Kitchen length", "Full box length", "Shorter — the cab takes space"],
+					[
+						"Parking",
+						"Leave it on site; use the tow vehicle",
+						"One vehicle does everything",
+					],
+					[
+						"Kitchen length",
+						"Full box length",
+						"Shorter — the cab takes space",
+					],
 				],
 			},
 			{ type: "h2", text: "Choose a trailer if…" },
@@ -184,7 +201,10 @@ export const PLANNING_ARTICLES: Article[] = [
 				a: "In most states a standard license covers a single trailer under the commercial weight thresholds, but rules vary by state and combined weight. Check with your state's DMV.",
 			},
 		],
-		related: ["how-much-does-a-food-trailer-cost", "what-size-food-trailer-do-i-need"],
+		related: [
+			"how-much-does-a-food-trailer-cost",
+			"what-size-food-trailer-do-i-need",
+		],
 	},
 	{
 		slug: "airstream-vs-square-concession-trailer",
@@ -215,7 +235,11 @@ export const PLANNING_ARTICLES: Article[] = [
 					["Wrap", "Simple, cheaper", "Compound curves; premium film"],
 					["Brand presence", "Strong with a good wrap", "Iconic on its own"],
 					["Lengths we build", "10, 13, 16 ft", "Small, Mid, Large"],
-					["Best for", "Throughput and budget", "Premium brands, events, photos"],
+					[
+						"Best for",
+						"Throughput and budget",
+						"Premium brands, events, photos",
+					],
 				],
 			},
 			{ type: "h2", text: "When the Airstream is worth it" },
@@ -233,7 +257,10 @@ export const PLANNING_ARTICLES: Article[] = [
 				text: "Our designer recommends a body from your brief — menu, peak volume and where you trade — and explains why. You can always overrule it.",
 			},
 		],
-		related: ["how-much-does-a-food-trailer-cost", "food-truck-wrap-design-guide"],
+		related: [
+			"how-much-does-a-food-trailer-cost",
+			"food-truck-wrap-design-guide",
+		],
 	},
 	{
 		slug: "what-size-food-trailer-do-i-need",
@@ -260,8 +287,16 @@ export const PLANNING_ARTICLES: Article[] = [
 				type: "table",
 				head: ["Your operation", "Peak orders/hour", "Recommended body"],
 				rows: [
-					["Coffee, boba or ice cream, 1–2 people", "Under 60", "Square 10 ft or Airstream Small"],
-					["Cold line at volume, 2 people", "60–120", "Square 13 ft or Airstream Mid"],
+					[
+						"Coffee, boba or ice cream, 1–2 people",
+						"Under 60",
+						"Square 10 ft or Airstream Small",
+					],
+					[
+						"Cold line at volume, 2 people",
+						"60–120",
+						"Square 13 ft or Airstream Mid",
+					],
 					["One hot station", "Up to 120", "Square 13 ft or Airstream Mid"],
 					["Hot line plus drinks station", "120+", "Square 16 ft"],
 					["Walk-in retail", "Dwell, not queue", "Airstream Large"],
@@ -285,7 +320,11 @@ export const PLANNING_ARTICLES: Article[] = [
 				label: "Get a recommendation",
 			},
 		],
-		related: ["food-truck-kitchen-layout", "food-trailer-power-guide", "how-much-does-a-food-trailer-cost"],
+		related: [
+			"food-truck-kitchen-layout",
+			"food-trailer-power-guide",
+			"how-much-does-a-food-trailer-cost",
+		],
 	},
 	{
 		slug: "food-trailer-power-guide",
@@ -312,8 +351,16 @@ export const PLANNING_ARTICLES: Article[] = [
 				type: "table",
 				head: ["Load", "Source", "Notes"],
 				rows: [
-					["Griddle, fryer, plancha, deck oven", "Propane", "Under the extraction hood"],
-					["Refrigeration and freezers", "Electric", "Runs continuously; surge on start"],
+					[
+						"Griddle, fryer, plancha, deck oven",
+						"Propane",
+						"Under the extraction hood",
+					],
+					[
+						"Refrigeration and freezers",
+						"Electric",
+						"Runs continuously; surge on start",
+					],
 					["Espresso machine", "Electric", "Often the largest single load"],
 					["Extraction fan, lights, pumps", "Electric", "Small but always on"],
 					["HVAC", "Electric", "Large; needed for walk-in and hot climates"],

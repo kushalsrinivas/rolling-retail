@@ -692,8 +692,6 @@ export function powerBudget(equipmentIds: string[]): PowerBudget {
 		supply,
 		overShore: designWatts > SHORE_50A_WATTS,
 		byUnit,
-		propaneUnits: specs
-			.filter((s) => s.fuel === "propane")
-			.map((s) => s.label),
+		propaneUnits: specs.filter((s) => s.fuel === "propane").map((s) => s.label),
 	};
 }

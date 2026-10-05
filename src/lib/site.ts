@@ -29,7 +29,7 @@ export const SITE = {
 	areaServed: "United States",
 	ogImage: "/og/default.png",
 	logo: "/logo512.png",
-	themeColor: "#111110",
+	themeColor: "#ff5a1f",
 } as const;
 
 export function absoluteUrl(path = "/"): string {
@@ -63,8 +63,7 @@ export function pageHead(args: PageHeadArgs): {
 	links: Link[];
 	scripts: Script[];
 } {
-	const title =
-		args.path === "/" ? args.title : `${args.title} | ${SITE.name}`;
+	const title = args.path === "/" ? args.title : `${args.title} | ${SITE.name}`;
 	const url = absoluteUrl(args.path);
 	const image = absoluteUrl(args.image ?? SITE.ogImage);
 	const meta: Meta[] = [
@@ -72,7 +71,10 @@ export function pageHead(args: PageHeadArgs): {
 		{ name: "description", content: args.description },
 		{ property: "og:site_name", content: SITE.name },
 		{ property: "og:locale", content: SITE.locale },
-		{ property: "og:type", content: args.type === "article" ? "article" : "website" },
+		{
+			property: "og:type",
+			content: args.type === "article" ? "article" : "website",
+		},
 		{ property: "og:title", content: title },
 		{ property: "og:description", content: args.description },
 		{ property: "og:url", content: url },

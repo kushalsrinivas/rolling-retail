@@ -197,10 +197,7 @@ export default function TruckConfigurator({
 					<p className="mt-1.5 text-[11px] text-[var(--ftf-ink-3)]">
 						{power.ampsAt240V}A · {power.supply}
 						{power.propaneUnits.length > 0 && (
-							<>
-								{" "}
-								· heat on propane ({power.propaneUnits.join(", ")})
-							</>
+							<> · heat on propane ({power.propaneUnits.join(", ")})</>
 						)}
 					</p>
 				</div>

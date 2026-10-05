@@ -23,7 +23,12 @@ interface Submission {
 	spec: Record<string, unknown> | null;
 	version: number | null;
 	images: Array<{ label: string; status: string; url: string | null }>;
-	videos: Array<{ id: string; kind: string; status: string; url: string | null }>;
+	videos: Array<{
+		id: string;
+		kind: string;
+		status: string;
+		url: string | null;
+	}>;
 	lead: Record<string, unknown> | null;
 	turns: number;
 }
@@ -122,9 +127,7 @@ function AdminPage() {
 	return (
 		<div className="mx-auto max-w-6xl px-4 py-8">
 			<div className="flex items-center justify-between">
-				<h1 className="text-lg font-bold">
-					Factory CMS — {subs.length} runs
-				</h1>
+				<h1 className="text-lg font-bold">Factory CMS — {subs.length} runs</h1>
 				<button
 					type="button"
 					onClick={() => load(token)}
@@ -160,8 +163,8 @@ function AdminPage() {
 								</span>
 								<span className="mt-0.5 block text-neutral-500">
 									{fmt(s.lastSeen)} · {s.quizSteps.length} quiz steps ·{" "}
-									{s.images.filter((i) => i.status === "ready").length}{" "}
-									renders · {s.turns} turns
+									{s.images.filter((i) => i.status === "ready").length} renders
+									· {s.turns} turns
 								</span>
 							</button>
 						);
@@ -199,11 +202,9 @@ function Detail({ sub }: { sub: Submission }) {
 						<span className="text-neutral-500"> · {fmt(s.at)}</span>
 						<div className="mt-1 flex flex-wrap gap-1">
 							{Object.entries(s.data).map(([k, v]) => (
-								<span
-									key={k}
-									className="rounded bg-neutral-100 px-1.5 py-0.5"
-								>
-									{k}: {Array.isArray(v) ? v.join(", ") || "—" : String(v ?? "—")}
+								<span key={k} className="rounded bg-neutral-100 px-1.5 py-0.5">
+									{k}:{" "}
+									{Array.isArray(v) ? v.join(", ") || "—" : String(v ?? "—")}
 								</span>
 							))}
 						</div>
@@ -216,7 +217,9 @@ function Detail({ sub }: { sub: Submission }) {
 					Final design{sub.version ? ` · v${sub.version}` : ""}
 				</h2>
 				{!sub.spec && (
-					<p className="mt-1 text-xs text-neutral-500">No spec committed yet.</p>
+					<p className="mt-1 text-xs text-neutral-500">
+						No spec committed yet.
+					</p>
 				)}
 				{sub.spec && (
 					<pre className="mt-2 overflow-x-auto text-[11px] leading-relaxed">
@@ -261,9 +264,7 @@ function Detail({ sub }: { sub: Submission }) {
 					{sub.videos.length > 0 && (
 						<p className="mt-1">
 							Videos:{" "}
-							{sub.videos
-								.map((v) => `${v.kind} (${v.status})`)
-								.join(", ")}
+							{sub.videos.map((v) => `${v.kind} (${v.status})`).join(", ")}
 						</p>
 					)}
 					{sub.lead && (

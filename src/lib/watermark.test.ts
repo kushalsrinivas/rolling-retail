@@ -20,9 +20,9 @@ describe("watermarkImage fallback", () => {
 
 	it("survives a url that is not an image", async () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-		await expect(
-			watermarkImage("not-a-data-url", { text: "x" }),
-		).resolves.toBe("not-a-data-url");
+		await expect(watermarkImage("not-a-data-url", { text: "x" })).resolves.toBe(
+			"not-a-data-url",
+		);
 		warn.mockRestore();
 	});
 });

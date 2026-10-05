@@ -229,12 +229,14 @@ export interface DesignBrief {
 /** One line, no control characters, capped — safe to quote in a data row. */
 export function cleanNotes(value: unknown): string {
 	if (typeof value !== "string") return "";
-	return value
-		// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
-		.replace(/[\u0000-\u001f\u007f]+/g, " ")
-		.replace(/\s+/g, " ")
-		.trim()
-		.slice(0, 240);
+	return (
+		value
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+			.replace(/[\u0000-\u001f\u007f]+/g, " ")
+			.replace(/\s+/g, " ")
+			.trim()
+			.slice(0, 240)
+	);
 }
 
 export function emptyBrief(): DesignBrief {

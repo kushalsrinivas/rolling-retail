@@ -18,13 +18,24 @@ demo never dies. See `.env.example` — every variable is documented there.
 
 ## Routes
 
-| Route    | What it is                                                        |
-| -------- | ----------------------------------------------------------------- |
-| `/`      | Marketing site                                                    |
-| `/chat`  | The designer: 5-step style quiz → AI concepts → build & spec tabs |
-| `/studio`| Standalone 3D playground (needs `RODIN_API_KEY`)                 |
-| `/report`| Location-scoring reports, ADK-era (needs `DATABASE_URL`)         |
-| `/admin` | Staff CMS: every run's quiz answers, renders, spec, lead (token-gated) |
+| Route | What it is |
+| --- | --- |
+| `/` | Marketing homepage (buyer-facing, B2C) |
+| `/trucks`, `/trucks/$slug` | The six bodies — specs, planning ranges, Product schema |
+| `/use-cases`, `/use-cases/$slug` | Per-business layouts (snapshot of `layoutFor`, test-enforced) |
+| `/resources`, `/resources/$slug` | Guides / blog (`src/content/articles-*.ts`) |
+| `/stories`, `/stories/$slug` | Customer stories — **illustrative**, labelled on every page |
+| `/how-it-works`, `/pricing`, `/faq`, `/about` | Core marketing pages |
+| `/sitemap.xml`, `/robots.txt`, `/llms.txt`, `/llms-full.txt` | Generated from `src/lib/site-index.ts` |
+| `/chat` | The designer: 7-step brief quiz → AI concepts → build & spec tabs |
+| `/studio` | Standalone 3D playground (needs `RODIN_API_KEY`), noindex |
+| `/report` | Location-scoring reports, ADK-era (needs `DATABASE_URL`), noindex |
+| `/admin` | Staff CMS (token-gated), noindex |
+
+SEO lives in `src/lib/site.ts` (`pageHead()` + JSON-LD builders). Set
+`VITE_SITE_URL` in production so canonicals and the sitemap use the real
+domain. Image and video prompts are ASD-STE100 documents built by
+`src/lib/food-truck/ste.ts`; `ste.test.ts` lints every prompt.
 
 API lives in `src/routes/api/agent/*` — session, chat (SSE), intake,
 quiz-step, images, design versions, approvals, menu, video, package PDF,

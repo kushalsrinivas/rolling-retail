@@ -24,16 +24,89 @@ const SITE_UPDATED = "2026-10-05";
 
 export function publicPages(): IndexedPage[] {
 	const core: IndexedPage[] = [
-		{ path: "/", title: SITE.name, summary: SITE.description, priority: 1, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/chat", title: "Online food trailer designer", summary: "Answer a short brief and get photoreal concepts, a layout, a wrap plan, a planning estimate and a spec sheet. Free.", priority: 0.9, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/trucks", title: "Food trailers we build", summary: "Six bodies: square 10/13/16 ft and Airstream Small/Mid/Large.", priority: 0.9, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/use-cases", title: "Use cases", summary: "How we lay out trailers for coffee, tacos, burgers, boba, ice cream, pizza, bars and retail.", priority: 0.8, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/how-it-works", title: "How it works", summary: "Brief → concepts → revisions → spec → quote → build in 6–10 weeks.", priority: 0.8, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/pricing", title: "Pricing", summary: "Planning ranges by body, wrap pricing, what is included.", priority: 0.8, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/resources", title: "Guides", summary: "Costs, sizing, permits, power, layout and wrap guides.", priority: 0.8, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/stories", title: "Customer stories (illustrative)", summary: "Illustrative examples of operators using the designer.", priority: 0.5, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/faq", title: "FAQ", summary: "Design, builds, costs and permits.", priority: 0.7, section: "Core", lastmod: SITE_UPDATED },
-		{ path: "/about", title: "About", summary: "Who we are and the principles we build by.", priority: 0.6, section: "Core", lastmod: SITE_UPDATED },
+		{
+			path: "/",
+			title: SITE.name,
+			summary: SITE.description,
+			priority: 1,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/chat",
+			title: "Online food trailer designer",
+			summary:
+				"Answer a short brief and get photoreal concepts, a layout, a wrap plan, a planning estimate and a spec sheet. Free.",
+			priority: 0.9,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/trucks",
+			title: "Food trailers we build",
+			summary: "Six bodies: square 10/13/16 ft and Airstream Small/Mid/Large.",
+			priority: 0.9,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/use-cases",
+			title: "Use cases",
+			summary:
+				"How we lay out trailers for coffee, tacos, burgers, boba, ice cream, pizza, bars and retail.",
+			priority: 0.8,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/how-it-works",
+			title: "How it works",
+			summary:
+				"Brief → concepts → revisions → spec → quote → build in 6–10 weeks.",
+			priority: 0.8,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/pricing",
+			title: "Pricing",
+			summary: "Planning ranges by body, wrap pricing, what is included.",
+			priority: 0.8,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/resources",
+			title: "Guides",
+			summary: "Costs, sizing, permits, power, layout and wrap guides.",
+			priority: 0.8,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/stories",
+			title: "Customer stories (illustrative)",
+			summary: "Illustrative examples of operators using the designer.",
+			priority: 0.5,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/faq",
+			title: "FAQ",
+			summary: "Design, builds, costs and permits.",
+			priority: 0.7,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
+		{
+			path: "/about",
+			title: "About",
+			summary: "Who we are and the principles we build by.",
+			priority: 0.6,
+			section: "Core",
+			lastmod: SITE_UPDATED,
+		},
 	];
 	return [
 		...core,
@@ -149,7 +222,9 @@ function blocksToMarkdown(blocks: Block[]): string {
 				case "ul":
 					return b.items.map((i) => `- ${stripMarkup(i)}`).join("\n");
 				case "ol":
-					return b.items.map((i, n) => `${n + 1}. ${stripMarkup(i)}`).join("\n");
+					return b.items
+						.map((i, n) => `${n + 1}. ${stripMarkup(i)}`)
+						.join("\n");
 				case "table":
 					return [
 						b.caption ? `*${b.caption}*` : "",
@@ -194,6 +269,8 @@ export function llmsFullTxt(): string {
 		);
 	}
 	parts.push("# FAQ\n");
-	parts.push(ALL_FAQS.map((f) => `Q: ${f.q}\nA: ${stripMarkup(f.a)}`).join("\n\n"));
+	parts.push(
+		ALL_FAQS.map((f) => `Q: ${f.q}\nA: ${stripMarkup(f.a)}`).join("\n\n"),
+	);
 	return parts.join("\n");
 }

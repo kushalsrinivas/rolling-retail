@@ -9,7 +9,12 @@
  * line, standard wrap) for budgeting. Sales confirms them against the
  * current price book; every page labels them as ranges, not quotes.
  */
-import { getVehicle, toFt, toSqft, type VehicleId } from "#/lib/food-truck/constants";
+import {
+	getVehicle,
+	toFt,
+	toSqft,
+	type VehicleId,
+} from "#/lib/food-truck/constants";
 
 export interface TruckModel {
 	slug: string;
@@ -36,7 +41,12 @@ export const TRUCKS: TruckModel[] = [
 		headline: "The lowest-cost way to start trading.",
 		summary:
 			"A compact concession trailer for one cold or coffee line. Light enough for a mid-size pickup, cheap to wrap, and simple to permit because there is no hot-food line to approve.",
-		bestFor: ["Coffee and espresso", "Boba and juice", "Ice cream", "Hatch-serve merch"],
+		bestFor: [
+			"Coffee and espresso",
+			"Boba and juice",
+			"Ice cream",
+			"Hatch-serve merch",
+		],
 		notFor: ["Hot food lines", "Walk-in retail"],
 		useCases: ["coffee-trailer", "boba-tea-trailer", "ice-cream-trailer"],
 		planningRange: [45000, 70000],
@@ -93,7 +103,11 @@ export const TRUCKS: TruckModel[] = [
 		headline: "Maximum curb appeal, minimum weight.",
 		summary:
 			"The iconic riveted aluminum shell at its most compact. It photographs better than any other body we build, which is why coffee brands, weddings and premium caterers choose it.",
-		bestFor: ["Specialty coffee", "Wine and spritz bars", "Weddings and private hire"],
+		bestFor: [
+			"Specialty coffee",
+			"Wine and spritz bars",
+			"Weddings and private hire",
+		],
 		notFor: ["Hot food at volume", "Walk-in retail"],
 		useCases: ["coffee-trailer", "mobile-bar-trailer"],
 		planningRange: [85000, 125000],
@@ -112,7 +126,12 @@ export const TRUCKS: TruckModel[] = [
 		headline: "Our best-seller: a real kitchen in an icon.",
 		summary:
 			"Long enough for one hot station with cold support, or a full bar. The Mid is the body most of our hatch-serve Airstream builds start from.",
-		bestFor: ["Burgers and grill", "Mobile bars", "Premium tacos", "Brewery residencies"],
+		bestFor: [
+			"Burgers and grill",
+			"Mobile bars",
+			"Premium tacos",
+			"Brewery residencies",
+		],
 		notFor: ["Walk-in retail", "Two hot stations"],
 		useCases: ["burger-trailer", "mobile-bar-trailer", "taco-trailer"],
 		planningRange: [110000, 160000],
@@ -131,7 +150,12 @@ export const TRUCKS: TruckModel[] = [
 		headline: "A walk-in store on wheels.",
 		summary:
 			"Customers step inside. The Large is a boutique, a brand experience or a product demo space — never a hot kitchen. It is the body brands use for tours and launches.",
-		bestFor: ["Retail pop-ups", "Brand activations", "Product demos", "Merch tours"],
+		bestFor: [
+			"Retail pop-ups",
+			"Brand activations",
+			"Product demos",
+			"Merch tours",
+		],
 		notFor: ["Any hot food line"],
 		useCases: ["retail-popup-trailer"],
 		planningRange: [140000, 200000],
@@ -157,7 +181,10 @@ export function truckSpecs(t: TruckModel) {
 	const v = getVehicle(t.vehicleId);
 	if (!v) return null;
 	return {
-		body: v.body === "airstream" ? "Riveted aluminum Airstream" : "Square steel-frame trailer",
+		body:
+			v.body === "airstream"
+				? "Riveted aluminum Airstream"
+				: "Square steel-frame trailer",
 		lengthFt: toFt(v.lengthM),
 		widthFt: toFt(v.widthM),
 		heightFt: toFt(v.heightM),

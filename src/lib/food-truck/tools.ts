@@ -346,11 +346,7 @@ export function layoutFor(
 		vehicleFit = "wrong";
 		vehicleNote =
 			"The Large Airstream is a walk-in merch/experience body — customers come inside, no cooking line. Brief this menu on the Small/Mid or a square hatch-serve instead: compact is the point (less weight, more energy margin).";
-	} else if (
-		walkIn &&
-		normalised === "retail" &&
-		(vehicle?.lengthM ?? 4) < 4
-	) {
+	} else if (walkIn && normalised === "retail" && (vehicle?.lengthM ?? 4) < 4) {
 		vehicleFit = "stretch";
 		vehicleNote =
 			"Walk-in retail wants 4m+ of body for an aisle plus display; this unit will be tight.";

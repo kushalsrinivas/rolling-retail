@@ -85,7 +85,7 @@ export default function HeroShowcase() {
 	const detail = preset.hotspots.find((h) => h.equipmentId === hotspot);
 
 	return (
-		<div className="relative h-[58vh] min-h-[380px] w-full overflow-hidden bg-[#111110] sm:h-[66vh]">
+		<div className="relative h-[58vh] max-h-[760px] min-h-[380px] w-full overflow-hidden bg-[#111110] sm:h-[66vh]">
 			<SceneBoundary>
 				<Canvas
 					shadows

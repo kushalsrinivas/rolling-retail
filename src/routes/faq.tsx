@@ -12,7 +12,13 @@ export const Route = createFileRoute("/faq")({
 			description:
 				"Answers about designing and buying a custom food trailer: how the online designer works, our six bodies, lead times, costs, permits and financing.",
 			path: "/faq",
-			jsonLd: [breadcrumbLd([{ name: "Home", path: "/" }, { name: "FAQ", path: "/faq" }]), faqLd(ALL_FAQS)],
+			jsonLd: [
+				breadcrumbLd([
+					{ name: "Home", path: "/" },
+					{ name: "FAQ", path: "/faq" },
+				]),
+				faqLd(ALL_FAQS),
+			],
 		}),
 });
 
@@ -20,7 +26,10 @@ function FaqPage() {
 	return (
 		<SiteShell>
 			<PageHero
-				crumbs={[{ name: "Home", path: "/" }, { name: "FAQ", path: "/faq" }]}
+				crumbs={[
+					{ name: "Home", path: "/" },
+					{ name: "FAQ", path: "/faq" },
+				]}
 				eyebrow="FAQ"
 				title="Questions buyers ask us."
 				lede={`Can't find yours? Email ${SITE.email} — a person from the build team answers.`}
@@ -28,7 +37,7 @@ function FaqPage() {
 			<div className="mx-auto max-w-4xl space-y-14 px-4 pb-20 sm:px-6">
 				{FAQ_GROUPS.map((g) => (
 					<section key={g.title} id={slugify(g.title)} className="scroll-mt-24">
-						<h2 className="mb-4 text-[22px] font-semibold tracking-tight">{g.title}</h2>
+						<h2 className="mb-4 sf-display text-[30px]">{g.title}</h2>
 						<FaqList faqs={g.faqs} />
 					</section>
 				))}

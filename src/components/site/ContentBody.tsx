@@ -78,14 +78,17 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 							<h2
 								key={key}
 								id={b.id ?? slugify(b.text)}
-								className="mt-12 scroll-mt-24 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-stone-900"
+								className="mt-12 scroll-mt-24 text-[30px] sf-display text-stone-900"
 							>
 								{b.text}
 							</h2>
 						);
 					case "h3":
 						return (
-							<h3 key={key} className="mt-8 text-[18px] font-semibold text-stone-900">
+							<h3
+								key={key}
+								className="mt-8 text-[18px] font-semibold text-stone-900"
+							>
 								{b.text}
 							</h3>
 						);
@@ -94,7 +97,10 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 							<ul key={key} className="mt-5 space-y-2.5">
 								{b.items.map((it) => (
 									<li key={it} className="flex gap-3">
-										<span aria-hidden className="mt-[13px] h-px w-3 shrink-0 bg-stone-400" />
+										<span
+											aria-hidden
+											className="mt-[13px] h-px w-3 shrink-0 bg-stone-400"
+										/>
 										<span>
 											<Inline text={it} />
 										</span>
@@ -137,22 +143,38 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 										</thead>
 										<tbody>
 											{b.rows.map((row) => (
-												<tr key={row.join("|")} className="border-b border-stone-200">
-													{row.map((cell, ci) => (
-														<td
-															key={`${ci}-${cell}`}
-															className={cn("py-3 pr-4 align-top", ci === 0 ? "font-medium text-stone-900" : "text-stone-600")}
-														>
-															<Inline text={cell} />
-														</td>
-													))}
+												<tr
+													key={row.join("|")}
+													className="border-b border-stone-200"
+												>
+													{row
+														.map((cell, ci) => ({
+															cell,
+															col: b.head[ci] ?? "",
+															first: ci === 0,
+														}))
+														.map(({ cell, col, first }) => (
+															<td
+																key={`${col}-${cell}`}
+																className={cn(
+																	"py-3 pr-4 align-top",
+																	first
+																		? "font-medium text-stone-900"
+																		: "text-stone-600",
+																)}
+															>
+																<Inline text={cell} />
+															</td>
+														))}
 												</tr>
 											))}
 										</tbody>
 									</table>
 								</div>
 								{b.caption && (
-									<figcaption className="mt-2 text-[12.5px] text-stone-500">{b.caption}</figcaption>
+									<figcaption className="mt-2 text-[12.5px] text-stone-500">
+										{b.caption}
+									</figcaption>
 								)}
 							</figure>
 						);
@@ -162,10 +184,14 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 								key={key}
 								className={cn(
 									"mt-7 border-l-2 px-5 py-4 text-[15px]",
-									b.tone === "warn" ? "border-[#e8641b] bg-[#fbf0e6]" : "border-stone-500 bg-stone-100",
+									b.tone === "warn"
+										? "border-[var(--sf-orange)] bg-[#ffe9c7]"
+										: "border-stone-500 bg-stone-100",
 								)}
 							>
-								{b.title && <p className="font-semibold text-stone-900">{b.title}</p>}
+								{b.title && (
+									<p className="font-semibold text-stone-900">{b.title}</p>
+								)}
 								<p className={b.title ? "mt-1" : undefined}>
 									<Inline text={b.text} />
 								</p>
@@ -173,17 +199,33 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 						);
 					case "quote":
 						return (
-							<blockquote key={key} className="mt-7 border-l-2 border-stone-900 pl-5">
-								<p className="font-mono text-[14px] leading-relaxed text-stone-800">{b.text}</p>
-								{b.cite && <cite className="mt-2 block text-[12.5px] not-italic text-stone-500">— {b.cite}</cite>}
+							<blockquote
+								key={key}
+								className="mt-7 border-l-2 border-stone-900 pl-5"
+							>
+								<p className="font-mono text-[14px] leading-relaxed text-stone-800">
+									{b.text}
+								</p>
+								{b.cite && (
+									<cite className="mt-2 block text-[12.5px] not-italic text-stone-500">
+										— {b.cite}
+									</cite>
+								)}
 							</blockquote>
 						);
 					case "cta":
 						return (
-							<div key={key} className="mt-10 rounded-sm bg-[#111110] px-6 py-6 text-stone-100 sm:flex sm:items-center sm:justify-between sm:gap-6">
+							<div
+								key={key}
+								className="mt-10 rounded-sm bg-[var(--sf-ink)] px-6 py-6 text-stone-100 sm:flex sm:items-center sm:justify-between sm:gap-6"
+							>
 								<div>
-									<p className="text-[17px] font-semibold text-stone-50">{b.title}</p>
-									<p className="mt-1 text-[14.5px] leading-relaxed text-stone-400">{b.text}</p>
+									<p className="text-[17px] font-semibold text-stone-50">
+										{b.title}
+									</p>
+									<p className="mt-1 text-[14.5px] leading-relaxed text-stone-400">
+										{b.text}
+									</p>
 								</div>
 								<Link
 									to={b.href as "/"}
@@ -202,7 +244,13 @@ export function ContentBody({ blocks }: { blocks: Block[] }) {
 	);
 }
 
-export function FaqList({ faqs, headingLevel = 3 }: { faqs: Faq[]; headingLevel?: 2 | 3 }) {
+export function FaqList({
+	faqs,
+	headingLevel = 3,
+}: {
+	faqs: Faq[];
+	headingLevel?: 2 | 3;
+}) {
 	const H = headingLevel === 2 ? "h2" : "h3";
 	return (
 		<div className="divide-y divide-stone-200 border-y border-stone-200">

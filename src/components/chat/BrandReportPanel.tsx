@@ -79,10 +79,7 @@ interface BrandReportPanelProps {
 	onRetryFailed: () => void;
 	onAskAbout: (label: string, value: string) => void;
 	/** `only` + `charge` flow through; the empty state passes the 3 starters. */
-	onGenerateConcepts: (opts?: {
-		only?: string[];
-		charge?: boolean;
-	}) => void;
+	onGenerateConcepts: (opts?: { only?: string[]; charge?: boolean }) => void;
 	onToggleFavorite: (label: string) => void;
 	/** Bring the chat into view with its input focused. */
 	onOpenChat: () => void;
@@ -611,8 +608,7 @@ function BrainCard({ brain }: { brain: ProjectBrain | null }) {
 
 /** three.js is heavy and client-only; keep it out of the panel's first paint. */
 /** What the factory wants stamped on anything a buyer takes away. */
-const WATERMARK_TEXT =
-	import.meta.env.VITE_WATERMARK_TEXT || "Rolling Retail";
+const WATERMARK_TEXT = import.meta.env.VITE_WATERMARK_TEXT || "Rolling Retail";
 
 const TruckConfigurator = lazy(
 	() => import("#/components/truck/TruckConfigurator"),
@@ -876,16 +872,16 @@ export default function BrandReportPanel({
 							icon={Truck}
 							title="No concepts yet — start with 3 starter views"
 							body="Hero, curbside and interior prove the concept from the same truck. Rear, night, assembly and brand views follow on request once the direction is confirmed."
-						action={{
-							label: "Generate 3 starter concepts",
-							onClick: () =>
-								onGenerateConcepts({
-									only: [...STARTER_AUTO_VIEWS],
-									// A fresh round with a view list still spends the credit
-									// it says it spends.
-									charge: true,
-								}),
-						}}
+							action={{
+								label: "Generate 3 starter concepts",
+								onClick: () =>
+									onGenerateConcepts({
+										only: [...STARTER_AUTO_VIEWS],
+										// A fresh round with a view list still spends the credit
+										// it says it spends.
+										charge: true,
+									}),
+							}}
 							footnote={
 								<>
 									<Lock className="h-3 w-3" /> Included with this customer ·
@@ -1044,15 +1040,15 @@ export default function BrandReportPanel({
 								})}
 							</div>
 							<div className="mt-3 flex flex-wrap gap-2">
-							<button
-								type="button"
-								onClick={() => onGenerateConcepts({ charge: true })}
-								disabled={isGenerating}
-								className={GHOST_BTN}
-							>
-								<RefreshCw className="h-3 w-3" />
-								Regenerate · 1 credit
-							</button>
+								<button
+									type="button"
+									onClick={() => onGenerateConcepts({ charge: true })}
+									disabled={isGenerating}
+									className={GHOST_BTN}
+								>
+									<RefreshCw className="h-3 w-3" />
+									Regenerate · 1 credit
+								</button>
 								<button
 									type="button"
 									onClick={onOpenChat}
@@ -1077,12 +1073,12 @@ export default function BrandReportPanel({
 									}
 								/>
 								<p className="-mt-1 mb-3 text-xs leading-relaxed text-[var(--ftf-ink-2)]">
-									Three clips: an inside walkthrough of the full equipment
-									line, a 360° orbit of the exterior, and the trailer at
-									night. The walkthrough is filmed standing inside the galley,
-									so it shows the line end to end. Clips are concept
-									visualizations for a pitch, not a record of the build; check
-									every clip before sharing it.
+									Three clips: an inside walkthrough of the full equipment line,
+									a 360° orbit of the exterior, and the trailer at night. The
+									walkthrough is filmed standing inside the galley, so it shows
+									the line end to end. Clips are concept visualizations for a
+									pitch, not a record of the build; check every clip before
+									sharing it.
 								</p>
 								<div className="grid gap-2 sm:grid-cols-2">
 									{SALES_VIDEO_PRESETS.map((p) => (
@@ -1114,50 +1110,52 @@ export default function BrandReportPanel({
 										/>
 									</div>
 								)}
-							{!isGeneratingVideo &&
-								videos.length > 0 &&
-								videos.map((v) => (
-									<div key={v.id} className={cn(CARD, "mt-2.5 overflow-hidden")}>
-										{v.status === "ready" && v.url ? (
-															<>
-																{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
-																<video
-																	src={v.url}
-																	controls
-																	playsInline
-																	className="aspect-video w-full bg-[var(--ftf-well)]"
-																/>
-																<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
-																	<span className="text-[11px] font-medium text-[var(--ftf-ink-2)]">
-																		{SALES_VIDEO_PRESETS.find(
-																			(p) => p.kind === v.kind,
-																		)?.label ?? v.kind}
-																	</span>
-																	<a
-																		href={v.url}
-																		download={`${v.kind}.mp4`}
-																		className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
-																	>
-																		<Download className="h-3 w-3" /> Deck-ready
-																		MP4
-																	</a>
-																</div>
-															</>
-														) : v.status === "error" ? (
-															<p className="px-3 py-3 text-xs leading-relaxed text-[var(--ftf-red-600)]">
-																Video failed
-																{v.error ? ` — ${v.error}` : ""}. Stills are
-																unaffected; try again.
-															</p>
-														) : (
-															<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
-																<Loader2 className="h-3.5 w-3.5 animate-spin" />
-																Filming from your renders — this takes a minute
-																or two.
-															</p>
-														)}
+								{!isGeneratingVideo &&
+									videos.length > 0 &&
+									videos.map((v) => (
+										<div
+											key={v.id}
+											className={cn(CARD, "mt-2.5 overflow-hidden")}
+										>
+											{v.status === "ready" && v.url ? (
+												<>
+													{/* biome-ignore lint/a11y/useMediaCaption: generated product clips have no dialogue track to caption */}
+													<video
+														src={v.url}
+														controls
+														playsInline
+														className="aspect-video w-full bg-[var(--ftf-well)]"
+													/>
+													<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ftf-line)] px-3 py-2">
+														<span className="text-[11px] font-medium text-[var(--ftf-ink-2)]">
+															{SALES_VIDEO_PRESETS.find(
+																(p) => p.kind === v.kind,
+															)?.label ?? v.kind}
+														</span>
+														<a
+															href={v.url}
+															download={`${v.kind}.mp4`}
+															className="flex items-center gap-1 text-[11px] font-medium text-[var(--ftf-blue-800)] hover:underline"
+														>
+															<Download className="h-3 w-3" /> Deck-ready MP4
+														</a>
 													</div>
-												))}
+												</>
+											) : v.status === "error" ? (
+												<p className="px-3 py-3 text-xs leading-relaxed text-[var(--ftf-red-600)]">
+													Video failed
+													{v.error ? ` — ${v.error}` : ""}. Stills are
+													unaffected; try again.
+												</p>
+											) : (
+												<p className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--ftf-amber-600)]">
+													<Loader2 className="h-3.5 w-3.5 animate-spin" />
+													Filming from your renders — this takes a minute or
+													two.
+												</p>
+											)}
+										</div>
+									))}
 							</div>
 
 							{/* The trailer itself — built from the factory's dimensions,

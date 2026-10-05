@@ -9,7 +9,8 @@ export const Route = createFileRoute("/trucks/")({
 	component: TrucksPage,
 	head: () =>
 		pageHead({
-			title: "Food trailers we build — Airstream and square concession trailers",
+			title:
+				"Food trailers we build — Airstream and square concession trailers",
 			description:
 				"Compare our six custom food trailer bodies: square concession trailers at 10, 13 and 16 ft and Airstream Small, Mid and Large. Dimensions, best uses and planning ranges.",
 			path: "/trucks",
@@ -55,20 +56,41 @@ function TrucksPage() {
 								<Link
 									to="/trucks/$slug"
 									params={{ slug: t.slug }}
-									className="group grid h-full gap-6 rounded-sm border border-stone-200 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.25)] sm:grid-cols-[1fr_1.1fr]"
+									className="group grid h-full gap-6 sf-card p-6 sm:grid-cols-[1fr_1.1fr]"
 								>
 									<div className="flex items-end">
-										<TrailerArt vehicleId={t.vehicleId} primary={i % 2 ? "#1f7a8c" : "#e8641b"} className="w-full text-stone-900" />
+										<TrailerArt
+											vehicleId={t.vehicleId}
+											primary={i % 2 ? "#1f7a8c" : "#e8641b"}
+											className="w-full text-stone-900"
+										/>
 									</div>
 									<div>
-										<h2 className="text-[20px] font-semibold tracking-tight">{t.name}</h2>
-										<p className="mt-1 text-[14px] text-stone-600">{t.headline}</p>
+										<h2 className="sf-display text-[30px]">{t.name}</h2>
+										<p className="mt-1 text-[14px] text-stone-600">
+											{t.headline}
+										</p>
 										<dl className="mt-4 space-y-1 text-[13px]">
-											<div className="flex justify-between"><dt className="text-stone-500">Size</dt><dd className="font-mono">{s?.lengthFt} × {s?.widthFt} × {s?.heightFt} ft</dd></div>
-											<div className="flex justify-between"><dt className="text-stone-500">Crew</dt><dd>{t.crew}</dd></div>
-											<div className="flex justify-between"><dt className="text-stone-500">Planning range</dt><dd className="font-mono">{rangeLabel(t.planningRange)}</dd></div>
+											<div className="flex justify-between">
+												<dt className="text-stone-500">Size</dt>
+												<dd className="font-mono">
+													{s?.lengthFt} × {s?.widthFt} × {s?.heightFt} ft
+												</dd>
+											</div>
+											<div className="flex justify-between">
+												<dt className="text-stone-500">Crew</dt>
+												<dd>{t.crew}</dd>
+											</div>
+											<div className="flex justify-between">
+												<dt className="text-stone-500">Planning range</dt>
+												<dd className="font-mono">
+													{rangeLabel(t.planningRange)}
+												</dd>
+											</div>
 										</dl>
-										<p className="mt-4 text-[12.5px] text-stone-500">Best for: {t.bestFor.join(", ")}</p>
+										<p className="mt-4 text-[12.5px] text-stone-500">
+											Best for: {t.bestFor.join(", ")}
+										</p>
 									</div>
 								</Link>
 							</Reveal>
@@ -78,14 +100,29 @@ function TrucksPage() {
 			</section>
 
 			<section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-				<h2 className="text-[24px] font-semibold tracking-tight">Side-by-side</h2>
+				<h2 className="sf-display text-[30px]">Side-by-side</h2>
 				<div className="-mx-4 mt-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 					<table className="w-full min-w-[720px] border-collapse text-left text-[14px]">
-						<caption className="sr-only">Comparison of the six food trailer bodies</caption>
+						<caption className="sr-only">
+							Comparison of the six food trailer bodies
+						</caption>
 						<thead>
 							<tr className="border-b border-stone-300">
-								{["Body", "Outside size (L × W × H)", "Wrap area", "Crew", "Peak", "Planning range"].map((h) => (
-									<th key={h} scope="col" className="py-2.5 pr-4 font-mono text-[10.5px] font-normal uppercase tracking-wider text-stone-500">{h}</th>
+								{[
+									"Body",
+									"Outside size (L × W × H)",
+									"Wrap area",
+									"Crew",
+									"Peak",
+									"Planning range",
+								].map((h) => (
+									<th
+										key={h}
+										scope="col"
+										className="py-2.5 pr-4 font-mono text-[10.5px] font-normal uppercase tracking-wider text-stone-500"
+									>
+										{h}
+									</th>
 								))}
 							</tr>
 						</thead>
@@ -95,13 +132,25 @@ function TrucksPage() {
 								return (
 									<tr key={t.slug} className="border-b border-stone-200">
 										<th scope="row" className="py-3 pr-4 font-medium">
-											<Link to="/trucks/$slug" params={{ slug: t.slug }} className="hover:underline">{t.name}</Link>
+											<Link
+												to="/trucks/$slug"
+												params={{ slug: t.slug }}
+												className="hover:underline"
+											>
+												{t.name}
+											</Link>
 										</th>
-										<td className="py-3 pr-4 font-mono text-stone-700">{s?.lengthFt} × {s?.widthFt} × {s?.heightFt} ft</td>
-										<td className="py-3 pr-4 font-mono text-stone-700">~{s?.wrapSqft} sq ft</td>
+										<td className="py-3 pr-4 font-mono text-stone-700">
+											{s?.lengthFt} × {s?.widthFt} × {s?.heightFt} ft
+										</td>
+										<td className="py-3 pr-4 font-mono text-stone-700">
+											~{s?.wrapSqft} sq ft
+										</td>
 										<td className="py-3 pr-4 text-stone-700">{t.crew}</td>
 										<td className="py-3 pr-4 text-stone-700">{t.peak}</td>
-										<td className="py-3 pr-4 font-mono text-stone-700">{rangeLabel(t.planningRange)}</td>
+										<td className="py-3 pr-4 font-mono text-stone-700">
+											{rangeLabel(t.planningRange)}
+										</td>
 									</tr>
 								);
 							})}
@@ -109,10 +158,14 @@ function TrucksPage() {
 					</table>
 				</div>
 				<p className="mt-4 text-[12.5px] text-stone-500">
-					Planning ranges are typical equipped builds with a standard wrap, for budgeting. Your quote is confirmed against your final specification.
+					Planning ranges are typical equipped builds with a standard wrap, for
+					budgeting. Your quote is confirmed against your final specification.
 				</p>
 			</section>
-			<CtaBand title="Not sure which body fits?" text="Tell the designer your menu, your busiest hour and where you trade. It recommends a body — and tells you why." />
+			<CtaBand
+				title="Not sure which body fits?"
+				text="Tell the designer your menu, your busiest hour and where you trade. It recommends a body — and tells you why."
+			/>
 		</SiteShell>
 	);
 }
