@@ -1,29 +1,57 @@
+/**
+ * The designer's client state: one conversation, one canvas, kept in step.
+ *
+ * The chat and the canvas used to be two separate stories. Renders landed
+ * in the panel without a word in the chat; a change asked for in the chat
+ * never reached the renders; every round opened nine slots for a three-view
+ * round and left six of them to "fail". This hook now treats the chat as the
+ * timeline of the design:
+ *
+ *   brief card → first renders card → proposal card → Apply → renders card …
+ *
+ * and the canvas as the live view of the latest version. Every render —
+ * auto, revision, extra angle, retry — goes through the server's single
+ * round runner and comes back as the same events.
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { track } from "#/lib/track";
 import type { ProjectBrain } from "#/lib/food-truck/brain";
-import {
-	CONCEPT_VIEW_COUNT,
-	CONCEPT_VIEWS,
-	RENDER_VIEWS,
-} from "#/lib/food-truck/constants";
+import { CONCEPT_VIEWS, RENDER_VIEWS } from "#/lib/food-truck/constants";
 import type { MenuDesign } from "#/lib/food-truck/menu";
 import {
 	pickApprovedReferences,
 	pickMasterReference,
 	type SalesVideoKind,
 } from "#/lib/food-truck/sales";
+import { track } from "#/lib/track";
 
 /**
- * The session id and the in-progress menu live on the client, so they also
- * die with the page: a phone refresh or a backgrounded tab the OS reclaims
- * used to land the buyer back on the empty intake with their whole design
- * invisible. The id is kept in localStorage and the design is re-hydrated
- * from GET /api/agent/state on mount.
+ * The session id and the in-progress menu are kept in localStorage so a
+ * reload re-hydrates the design from GET /api/agent/state instead of
+ * landing the buyer back on an empty intake.
  */
 const SESSION_KEY = "ftf_sessionId";
 const MENU_DRAFT_KEY = "ftf_menuDraft";
 
 export type MessageRole = "user" | "assistant";
+
+export interface RendersCardData {
+	views: string[];
+	failed?: string[];
+	version?: number | null;
+	stamp?: string | null;
+	/** What produced it, for the card's headline. */
+	reason?: "first" | "revision" | "more" | "retry" | "regenerate";
+}
+
+export interface ProposalCardData {
+	id: string;
+	changeSummary: string;
+	changes: string[];
+	viewCount: number;
+	creditsLeft?: number;
+	status: "pending" | "applying" | "applied" | "dismissed";
+	version?: number;
+}
 
 export interface ChatMessage {
 	id: string;
@@ -34,6 +62,10 @@ export interface ChatMessage {
 	notice?: boolean;
 	/** Attached inspiration photo preview (user messages). */
 	image?: string;
+	/** Structured cards in the timeline. Plain text when omitted. */
+	kind?: "brief" | "renders" | "proposal";
+	renders?: RendersCardData;
+	proposal?: ProposalCardData;
 }
 
 export interface GeneratedImage {
@@ -42,21 +74,21 @@ export interface GeneratedImage {
 	url: string;
 	timestamp: Date;
 	favorite?: boolean;
-	/**
-	 * A slot exists for every concept view from the moment a round starts, so
-	 * a view that is still rendering or has failed shows as itself rather than
-	 * as a gap in the grid.
-	 */
+	/** Only the views a round is actually rendering get a pending slot. */
 	status: "pending" | "ready" | "failed";
 	error?: string;
 	/** Views this render was conditioned on — surfaced as provenance. */
 	references?: string[];
+	/**
+	 * The latest round for this view failed, so these are the previous
+	 * version's pixels. The canvas says so instead of passing them off as new.
+	 */
+	stale?: boolean;
 }
 
 /** Where a generation round has got to, for one honest progress display. */
 export interface PipelineProgress {
 	phase: "idle" | "renders" | "videos" | "finalizing" | "complete";
-	/** Human label for the step in flight, e.g. "Rendering interior layout". */
 	step: string;
 	rendersDone: number;
 	rendersTotal: number;
@@ -69,7 +101,24 @@ export function prettyView(view: string): string {
 	return view.replace(/_/g, " ");
 }
 
-export const IDLE_PROGRESS: PipelineProgress = {
+/** Buyer-facing names for each view. */
+export const VIEW_TITLES: Record<string, string> = {
+	exterior_hero: "Exterior",
+	side_elevation: "Curbside",
+	interior_layout: "Interior line",
+	exterior_rear: "Rear",
+	front_elevation: "Through the hatch",
+	assembly_theater: "At the counter",
+	night_exterior: "At night",
+	brand_mark: "Brand mark",
+	menu_board: "Menu board",
+};
+
+export function viewTitle(view: string): string {
+	return VIEW_TITLES[view] ?? prettyView(view);
+}
+
+const IDLE_PROGRESS: PipelineProgress = {
 	phase: "idle",
 	step: "",
 	rendersDone: 0,
@@ -86,7 +135,6 @@ export interface GeneratedVideo {
 	error?: string | null;
 	part?: number;
 	seriesId?: string;
-	/** Provider interaction id — re-sent so tour chaining + polling survive fresh serverless instances. */
 	operationId?: string | null;
 }
 
@@ -135,92 +183,74 @@ export interface TruckSpec {
 	nextSteps: string[];
 }
 
-// ── Deprecated ADK-era aliases (kept so old panels compile during migration) ──
-export interface DeploymentMetrics {
-	roi_projections: {
-		monthly_budget: number;
-		days_per_month: number;
-		num_locations: number;
-		avg_ticket: number;
-		price_point: string;
-		monthly_impressions: number;
-		foot_traffic_encounters: number;
-		est_conversions: number;
-		projected_monthly_revenue: number;
-		conversion_rate: number;
-		roi_percentage: number;
-	};
-	comparison: {
-		mobile_monthly_cost: number;
-		traditional_lease_cost: number;
-		digital_only_cost: number;
-		mobile_conversion: number;
-		traditional_conversion: number;
-		digital_conversion: number;
-		mobile_setup: string;
-		traditional_setup: string;
-		digital_setup: string;
-	};
-	scoring: {
-		weights: Record<string, number>;
-		top_location_score: number;
-		scores: {
-			daytime: number;
-			pedestrian: number;
-			commercial: number;
-			affluence: number;
-			composite: number;
-		};
-	};
-	target_markets: string[];
+export interface DesignState {
+	current?: {
+		version: number;
+		state: string;
+		changeSummary?: string | null;
+		spec?: Record<string, unknown>;
+	} | null;
+	versions?: Array<{
+		version: number;
+		state: string;
+		changeSummary?: string | null;
+	}>;
+	approvals?: Array<{
+		version: number;
+		by?: string | null;
+		createdAt: number;
+	}>;
+	stamp?: string | null;
 }
-export interface EventRecommendation {
-	name: string;
-	type: string;
-	location: string;
-	frequency: string;
-	season: string;
-	total_attendance: number;
-	daily_attendance: number;
-	fit_score: number;
-	fit_reasons: string[];
-	projected_daily_impressions: number;
-	projected_daily_conversions: number;
-	projected_daily_revenue: number;
-	permit_type: string;
-}
-export interface PlatformAnalytics {
-	platform_stats: {
-		total_orders: number;
-		paid_orders: number;
-		total_revenue: number;
-		avg_order_value: number;
-		total_items_sold: number;
-		unique_customers: number;
-		cities_served: number;
-		states_reached: number;
-		vendors_hosted: number;
-		peak_day: string;
-		peak_hours: string[];
-		channel_split: { web: number; pos: number };
-		monthly_trend: Array<{ month: string; revenue: number; orders: number }>;
-	};
-	top_products: Array<{ name: string; units_sold: number }>;
-	top_categories: Array<{ category: string; units_sold: number; pct: number }>;
-	top_locations: Array<{ location: string; transactions: number }>;
-	customer_insights: {
-		repeat_customer_rate_pct: number;
-		multi_item_basket_rate_pct: number;
-		marketing_opt_in_rate_pct: number;
-	};
-}
+
+type IncomingImage = {
+	label: string;
+	filename?: string;
+	url: string;
+	status?: string;
+	error?: string;
+	references?: string[];
+};
 
 function generateId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 const WELCOME =
-	"Welcome to the Rolling Retail designer. Please share your brand, menu, colors, service style and any inspiration — I will organize it into a factory-buildable layout and prepare visual concepts once I have enough detail. What are you building?";
+	"Hi — I'm your Rolling Retail designer. Tell me what you'll serve and how you want it to feel, or share a photo you like. I'll lay out a trailer our factory can build and show it to you inside and out.";
+
+const OUT_OF_ROUNDS =
+	"You've used your free design rounds. Request a quote and our team will keep refining it with you.";
+
+/** Read an SSE response, one parsed event at a time. */
+async function readSse(
+	res: Response,
+	onEvent: (evt: Record<string, unknown>) => void,
+): Promise<void> {
+	const reader = res.body?.getReader();
+	if (!reader) throw new Error("No response stream");
+	const decoder = new TextDecoder();
+	let buf = "";
+	const flush = (frame: string) => {
+		for (const line of frame.split("\n")) {
+			if (!line.startsWith("data: ")) continue;
+			try {
+				onEvent(JSON.parse(line.slice(6)) as Record<string, unknown>);
+			} catch {
+				/* partial frame */
+			}
+		}
+	};
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		buf += decoder.decode(value, { stream: true });
+		const frames = buf.split("\n\n");
+		buf = frames.pop() ?? "";
+		for (const f of frames) flush(f);
+	}
+	if (buf.trim()) flush(buf.trim());
+}
 
 export function useChat() {
 	const [messages, setMessages] = useState<ChatMessage[]>([
@@ -238,50 +268,58 @@ export function useChat() {
 	const [estimate, setEstimate] = useState<TruckEstimate | null>(null);
 	const [spec, setSpec] = useState<TruckSpec | null>(null);
 	const [lead, setLead] = useState<Record<string, unknown> | null>(null);
-	const [metrics] = useState<DeploymentMetrics | null>(null);
-	const [events] = useState<EventRecommendation[]>([]);
-	const [analytics] = useState<PlatformAnalytics | null>(null);
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [isGeneratingImages, setIsGeneratingImages] = useState(false);
 	const [videos, setVideos] = useState<GeneratedVideo[]>([]);
 	const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
 	const [creditsLeft, setCreditsLeft] = useState<number | null>(null);
-	const [leads, setLeads] = useState<PipelineLead[]>([]);
-	const [vehicleId, setVehicleId] = useState<string>("airstream-m");
-	const [businessType, setBusinessType] = useState<string>("combined");
+	const [vehicleId, setVehicleId] = useState<string>("");
+	const [businessType, setBusinessType] = useState<string>("");
 	const [brandName, setBrandName] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
 	const [isRenderingMenu, setIsRenderingMenu] = useState(false);
-	// Held here, not in the tab, so switching tabs never loses a half-typed menu.
 	const [menuDraft, setMenuDraft] = useState<MenuDesign | null>(null);
-	// Versioned design record — v1 → v2 → v3 with approvals + stamp.
-	const [design, setDesign] = useState<{
-		current?: {
-			version: number;
-			state: string;
-			changeSummary?: string | null;
-			spec?: Record<string, unknown>;
-		} | null;
-		versions?: Array<{
-			version: number;
-			state: string;
-			changeSummary?: string | null;
-		}>;
-		approvals?: Array<{
-			version: number;
-			by?: string | null;
-			createdAt: number;
-		}>;
-		stamp?: string | null;
-	} | null>(null);
+	const [design, setDesign] = useState<DesignState | null>(null);
 	const [isApproving, setIsApproving] = useState(false);
-	/** Server snapshot shape returned by /api/agent/state. */
 	const [hydrated, setHydrated] = useState(false);
+	/** The view the canvas shows large. Chat thumbnails set it. */
+	const [selectedView, setSelectedView] = useState<string | null>(null);
 
 	const sessionIdRef = useRef<string | null>(null);
 	const [sessionId, setSessionId] = useState<string | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
+	/** Id of the assistant bubble currently receiving text. */
+	const streamingIdRef = useRef<string | null>(null);
+	/** Why the round in flight started — for the renders card headline. */
+	const roundReasonRef = useRef<RendersCardData["reason"]>("first");
+
+	const pushMessage = useCallback(
+		(m: Omit<ChatMessage, "id" | "timestamp">) => {
+			setMessages((prev) => [
+				...prev,
+				{
+					...m,
+					id: `${m.kind ?? m.role}-${generateId()}`,
+					timestamp: new Date(),
+				},
+			]);
+		},
+		[],
+	);
+
+	const patchProposal = useCallback(
+		(id: string, patch: Partial<ProposalCardData>) => {
+			setMessages((prev) =>
+				prev.map((m) =>
+					m.kind === "proposal" && m.proposal?.id === id
+						? { ...m, proposal: { ...m.proposal, ...patch } }
+						: m,
+				),
+			);
+		},
+		[],
+	);
 
 	const refreshDesign = useCallback(async () => {
 		const sid = sessionIdRef.current;
@@ -291,26 +329,7 @@ export function useChat() {
 				`/api/agent/design?sessionId=${encodeURIComponent(sid)}`,
 			);
 			if (!res.ok) return;
-			const data = (await res.json()) as {
-				current?: {
-					version: number;
-					state: string;
-					changeSummary?: string | null;
-					spec?: Record<string, unknown>;
-				} | null;
-				versions?: Array<{
-					version: number;
-					state: string;
-					changeSummary?: string | null;
-				}>;
-				approvals?: Array<{
-					version: number;
-					by?: string | null;
-					createdAt: number;
-				}>;
-				stamp?: string | null;
-			};
-			setDesign(data);
+			setDesign((await res.json()) as DesignState);
 		} catch {
 			/* design bar is best-effort */
 		}
@@ -321,16 +340,18 @@ export function useChat() {
 		const res = await fetch("/api/agent/session", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ sessionId: sessionIdRef.current ?? undefined }),
+			body: JSON.stringify({}),
 		});
-		if (!res.ok) throw new Error(`Session failed (${res.status})`);
+		if (!res.ok)
+			throw new Error(
+				"We couldn't start your design. Please refresh and try again.",
+			);
 		const data = (await res.json()) as {
 			sessionId: string;
 			credits?: { left: number };
 		};
 		sessionIdRef.current = data.sessionId;
 		setSessionId(data.sessionId);
-		// Reload-proof: the id is what the next mount re-hydrates from.
 		try {
 			localStorage.setItem(SESSION_KEY, data.sessionId);
 		} catch {
@@ -343,67 +364,111 @@ export function useChat() {
 	}, [refreshDesign]);
 
 	/**
-	 * Fold a batch of renders into the view-keyed set.
-	 *
-	 * Keyed by view, latest wins. The previous version appended and deduped on
-	 * the image bytes, so every regeneration stacked another nine tiles into
-	 * the same grid — which is the opposite of "one property seen from nine
-	 * angles". A failed render never displaces a good one, mirroring the
-	 * server's own rule, so a flaky retry cannot blank a view.
+	 * Fold renders into the view-keyed set. Latest wins; a failed render never
+	 * displaces a good one, mirroring the server's own rule.
 	 */
-	const mergeImages = useCallback(
-		(
-			incoming: Array<{
-				label: string;
-				filename?: string;
-				url: string;
-				status?: string;
-				error?: string;
-				references?: string[];
-			}>,
-		) => {
-			if (incoming.length === 0) return;
-			const now = new Date();
-			setImages((prev) => {
-				const byView = new Map(prev.map((p) => [p.label, p]));
-				for (const i of incoming) {
-					const held = byView.get(i.label);
-					const status: GeneratedImage["status"] =
-						i.status === "failed"
-							? "failed"
-							: i.status === "pending"
-								? "pending"
-								: "ready";
-					if (status === "failed" && held?.status === "ready") continue;
+	const mergeImages = useCallback((incoming: IncomingImage[]) => {
+		if (incoming.length === 0) return;
+		const now = new Date();
+		setImages((prev) => {
+			const byView = new Map(prev.map((p) => [p.label, p]));
+			for (const i of incoming) {
+				const held = byView.get(i.label);
+				const status: GeneratedImage["status"] =
+					i.status === "failed"
+						? "failed"
+						: i.status === "pending"
+							? "pending"
+							: "ready";
+				if (
+					status === "failed" &&
+					held?.url &&
+					(held.status === "ready" || held.status === "pending")
+				) {
 					byView.set(i.label, {
-						label: i.label,
-						filename: i.filename ?? `${i.label}.png`,
-						url: i.url,
-						timestamp: now,
-						status,
+						...held,
+						status: "ready",
+						stale: true,
 						error: i.error,
-						references: i.references,
-						// Starring is the buyer's, not the pipeline's.
-						favorite: held?.favorite,
 					});
+					continue;
 				}
-				return RENDER_VIEWS.map((v) => byView.get(v)).filter(
-					(v): v is GeneratedImage => Boolean(v),
-				);
-			});
-		},
-		[],
-	);
+				byView.set(i.label, {
+					label: i.label,
+					filename: i.filename ?? `${i.label}.png`,
+					url: i.url,
+					timestamp: now,
+					status,
+					error: i.error,
+					references: i.references,
+					favorite: held?.favorite,
+					stale: status === "ready" ? false : held?.stale,
+				});
+			}
+			return RENDER_VIEWS.map((v) => byView.get(v)).filter(
+				(v): v is GeneratedImage => Boolean(v),
+			);
+		});
+	}, []);
 
-	/*
-	 * ── Session rehydrate ──
-	 *
-	 * On mount, a saved session id is used to re-read the server snapshot:
-	 * messages, brain, credits, design record, renders, clips and the menu
-	 * draft. Without this, every reload was a new session from the buyer's
-	 * point of view — the previous read design stayed on the server but the
-	 * panel went back to fresh-empty.
-	 */
+	/** Open a pending slot for exactly the views this round renders. */
+	const openRenderSlots = useCallback((views: readonly string[]) => {
+		const now = new Date();
+		setImages((prev) => {
+			const byView = new Map(prev.map((p) => [p.label, p]));
+			for (const v of views) {
+				const held = byView.get(v);
+				byView.set(v, {
+					label: v,
+					filename: `${v}.png`,
+					// A re-render keeps showing the old pixels until the new ones land.
+					url: held?.url ?? "",
+					timestamp: now,
+					status: "pending",
+					favorite: held?.favorite,
+				});
+			}
+			return RENDER_VIEWS.map((view) => byView.get(view)).filter(
+				(x): x is GeneratedImage => Boolean(x),
+			);
+		});
+	}, []);
+
+	/** Ask the server what it actually produced, and settle every slot. */
+	const reconcileImages = useCallback(async () => {
+		const sid = sessionIdRef.current;
+		if (!sid) return;
+		try {
+			const res = await fetch(
+				`/api/agent/images?sessionId=${encodeURIComponent(sid)}`,
+			);
+			if (!res.ok) return;
+			const data = (await res.json()) as {
+				images?: IncomingImage[];
+				creditsLeft?: number;
+			};
+			if (Array.isArray(data.images)) mergeImages(data.images);
+			setImages((prev) =>
+				prev.map((i) =>
+					i.status === "pending"
+						? i.url
+							? { ...i, status: "ready" }
+							: {
+									...i,
+									status: "failed",
+									error: "This view didn't come back from the renderer.",
+								}
+						: i,
+				),
+			);
+			if (typeof data.creditsLeft === "number")
+				setCreditsLeft(data.creditsLeft);
+		} catch {
+			/* reconciliation is best-effort */
+		}
+	}, [mergeImages]);
+
+	/* ── Session rehydrate ── */
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -417,36 +482,17 @@ export function useChat() {
 					);
 					if (res.ok && !cancelled) {
 						const data = (await res.json()) as {
-							history?: Array<{ role: "user" | "assistant"; content: string }>;
+							history?: Array<{
+								role: "user" | "assistant";
+								content: string;
+								kind?: ChatMessage["kind"];
+								data?: Record<string, unknown>;
+							}>;
 							brain?: ProjectBrain;
 							credits?: { left: number };
-							images?: Array<{
-								label: string;
-								url: string;
-								status?: string;
-								error?: string;
-								references?: string[];
-							}>;
+							images?: IncomingImage[];
 							videos?: GeneratedVideo[];
-							design?: {
-								current?: {
-									version: number;
-									state: string;
-									changeSummary?: string | null;
-									spec?: Record<string, unknown>;
-								} | null;
-								versions?: Array<{
-									version: number;
-									state: string;
-									changeSummary?: string | null;
-								}>;
-								approvals?: Array<{
-									version: number;
-									by?: string | null;
-									createdAt: number;
-								}>;
-								stamp?: string | null;
-							};
+							design?: DesignState;
 							lead?: Record<string, unknown>;
 						};
 						if (Array.isArray(data.history) && data.history.length > 0) {
@@ -462,6 +508,15 @@ export function useChat() {
 									role: h.role,
 									content: String(h.content ?? ""),
 									timestamp: new Date(),
+									kind: h.kind,
+									renders:
+										h.kind === "renders"
+											? (h.data as unknown as RendersCardData)
+											: undefined,
+									proposal:
+										h.kind === "proposal"
+											? (h.data as unknown as ProposalCardData)
+											: undefined,
 								})),
 							]);
 						}
@@ -492,100 +547,16 @@ export function useChat() {
 		return () => {
 			cancelled = true;
 		};
-		// mergeImages is the only dependency that is callable; it is memoized
-		// with stable deps, so the effect still runs exactly once on mount.
 	}, [mergeImages]);
 
-	// The half-built menu survives reloads too — losing a typed menu was the
-	// second-most-restart-frustration after losing the design itself.
 	useEffect(() => {
-		if (menuDraft)
+		if (!menuDraft) return;
+		try {
 			localStorage.setItem(MENU_DRAFT_KEY, JSON.stringify(menuDraft));
+		} catch {
+			/* storage disabled */
+		}
 	}, [menuDraft]);
-
-	/** Open a slot per view so the grid shows the whole round immediately. */
-	const openRenderSlots = useCallback(() => {
-		const now = new Date();
-		setImages((prev) => {
-			const byView = new Map(prev.map((p) => [p.label, p]));
-			for (const v of CONCEPT_VIEWS) {
-				const held = byView.get(v);
-				if (held?.status === "ready") continue;
-				byView.set(v, {
-					label: v,
-					filename: `${v}.png`,
-					url: "",
-					timestamp: now,
-					status: "pending",
-					favorite: held?.favorite,
-				});
-			}
-			return RENDER_VIEWS.map((view) => byView.get(view)).filter(
-				(x): x is GeneratedImage => Boolean(x),
-			);
-		});
-	}, []);
-
-	/**
-	 * Ask the server what it actually produced.
-	 *
-	 * SSE is the fast path but not a reliable one — a dropped or truncated
-	 * frame used to lose a render for good, because nothing but that frame
-	 * ever held it. Every round now ends by reconciling against the store.
-	 */
-	const reconcileImages = useCallback(async () => {
-		const sessionId = sessionIdRef.current;
-		if (!sessionId) return;
-		try {
-			const res = await fetch(
-				`/api/agent/images?sessionId=${encodeURIComponent(sessionId)}`,
-			);
-			if (!res.ok) return;
-			const data = (await res.json()) as {
-				images?: Array<{
-					label: string;
-					filename?: string;
-					url: string;
-					status?: string;
-					error?: string;
-					references?: string[];
-				}>;
-				creditsLeft?: number;
-			};
-			if (Array.isArray(data.images) && data.images.length > 0) {
-				mergeImages(data.images);
-			}
-			// Any slot still "pending" after the server has settled never
-			// landed — mark it so the grid can offer a retry instead of
-			// spinning forever.
-			setImages((prev) =>
-				prev.map((i) =>
-					i.status === "pending"
-						? {
-								...i,
-								status: "failed",
-								error: "This view did not come back from the renderer.",
-							}
-						: i,
-				),
-			);
-			if (typeof data.creditsLeft === "number")
-				setCreditsLeft(data.creditsLeft);
-		} catch {
-			/* reconciliation is best-effort — SSE data still stands */
-		}
-	}, [mergeImages]);
-
-	const refreshLeads = useCallback(async () => {
-		try {
-			const res = await fetch("/api/agent/leads");
-			if (!res.ok) return;
-			const data = (await res.json()) as { leads?: PipelineLead[] };
-			if (Array.isArray(data.leads)) setLeads(data.leads);
-		} catch {
-			/* pipeline is best-effort */
-		}
-	}, []);
 
 	const approveVersion = useCallback(
 		async (version: number) => {
@@ -605,34 +576,37 @@ export function useChat() {
 				});
 				const data = (await res.json().catch(() => ({}))) as { error?: string };
 				if (!res.ok)
-					throw new Error(data.error || `Approval failed (${res.status})`);
+					throw new Error(
+						data.error || "We couldn't save your approval. Please try again.",
+					);
 				track("design_approved", { version });
 				await refreshDesign();
+				pushMessage({
+					role: "assistant",
+					content: `**Design v${version} approved.** Our build team now has a version they can quote from. Share your name and the best way to reach you, and I'll send it across with your spec.`,
+				});
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Approval failed");
 			} finally {
 				setIsApproving(false);
 			}
 		},
-		[isApproving, brandName, refreshDesign],
+		[isApproving, brandName, refreshDesign, pushMessage],
 	);
 
+	/** Every stream (chat, revise) speaks the same event language. */
 	const applyStreamEvent = useCallback(
 		(evt: Record<string, unknown>) => {
 			const type = evt.type as string;
 			if (type === "text") {
 				const delta = String(evt.delta ?? "");
-				if (!delta) return;
-				setMessages((prev) => {
-					const last = prev[prev.length - 1];
-					if (last && last.role === "assistant" && last.isStreaming) {
-						return [
-							...prev.slice(0, -1),
-							{ ...last, content: last.content + delta },
-						];
-					}
-					return prev;
-				});
+				const id = streamingIdRef.current;
+				if (!delta || !id) return;
+				setMessages((prev) =>
+					prev.map((m) =>
+						m.id === id ? { ...m, content: m.content + delta } : m,
+					),
+				);
 			} else if (type === "layout") {
 				setLayout(evt.layout as TruckLayout);
 			} else if (type === "estimate") {
@@ -641,49 +615,43 @@ export function useChat() {
 				setSpec(evt.spec as TruckSpec);
 			} else if (type === "lead") {
 				setLead(evt.lead as Record<string, unknown>);
-				void refreshLeads();
-			} else if (type === "notice") {
-				setMessages((prev) => [
-					...prev,
-					{
-						id: `notice-${generateId()}`,
-						role: "assistant",
-						content: String(evt.notice ?? ""),
-						timestamp: new Date(),
-						notice: true,
-					},
-				]);
 			} else if (type === "done") {
 				if (typeof evt.creditsLeft === "number")
 					setCreditsLeft(evt.creditsLeft as number);
 			} else if (type === "brain") {
-				setBrain(evt.brain as ProjectBrain);
+				const b = evt.brain as ProjectBrain;
+				setBrain(b);
+				if (b?.vehicleId) setVehicleId(b.vehicleId);
+				if (b?.businessType) setBusinessType(b.businessType);
+				if (b?.brandName) setBrandName(b.brandName);
+			} else if (type === "proposal") {
+				pushMessage({
+					role: "assistant",
+					content: "",
+					kind: "proposal",
+					proposal: evt.proposal as ProposalCardData,
+				});
+			} else if (type === "proposal_applied") {
+				patchProposal(String(evt.proposalId), {
+					status: "applied",
+					version: evt.version as number,
+				});
+				roundReasonRef.current = "revision";
 			} else if (type === "images_start") {
+				const views = Array.isArray(evt.views) ? (evt.views as string[]) : [];
 				setIsGeneratingImages(true);
-				openRenderSlots();
+				openRenderSlots(views);
+				if (views[0]) setSelectedView((cur) => cur ?? views[0]);
 				setProgress({
 					phase: "renders",
 					step: "Preparing the render brief",
 					rendersDone: 0,
-					rendersTotal:
-						typeof evt.count === "number"
-							? (evt.count as number)
-							: CONCEPT_VIEW_COUNT,
+					rendersTotal: views.length,
 					videosDone: 0,
 					videosTotal: 0,
 				});
 			} else if (type === "images") {
-				// A stage announces itself with an empty batch before it runs, so
-				// the panel can name the views currently in flight.
-				const batch = (evt.images ?? []) as Array<{
-					label: string;
-					filename: string;
-					url: string;
-					status?: string;
-					error?: string;
-					references?: string[];
-				}>;
-				mergeImages(batch);
+				mergeImages((evt.images ?? []) as IncomingImage[]);
 				const p = evt.progress as
 					| { completed?: number; total?: number; generating?: string[] }
 					| undefined;
@@ -692,16 +660,14 @@ export function useChat() {
 						...prev,
 						phase: "renders",
 						step: p.generating?.length
-							? `Rendering ${p.generating.map(prettyView).join(", ")}`
+							? `Rendering ${p.generating.map(viewTitle).join(", ").toLowerCase()}`
 							: prev.step,
 						rendersDone: p.completed ?? prev.rendersDone,
 						rendersTotal: p.total ?? prev.rendersTotal,
 					}));
 				}
 			} else if (type === "images_done") {
-				mergeImages(
-					(evt.images ?? []) as Array<{ label: string; url: string }>,
-				);
+				mergeImages((evt.images ?? []) as IncomingImage[]);
 				setIsGeneratingImages(false);
 				setProgress((prev) => ({
 					...prev,
@@ -712,25 +678,45 @@ export function useChat() {
 				if (typeof evt.creditsLeft === "number")
 					setCreditsLeft(evt.creditsLeft as number);
 				if (typeof evt.error === "string") setError(evt.error);
+				const views = (evt.views ?? []) as string[];
+				const failed = (evt.failed ?? []) as string[];
+				if (views.length || failed.length) {
+					pushMessage({
+						role: "assistant",
+						content: "",
+						kind: "renders",
+						renders: {
+							views,
+							failed,
+							version: (evt.version as number | null) ?? null,
+							stamp: (evt.stamp as string | null) ?? null,
+							reason: roundReasonRef.current,
+						},
+					});
+					if (views[0]) setSelectedView(views[0]);
+				}
+				roundReasonRef.current = "first";
 				void reconcileImages();
 				void refreshDesign();
 			}
 		},
 		[
-			refreshLeads,
 			mergeImages,
 			openRenderSlots,
 			reconcileImages,
 			refreshDesign,
+			pushMessage,
+			patchProposal,
 		],
 	);
 
 	const sendMessage = useCallback(
-		async (text: string, opts?: { image?: string }) => {
+		async (text: string, opts?: { image?: string; kind?: "brief" }) => {
 			const trimmed = text.trim();
 			if ((!trimmed && !opts?.image) || isStreaming) return;
 			setError(null);
 			const assistantId = `assistant-${generateId()}`;
+			streamingIdRef.current = assistantId;
 			setMessages((prev) => [
 				...prev,
 				{
@@ -739,6 +725,7 @@ export function useChat() {
 					content: trimmed,
 					timestamp: new Date(),
 					image: opts?.image,
+					kind: opts?.kind,
 				},
 				{
 					id: assistantId,
@@ -750,7 +737,7 @@ export function useChat() {
 			]);
 			setIsConnecting(true);
 			try {
-				const sessionId = await ensureSession();
+				const sid = await ensureSession();
 				setIsConnecting(false);
 				setIsStreaming(true);
 				abortRef.current = new AbortController();
@@ -758,59 +745,31 @@ export function useChat() {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						sessionId,
+						sessionId: sid,
 						message: trimmed,
 						image: opts?.image,
-						context: { vehicleId, businessType, brandName },
+						kind: opts?.kind,
 					}),
 					signal: abortRef.current.signal,
 				});
 				if (!res.ok) {
-					const data = await res.json().catch(() => ({}));
+					const data = (await res.json().catch(() => ({}))) as {
+						error?: string;
+					};
 					throw new Error(
-						(data as { error?: string }).error ||
-							`Designer request failed (${res.status})`,
+						data.error || "The designer didn't answer. Please try again.",
 					);
 				}
-				const reader = res.body?.getReader();
-				if (!reader) throw new Error("No response stream");
-				const decoder = new TextDecoder();
-				let buf = "";
-				for (;;) {
-					const { done, value } = await reader.read();
-					if (done) break;
-					buf += decoder.decode(value, { stream: true });
-					const frames = buf.split("\n\n");
-					buf = frames.pop() ?? "";
-					for (const frame of frames) {
-						for (const line of frame.split("\n")) {
-							if (!line.startsWith("data: ")) continue;
-							try {
-								applyStreamEvent(
-									JSON.parse(line.slice(6)) as Record<string, unknown>,
-								);
-							} catch {
-								/* partial frame */
-							}
-						}
-					}
-				}
-				if (buf.trim().startsWith("data: ")) {
-					try {
-						applyStreamEvent(
-							JSON.parse(buf.trim().slice(6)) as Record<string, unknown>,
-						);
-					} catch {
-						/* ignore */
-					}
-				}
+				await readSse(res, applyStreamEvent);
 				setMessages((prev) =>
 					prev.map((m) =>
 						m.id === assistantId
 							? {
 									...m,
 									isStreaming: false,
-									content: m.content || "Got it — what should we refine next?",
+									content:
+										m.content ||
+										"Done — take a look at the canvas and tell me what to change.",
 								}
 							: m,
 					),
@@ -828,154 +787,183 @@ export function useChat() {
 						prev.filter((m) => m.id !== assistantId || m.content.length > 0),
 					);
 				}
+				setIsGeneratingImages(false);
 			} finally {
+				streamingIdRef.current = null;
 				setIsStreaming(false);
 				setIsConnecting(false);
 			}
 		},
-		[
-			isStreaming,
-			ensureSession,
-			applyStreamEvent,
-			vehicleId,
-			businessType,
-			brandName,
-		],
+		[isStreaming, ensureSession, applyStreamEvent],
 	);
 
-	const sendContextMessage = useCallback(
-		async (label: string, value: string, question?: string) => {
-			await sendMessage(
-				`[${label}: ${value}] ${question?.trim() || `Tell me more about ${label}.`}`,
-			);
+	/** Apply a proposed change: new version + re-render, streamed. */
+	const applyProposal = useCallback(
+		async (proposalId: string) => {
+			if (isGeneratingImages) return;
+			setError(null);
+			patchProposal(proposalId, { status: "applying" });
+			roundReasonRef.current = "revision";
+			try {
+				const sid = await ensureSession();
+				const res = await fetch("/api/agent/revise", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ sessionId: sid, proposalId }),
+				});
+				if (!res.ok) {
+					const data = (await res.json().catch(() => ({}))) as {
+						error?: string;
+						creditsLeft?: number;
+					};
+					if (typeof data.creditsLeft === "number")
+						setCreditsLeft(data.creditsLeft);
+					patchProposal(proposalId, {
+						status: res.status === 409 ? "dismissed" : "pending",
+					});
+					throw new Error(
+						data.error || "That change didn't go through. Please try again.",
+					);
+				}
+				track("revision_applied", { proposalId });
+				await readSse(res, applyStreamEvent);
+			} catch (err) {
+				setError(
+					err instanceof Error ? err.message : "That change didn't go through.",
+				);
+				setIsGeneratingImages(false);
+			}
 		},
-		[sendMessage],
+		[isGeneratingImages, ensureSession, applyStreamEvent, patchProposal],
+	);
+
+	const dismissProposal = useCallback(
+		async (proposalId: string) => {
+			patchProposal(proposalId, { status: "dismissed" });
+			const sid = sessionIdRef.current;
+			if (!sid) return;
+			try {
+				await fetch(
+					`/api/agent/revise?sessionId=${encodeURIComponent(sid)}&proposalId=${encodeURIComponent(proposalId)}`,
+					{ method: "DELETE" },
+				);
+			} catch {
+				/* dismiss is local-first */
+			}
+		},
+		[patchProposal],
 	);
 
 	/**
-	 * One visual round.
-	 *
-	 * `only` retries a subset of views (`charge:true` keeps a fresh round
-	 * charged even with a view list, so starter rounds cost what they say);
-	 * the server reuses the round's existing renders as references, so a
-	 * retried view rejoins the same visual world instead of starting a new
-	 * one.
+	 * Canvas-driven renders. `more` and `retry` are free; `regenerate` spends
+	 * a round. The server briefs the round from the design record — the
+	 * client sends no colors, brand or vehicle of its own.
 	 */
-	const generateConcepts = useCallback(
-		async (opts?: {
-			colors?: string;
-			vibe?: string;
-			only?: string[];
-			charge?: boolean;
-		}) => {
+	const renderViews = useCallback(
+		async (
+			views: string[] | undefined,
+			mode: "more" | "retry" | "regenerate",
+		) => {
 			if (isGeneratingImages) return;
 			setError(null);
 			setIsGeneratingImages(true);
-			const targets = opts?.only?.length ? opts.only : [...CONCEPT_VIEWS];
-			openRenderSlots();
+			roundReasonRef.current = mode;
+			const targets = views?.length
+				? views
+				: images
+						.filter(
+							(i) =>
+								i.status === "ready" &&
+								(CONCEPT_VIEWS as readonly string[]).includes(i.label),
+						)
+						.map((i) => i.label);
+			openRenderSlots(targets);
 			setProgress({
 				phase: "renders",
-				step: "Preparing the render brief",
+				step:
+					mode === "regenerate"
+						? "Re-rendering your design"
+						: `Rendering ${targets.map(viewTitle).join(", ").toLowerCase()}`,
 				rendersDone: 0,
-				rendersTotal: targets.length,
+				rendersTotal: targets.length || 3,
 				videosDone: 0,
 				videosTotal: 0,
 			});
 			try {
-				const sessionId = await ensureSession();
+				const sid = await ensureSession();
 				const res = await fetch("/api/agent/images", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						sessionId,
-						// Only what the customer actually gave. Placeholders here
-						// used to override their palette ("bold brand colors") and
-						// letter "New Brand" onto the trailer; the server falls back
-						// to the project brain instead.
-						brand: brandName.trim() || undefined,
-						vehicleId,
-						colors: opts?.colors || undefined,
-						vibe: opts?.vibe || undefined,
-						only: opts?.only,
-						charge: opts?.charge,
-					}),
+					body: JSON.stringify({ sessionId: sid, views, mode }),
 				});
 				const data = (await res.json()) as {
-					images?: Array<{
-						label: string;
-						url: string;
-						filename: string;
-						status?: string;
-						error?: string;
-						references?: string[];
-					}>;
+					images?: IncomingImage[];
+					views?: string[];
+					failed?: string[];
+					version?: number | null;
+					stamp?: string | null;
 					creditsLeft?: number;
 					error?: string;
 				};
-				if (!res.ok) {
-					if (res.status === 402) {
-						setError(
-							"This round is included with the customer. Share their contact and sales will unlock further iterations.",
-						);
-						if (typeof data.creditsLeft === "number")
-							setCreditsLeft(data.creditsLeft);
-						return;
-					}
-					throw new Error(
-						data.error || `Concept generation failed (${res.status})`,
-					);
-				}
-				mergeImages(data.images ?? []);
 				if (typeof data.creditsLeft === "number")
 					setCreditsLeft(data.creditsLeft);
+				if (!res.ok)
+					throw new Error(
+						res.status === 402
+							? OUT_OF_ROUNDS
+							: data.error || "The render didn't finish. Please try again.",
+					);
+				mergeImages(data.images ?? []);
+				pushMessage({
+					role: "assistant",
+					content: "",
+					kind: "renders",
+					renders: {
+						views: data.views ?? [],
+						failed: data.failed ?? [],
+						version: data.version,
+						stamp: data.stamp,
+						reason: mode,
+					},
+				});
+				if (data.views?.[0]) setSelectedView(data.views[0]);
 				void refreshDesign();
-				if (opts?.only?.length) return;
-				await sendMessage(
-					`I just generated the ${CONCEPT_VIEW_COUNT}-view concept set (${CONCEPT_VIEWS.map(prettyView).join(", ")})${brandName.trim() ? ` for ${brandName.trim()}` : ""} on the current vehicle. Which direction should we develop — and what should change?`,
-				);
 			} catch (err) {
 				setError(
-					err instanceof Error ? err.message : "Concept generation failed",
+					err instanceof Error ? err.message : "The render didn't finish.",
 				);
 			} finally {
 				setIsGeneratingImages(false);
-				// Settles any slot the round never filled, so nothing spins on.
+				roundReasonRef.current = "first";
 				await reconcileImages();
 				setProgress((prev) => ({ ...prev, phase: "complete", step: "" }));
 			}
 		},
 		[
 			isGeneratingImages,
+			images,
 			ensureSession,
-			brandName,
-			vehicleId,
-			sendMessage,
-			mergeImages,
 			openRenderSlots,
-			reconcileImages,
+			mergeImages,
+			pushMessage,
 			refreshDesign,
+			reconcileImages,
 		],
 	);
 
-	/** Re-render just the views that failed, keeping the rest as references. */
 	const retryFailedRenders = useCallback(async () => {
-		// The menu board is not part of a round; it retries from the Menu tab.
 		const failed = images
 			.filter(
 				(i) =>
-					i.status === "failed" &&
+					(i.status === "failed" || i.stale) &&
 					(CONCEPT_VIEWS as readonly string[]).includes(i.label),
 			)
 			.map((i) => i.label);
 		if (failed.length === 0) return;
-		await generateConcepts({ only: failed });
-	}, [images, generateConcepts]);
+		await renderViews(failed, "retry");
+	}, [images, renderViews]);
 
-	/*
-	 * A favorite is a marker, not a sign-off, and it no longer speaks for the
-	 * customer: starring used to post a design brief into the chat in their
-	 * name.
-	 */
+	/** A favorite is a marker, not a sign-off, and never speaks for the buyer. */
 	const toggleFavorite = useCallback((label: string) => {
 		setImages((prev) =>
 			prev.map((img) =>
@@ -986,25 +974,19 @@ export function useChat() {
 
 	const clearError = useCallback(() => setError(null), []);
 
-	/*
-	 * ── Menu board ──
-	 *
-	 * The artwork is rendered in the browser from the exact SVG the buyer
-	 * previewed and sent as a PNG, so the board render is conditioned on the
-	 * pixels they approved. Costs one visual credit.
-	 */
+	/* ── Menu board ── */
 	const renderMenuBoard = useCallback(
 		async (menu: MenuDesign, artwork: string) => {
 			if (isRenderingMenu) return;
 			setError(null);
 			setIsRenderingMenu(true);
 			try {
-				const sessionId = await ensureSession();
+				const sid = await ensureSession();
 				const res = await fetch("/api/agent/menu", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						sessionId,
+						sessionId: sid,
 						brand: brandName.trim() || undefined,
 						vehicleId,
 						menu,
@@ -1013,14 +995,7 @@ export function useChat() {
 					}),
 				});
 				const data = (await res.json()) as {
-					image?: {
-						label: string;
-						url: string;
-						filename: string;
-						status?: string;
-						error?: string;
-						references?: string[];
-					};
+					image?: IncomingImage;
 					creditsLeft?: number;
 					error?: string;
 				};
@@ -1029,11 +1004,18 @@ export function useChat() {
 				if (!res.ok || !data.image) {
 					throw new Error(
 						res.status === 402
-							? "This round is included with the customer. Share their contact and sales will unlock further iterations."
-							: data.error || `Menu board render failed (${res.status})`,
+							? OUT_OF_ROUNDS
+							: data.error || "The menu board didn't render. Please try again.",
 					);
 				}
 				mergeImages([data.image]);
+				setSelectedView("menu_board");
+				pushMessage({
+					role: "assistant",
+					content: "",
+					kind: "renders",
+					renders: { views: ["menu_board"], reason: "more" },
+				});
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Menu board render failed",
@@ -1042,17 +1024,17 @@ export function useChat() {
 				setIsRenderingMenu(false);
 			}
 		},
-		[isRenderingMenu, ensureSession, brandName, vehicleId, mergeImages],
+		[
+			isRenderingMenu,
+			ensureSession,
+			brandName,
+			vehicleId,
+			mergeImages,
+			pushMessage,
+		],
 	);
 
-	/*
-	 * ── Sales video ──
-	 *
-	 * One clip per request: the walkthrough films from inside off the
-	 * interior render, the 360 orbits the outside, night closes. The server
-	 * chooses the references; these bytes are only a fallback for a session
-	 * whose renders the server never stored.
-	 */
+	/* ── Sales video ── */
 	const generateVideo = useCallback(
 		async (kind: SalesVideoKind = "hero-orbit") => {
 			if (isGeneratingVideo) return;
@@ -1065,7 +1047,7 @@ export function useChat() {
 			].slice(0, 3);
 			if (refs.length === 0) {
 				setError(
-					"Generate concepts first — video needs an approved still to film.",
+					"Render your trailer first — the film is shot from your renders.",
 				);
 				return;
 			}
@@ -1078,17 +1060,14 @@ export function useChat() {
 				videosTotal: 1,
 			}));
 			try {
-				const sessionId = await ensureSession();
+				const sid = await ensureSession();
 				const started = await fetch("/api/agent/video", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						sessionId,
+						sessionId: sid,
 						kind,
 						brand: brandName.trim() || undefined,
-						// The picker values, not a stand-in for them: `vibe` used to
-						// carry the business-type id, so every clip was briefed with
-						// "grill" as its mood and "food trailer" as its body.
 						vehicleId: vehicleId || undefined,
 						businessType: businessType || undefined,
 						colors: brain?.colors.slice(0, 3).join(", ") || undefined,
@@ -1102,21 +1081,21 @@ export function useChat() {
 					video?: GeneratedVideo;
 					error?: string;
 				};
-				if (!started.ok || !startData.video) {
+				if (!started.ok || !startData.video)
 					throw new Error(
-						startData.error || `Video start failed (${started.status})`,
+						startData.error || "The film didn't start. Please try again.",
 					);
-				}
 				const job = { ...startData.video, kind } as GeneratedVideo;
 				setVideos((prev) => [job, ...prev.filter((v) => v.id !== job.id)]);
-				// Omni 10s renders take minutes, not seconds — 90×4s ≈ 6 min.
 				let current = job;
 				for (let i = 0; i < 90 && current.status === "pending"; i++) {
 					await new Promise((r) => setTimeout(r, 4000));
-					const params = new URLSearchParams({ sessionId, videoId: job.id });
-					if (job.operationId) {
+					const params = new URLSearchParams({
+						sessionId: sid,
+						videoId: job.id,
+					});
+					if (job.operationId)
 						params.set("operationId", String(job.operationId));
-					}
 					const poll = await fetch(`/api/agent/video?${params.toString()}`);
 					const pollData = (await poll.json().catch(() => ({}))) as {
 						video?: GeneratedVideo;
@@ -1154,15 +1133,21 @@ export function useChat() {
 		],
 	);
 
-	const guidedStep: "brand" | "vehicle" | "layout" | "wrap" | "review" = spec
-		? "review"
-		: estimate
-			? "wrap"
-			: layout
-				? "layout"
-				: vehicleId
-					? "vehicle"
-					: "brand";
+	/** Where the buyer is in the journey — drives the header stepper. */
+	const hasRenders = images.some((i) => i.status === "ready");
+	const approved = (design?.approvals ?? []).length > 0;
+	const journeyStep: "brief" | "concepts" | "refine" | "approve" | "quote" =
+		lead
+			? "quote"
+			: approved
+				? "quote"
+				: (design?.current?.version ?? 0) > 1
+					? "approve"
+					: hasRenders
+						? "refine"
+						: messages.length > 1
+							? "concepts"
+							: "brief";
 
 	return {
 		messages,
@@ -1175,8 +1160,6 @@ export function useChat() {
 		estimate,
 		spec,
 		lead,
-		leads,
-		refreshLeads,
 		toggleFavorite,
 		design,
 		refreshDesign,
@@ -1185,15 +1168,16 @@ export function useChat() {
 		ensureSession,
 		sessionId,
 		hydrated,
-		metrics,
-		events,
-		analytics,
 		isStreaming,
 		isConnecting,
 		isGeneratingImages,
-		isGeneratingImagesAlias: isGeneratingImages,
 		progress,
 		retryFailedRenders,
+		renderViews,
+		applyProposal,
+		dismissProposal,
+		selectedView,
+		setSelectedView,
 		creditsLeft,
 		vehicleId,
 		setVehicleId,
@@ -1201,11 +1185,9 @@ export function useChat() {
 		setBusinessType,
 		brandName,
 		setBrandName,
-		guidedStep,
+		journeyStep,
 		error,
 		sendMessage,
-		sendContextMessage,
-		generateConcepts,
 		renderMenuBoard,
 		isRenderingMenu,
 		menuDraft,

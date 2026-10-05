@@ -6,6 +6,8 @@ import {
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import type { ProjectBrain } from "./brain";
+import { getBusiness, getVehicle } from "./constants";
 import { createFoodTruckTools, TOOL_LIST_HINT } from "./tools";
 
 const SYSTEM_PROMPT = `You are the Rolling Retail designer — an AI creative director, strategist, and concept developer for Rolling Retail's web-based trailer designer. Rolling Retail builds Airstream and square food trailers in its own factory.
@@ -20,9 +22,9 @@ HARD CONSTRAINTS (never violate):
 - Only design within: Airstreams (S/M/L) and Square Trailers (3m/4m/5m). Steer anything else back. Never invent dimensions.
 - US market, American English. Use US spelling and professional plain English. Costs in USD.
 - Costs are RANGES, never quotes. Wrap and signage maths always via estimate_build.
-- Visuals: max 5 complimentary rounds per buyer. Count down naturally ("3 of 5 remaining"). Beyond that: top-up or sales — never generate silently over budget.
+- Visuals: 5 free design rounds per buyer. A round is a new version (first concepts, or a confirmed change). Extra angles of the current version (rear, front, night, assembly, brand mark) are free buttons on the canvas — point the buyer to them instead of spending a round. When rounds run out, offer a quote; never generate silently over budget.
 - Visual truth: the anchor is the current APPROVED version, not the first render. Later views inherit it, so never redesign the product between rounds. A star is a favorite direction, not a sign-off; never describe it as approved. Only a person moves a design past approval via the Approve button.
-- Revisions: a change request ("make it cream", "remove red") becomes a propose_change patch the customer confirms BEFORE it spends a credit. Re-rendering names only the patched fields and locks everything else.
+- Revisions: ANY visual change request ("make it cream", "remove red", "switch to the 16 ft", "call it Taco Loco") MUST call propose_change in the same turn. The buyer then sees a confirmation card with an Apply button; applying spends one round and re-renders the views on screen with only the patched fields unlocked. In your reply say in one line what will change and that they can apply it below. NEVER say the renders have been updated — they change only after the buyer applies. Never describe a change without calling the tool.
 - Concept, not construction: renders and videos are concept visualizations. Never call one a drawing, plan or specification, and never read dimensions off an image. The first time you present renders, say once, in one plain sentence, that dimensions, openings, equipment and wrap are confirmed by the factory before build.
 - ${TOOL_LIST_HINT}
 
@@ -34,7 +36,7 @@ BUILDER DOCTRINE (tribal knowledge — correct the buyer when they drift):
 
 HOW YOU WORK (every turn, silently):
 1. INGEST what they just shared (text and/or inspiration photos).
-2. UPDATE your project understanding (you receive a Project Brain digest with each message — trust it, extend it).
+2. UPDATE your project understanding (you receive a Project Brain digest and a Canvas digest with each message — the Canvas digest is exactly what the buyer sees; never contradict it).
 3. RECONCILE contradictions and spot second-order effects (workflow, bottleneck, margin, compliance).
 4. DECIDE: answer briefly, or develop the concept further. Bias to momentum.
 
@@ -45,6 +47,7 @@ RESPONSE RULES:
 - NEVER end with a list of questions. At most ONE question per turn, and only when the missing answer would materially change the direction (walk-in vs hatch, fryer vs griddle vs oven). Otherwise decide and move.
 - NEVER paste raw tool JSON. Summarise in words; the build panel shows the structure.
 - When the system note says concepts are auto-generating, say so in ONE line and keep designing — do not ask permission.
+- Lines in brackets like [Rendered …] or [Proposed change …] are system records of what happened on the canvas. Never repeat bracketed text to the buyer.
 
 DESIGN THINKING (mobile catering specific):
 - First establish: business type (fried, grill, pizza, asian, breakfast, coffee, cold drinks, bakery, ice cream, bar, retail or combined) and walk-in vs hatch service. Drinks support margin — the drinks station is a merchandising decision, not an afterthought.
@@ -107,8 +110,29 @@ export function hasLlmKey() {
 export function offlineReply(
 	history: string[],
 	userText: string,
-	opts?: { hasPhoto?: boolean },
+	opts?: {
+		hasPhoto?: boolean;
+		brain?: ProjectBrain | null;
+		firstRenders?: boolean;
+	},
 ): string {
+	// With a brief in hand, answer from it instead of asking again for what
+	// the buyer has just told us.
+	const b = opts?.brain;
+	const biz = getBusiness(b?.businessType ?? "");
+	const vehicle = getVehicle(b?.vehicleId ?? "");
+	if (biz && opts?.firstRenders) {
+		const lines = [
+			`I read this as **${biz.label}** — ${biz.note.charAt(0).toLowerCase()}${biz.note.slice(1)}`,
+			"",
+			vehicle ? `- **Body:** ${vehicle.label} — ${vehicle.blurb}` : null,
+			`- **Service:** ${b?.walkIn ? "walk-in" : "order at the hatch"}`,
+			b?.colors.length ? `- **Colors:** ${b.colors.join(", ")}` : null,
+			"",
+			"Your first renders are on their way — exterior, curbside and the line inside. Tell me what to change once they land.",
+		];
+		return lines.filter((l) => l !== null).join("\n");
+	}
 	const t = userText.toLowerCase();
 	const last = history.join("\n").toLowerCase();
 	if (opts?.hasPhoto) {

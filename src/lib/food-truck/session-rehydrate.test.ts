@@ -57,20 +57,21 @@ describe("session rehydration", () => {
 		expect(layout).not.toMatch(/\{pane === "design" \? <ChatPanel/);
 	});
 
-	it("render progress is visible from non-visuals tabs", () => {
-		const panel = src("components/chat/BrandReportPanel.tsx");
-		expect(panel).toMatch(
-			/\(isGenerating \|\| isGeneratingVideo\) && tab !== "visuals"/,
-		);
+	it("render progress is visible from the chat while the canvas renders", () => {
+		const panel = src("components/chat/ChatPanel.tsx");
+		expect(panel).toMatch(/isGeneratingImages && !isStreaming/);
+		const layout = src("components/chat/ChatLayout.tsx");
+		// The phone's Trailer tab pulses while renders run elsewhere.
+		expect(layout).toMatch(/chat\.isGeneratingImages\s*&&\s*pane !== "build"/);
 	});
 
-	it("the 3-starter button generates 3 charged views, not 8", () => {
-		const panel = src("components/chat/BrandReportPanel.tsx");
-		expect(panel).toContain("STARTER_AUTO_VIEWS");
+	it("a round opens slots only for the views it renders", () => {
+		const round = src("lib/food-truck/round.ts");
+		expect(round).toMatch(/type: "images_start",\s*views/);
 		const hook = src("hooks/use-chat.ts");
-		expect(hook).toContain("charge: opts?.charge");
+		expect(hook).toContain("openRenderSlots(views)");
 		const chat = src("routes/api/agent/chat.ts");
 		// The auto first round is a fresh round with a view list: charged.
-		expect(chat).toContain("charge: true,");
+		expect(chat).toContain("charge: true");
 	});
 });

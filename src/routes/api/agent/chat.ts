@@ -1,15 +1,9 @@
 import { HumanMessage } from "@langchain/core/messages";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	brainDigest,
-	brainReady,
-	describeVehicle,
-	updateBrain,
-} from "#/lib/food-truck/brain";
+import { brainDigest, brainReady, updateBrain } from "#/lib/food-truck/brain";
 import {
 	type ConceptView,
 	getBusiness,
-	getVehicle,
 	STARTER_AUTO_VIEWS,
 } from "#/lib/food-truck/constants";
 import {
@@ -18,17 +12,14 @@ import {
 	offlineReply,
 	toLangChainMessages,
 } from "#/lib/food-truck/graph";
-import { runStarterConcepts } from "#/lib/food-truck/images";
+import { canvasDigest } from "#/lib/food-truck/render-inputs";
+import { describePatch, runRound, viewsOnScreen } from "#/lib/food-truck/round";
 import {
-	adoptMasterFromImages,
-	commitDesignVersion,
-	conceptsByView,
 	creditsLeft,
-	currentDesign,
 	getOrCreateSession,
 	listConcepts,
-	persistSession,
-	putConcepts,
+	type ChatTurn,
+	type Proposal,
 	restoreSession,
 } from "#/lib/food-truck/session";
 import { layoutFor } from "#/lib/food-truck/tools";
@@ -38,6 +29,8 @@ interface ChatBody {
 	message?: string;
 	/** Optional attached photo (competitor/inspiration) as a data URL. */
 	image?: string;
+	/** "brief" marks the quiz's composed opening message. */
+	kind?: string;
 	context?: {
 		vehicleId?: string;
 		businessType?: string;
@@ -131,8 +124,9 @@ export const Route = createFileRoute("/api/agent/chat")({
 						? `[Designer context: ${hintParts.join(" ")}]`
 						: null,
 					`[${brainDigest(brain)}]`,
+					`[${canvasDigest(session)}]`,
 					shouldAutoVisuals
-						? `[SYSTEM: brand knowledge is sufficient — after your reply the system WILL auto-generate 3 starter renders (${STARTER_AUTO_VIEWS.map((v) => v.replace(/_/g, " ")).join(", ")}). 1 credit. In your reply, state the category you read this as (${getBusiness(brain.businessType ?? "")?.label ?? brain.businessType}) and the equipment line it implies, so the buyer can correct you before the renders land. End with ONE short line saying the starter renders are generating and the rest (rear, interior views, night, brand) are available on request. Do not ask permission.]`
+						? `[SYSTEM: brand knowledge is sufficient — after your reply the system WILL auto-generate 3 starter renders (${STARTER_AUTO_VIEWS.map((v) => v.replace(/_/g, " ")).join(", ")}). 1 round. In your reply, state the category you read this as (${getBusiness(brain.businessType ?? "")?.label ?? brain.businessType}) and the equipment line it implies, so the buyer can correct you before the renders land. End with ONE short line saying the first renders are on their way. Do not ask permission.]`
 						: null,
 					image ? "[Buyer attached an inspiration photo — see image.]" : null,
 					text || "What do you see in this photo? How would you build it?",
@@ -140,7 +134,12 @@ export const Route = createFileRoute("/api/agent/chat")({
 					.filter(Boolean)
 					.join("\n\n");
 
-				session.history.push({ role: "user", content: userText });
+				session.history.push({
+					role: "user",
+					content: userText,
+					display: text,
+					kind: body.kind === "brief" ? "brief" : undefined,
+				});
 
 				const stream = new ReadableStream({
 					async start(controller) {
@@ -162,141 +161,81 @@ export const Route = createFileRoute("/api/agent/chat")({
 						// ponytail: one shared auto-visuals runner — called from BOTH the
 						// offline and LLM paths so a missing key or LLM hiccup can
 						// never silently skip the concept set. Streams per batch.
+						// Cards land in history after the turn's text, matching the
+						// order the buyer saw them in.
+						const deferredTurns: ChatTurn[] = [];
+
 						const runAutoVisuals = async () => {
 							if (!shouldAutoVisuals || creditsLeft(session) <= 0) return;
 							try {
-								const effectiveVehicleId =
-									brain.vehicleId ?? body.context?.vehicleId ?? "airstream-m";
-								const vehicle =
-									getVehicle(effectiveVehicleId) ??
-									getVehicle(brain.vehicleId ?? "");
-								const vehicleLabel =
-									vehicle?.label ?? describeVehicle(effectiveVehicleId);
-								const serveMode =
-									brain.walkIn === null
-										? "hatch-serve"
-										: brain.walkIn
-											? "walk-in"
-											: "hatch-serve";
-								if (!brain.vehicleId && vehicle) {
-									brain.vehicleId = effectiveVehicleId;
+								if (!brain.vehicleId) {
+									brain.vehicleId = body.context?.vehicleId ?? "airstream-m";
 									brain.vehicleSource = "picker";
 								}
-								const run = await runStarterConcepts(
-									session.creditsUsed,
+								await runRound(
+									session,
 									{
-										completed: conceptsByView(session),
-										vehicleId: effectiveVehicleId,
-										inspirationImage: session.inspirationImage,
-										masterReference: session.masterImageUrl,
-										// First generation proves the concept: hero, curbside,
-										// interior. The rest are offered on request. It is a
-										// fresh round with a view list, not a retry — the
-										// explicit charge flag keeps a credit being spent.
-										only: [...STARTER_AUTO_VIEWS] as ConceptView[],
+										views: [...STARTER_AUTO_VIEWS] as ConceptView[],
 										charge: true,
-										brand:
-											brain.brandName ?? body.context?.brandName?.trim() ?? "",
-										vehicleLabel,
-										vehicleBody: vehicle?.body ?? "square",
-										lengthM: vehicle?.lengthM ?? 4,
-										widthM: vehicle?.widthM ?? 2.1,
-										heightM: vehicle?.heightM ?? 2.6,
-										colors:
-											brain.colors.slice(0, 3).join(", ") || "brand colors",
-										vibe:
-											brain.vibeWords.slice(0, 2).join(", ") ||
-											brain.businessType ||
-											"bold street-food",
-										businessType: brain.businessType ?? "combined",
-										menuKeywords: brain.menuKeywords,
-										// One equipment list for renders, spec and 3D.
-										equipment: layoutFor(
-											brain.businessType ?? "combined",
-											effectiveVehicleId,
-											brain.walkIn === true,
-											brain.menuKeywords,
-										).equipment,
-										serveMode,
-										brief: session.brief,
-										openings: currentDesign(session)?.spec.openings ?? null,
-										brainNote: [
-											session.brief?.notes
-												? `buyer must-haves: ${session.brief.notes}`
-												: null,
-											brain.businessType
-												? `${brain.businessType} menu (${brain.menuKeywords.slice(0, 4).join(", ") || "house menu"})`
-												: null,
-											brain.walkIn === null
-												? null
-												: brain.walkIn
-													? "walk-in interior service"
-													: "hatch-serve service",
-										]
-											.filter(Boolean)
-											.join("; "),
 									},
-									(batch, progress) => {
-										// Persist before announcing: if the frame never
-										// arrives, the render is still recoverable from
-										// GET /api/agent/images.
-										if (batch.length > 0) putConcepts(session, batch);
-										send({
-											type: "images",
-											images: batch,
-											progress,
-										});
+									(evt) => {
+										// The early announcement already opened the slots.
+										if (evt.type !== "images_start") send(evt);
 									},
 								);
-								session.creditsUsed = run.creditsUsed;
-								session.visualRounds += 1;
-								adoptMasterFromImages(session, run.images);
-								putConcepts(session, run.images);
-								if (!currentDesign(session)) {
-									try {
-										const { specFromIntake } = await import(
-											"#/lib/food-truck/design-record"
-										);
-										commitDesignVersion(
-											session,
-											specFromIntake({
-												brandName: brain.brandName ?? undefined,
-												businessType: brain.businessType ?? undefined,
-												menu: brain.menuKeywords.join(", ") || undefined,
-												colors: brain.colors.join(", ") || undefined,
-												vibe: brain.vibeWords.join(", ") || undefined,
-												vehicleId: brain.vehicleId ?? undefined,
-												service: brain.walkIn ? "walk-in" : "hatch",
-											}),
-											{
-												changeSummary: "First visuals — design record v1.",
-												state: "concept",
-											},
-										);
-									} catch {
-										/* record is best-effort */
-									}
-								}
-								persistSession(session);
-								send({
-									type: "images_done",
-									images: listConcepts(session),
-									creditsLeft: creditsLeft(session),
-								});
 							} catch (imgErr) {
 								console.warn("[food-truck] auto visuals failed:", imgErr);
-								// The panel must leave its loading state even when the
+								// The canvas must leave its loading state even when the
 								// whole round throws, or it spins forever.
 								send({
 									type: "images_done",
 									images: listConcepts(session),
+									views: [],
+									failed: [...STARTER_AUTO_VIEWS],
 									creditsLeft: creditsLeft(session),
 									error:
-										imgErr instanceof Error
-											? imgErr.message
-											: "Render round failed.",
+										"The first renders did not finish. Try again from the canvas — it won't cost a round.",
 								});
 							}
+						};
+
+						/** propose_change → a stored, confirmable proposal card. */
+						const surfaceProposal = (parsed: Record<string, unknown>) => {
+							const id = `p_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+							const proposal: Proposal = {
+								id,
+								patch: (parsed.patch ?? {}) as Proposal["patch"],
+								removeColors: Array.isArray(parsed.removeColors)
+									? (parsed.removeColors as string[])
+									: [],
+								changeSummary: String(parsed.changeSummary ?? "Design change"),
+								status: "pending",
+								createdAt: Date.now(),
+							};
+							// One open request at a time: a newer one replaces older pending ones.
+							for (const p of Object.values(session.proposals)) {
+								if (p.status === "pending") p.status = "dismissed";
+							}
+							session.proposals[id] = proposal;
+							const card = {
+								id,
+								changeSummary: proposal.changeSummary,
+								changes: describePatch(proposal),
+								viewCount: Math.max(
+									1,
+									viewsOnScreen(session).length || STARTER_AUTO_VIEWS.length,
+								),
+								creditsLeft: creditsLeft(session),
+								status: "pending",
+							};
+							deferredTurns.push({
+								role: "assistant",
+								content: `[Proposed change for the buyer to confirm: ${proposal.changeSummary}]`,
+								display: "",
+								kind: "proposal",
+								data: card,
+							});
+							send({ type: "proposal", proposal: card });
 						};
 
 						// Signal early so the left panel moves + spinner shows
@@ -318,7 +257,11 @@ export const Route = createFileRoute("/api/agent/chat")({
 							} catch {
 								/* layout is best-effort — images still fire */
 							}
-							send({ type: "images_start", count: STARTER_AUTO_VIEWS.length });
+							send({
+								type: "images_start",
+								views: [...STARTER_AUTO_VIEWS],
+								count: STARTER_AUTO_VIEWS.length,
+							});
 						};
 
 						// ── No LLM key: deterministic offline designer (demo never dies) ──
@@ -328,7 +271,11 @@ export const Route = createFileRoute("/api/agent/chat")({
 							const reply = offlineReply(
 								session.history.map((h) => h.content),
 								userText,
-								{ hasPhoto: Boolean(image) },
+								{
+									hasPhoto: Boolean(image),
+									brain,
+									firstRenders: shouldAutoVisuals,
+								},
 							);
 							session.history.push({ role: "assistant", content: reply });
 							for (const c of chunkWords(reply)) {
@@ -346,7 +293,10 @@ export const Route = createFileRoute("/api/agent/chat")({
 							send({ type: "brain", brain });
 							announceAutoVisuals();
 							const { agent } = getFoodTruckAgent();
-							const threadId = session.sessionId;
+							// The full recent history is passed in every turn, so the thread must
+							// be fresh — a shared thread id made the checkpointer append the same
+							// twenty messages again on every turn.
+							const threadId = `${session.sessionId}:${session.history.length}`;
 							const lcMessages = toLangChainMessages(
 								session.history
 									.slice(-20)
@@ -450,7 +400,9 @@ export const Route = createFileRoute("/api/agent/chat")({
 														string,
 														unknown
 													>;
-													if (parsed.layoutName || parsed.zones) {
+													if (parsed.patch && parsed.changeSummary) {
+														surfaceProposal(parsed);
+													} else if (parsed.layoutName || parsed.zones) {
 														send({ type: "layout", layout: parsed });
 													} else if (parsed.wrapSqm || parsed.bom) {
 														send({ type: "estimate", estimate: parsed });
@@ -476,11 +428,13 @@ export const Route = createFileRoute("/api/agent/chat")({
 
 							if (fullText.trim()) {
 								session.history.push({ role: "assistant", content: fullText });
+								session.history.push(...deferredTurns);
 							} else {
 								// Model produced only tool calls with no final text (rare) — nudge.
 								const nudge =
-									"I've updated your build panel on the left — take a look and tell me what to change next.";
+									"I've updated your build on the canvas — take a look and tell me what to change next.";
 								session.history.push({ role: "assistant", content: nudge });
+								session.history.push(...deferredTurns);
 								send({ type: "text", delta: nudge });
 							}
 
@@ -493,16 +447,16 @@ export const Route = createFileRoute("/api/agent/chat")({
 							const reply = offlineReply(
 								session.history.map((h) => h.content),
 								userText,
-								{ hasPhoto: Boolean(image) },
+								{
+									hasPhoto: Boolean(image),
+									brain,
+									firstRenders: shouldAutoVisuals,
+								},
 							);
 							session.history.push({ role: "assistant", content: reply });
 							for (const c of chunkWords(reply))
 								send({ type: "text", delta: c });
-							send({
-								type: "notice",
-								notice:
-									"Live model hiccup — continued in offline mode so the demo keeps running.",
-							});
+
 							await runAutoVisuals();
 							close();
 						}

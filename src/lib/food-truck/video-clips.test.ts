@@ -39,7 +39,7 @@ describe("single-clip video pipeline", () => {
 	});
 
 	it("the panel no longer groups tour parts", () => {
-		const panel = src("components/chat/BrandReportPanel.tsx");
+		const panel = src("components/chat/DesignCanvas.tsx");
 		expect(panel).not.toContain("TourSeries");
 		expect(panel).not.toMatch(/tour\.mp4/);
 	});

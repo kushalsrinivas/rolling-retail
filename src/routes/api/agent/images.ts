@@ -1,200 +1,111 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	CONCEPT_VIEWS,
-	getBusiness,
-	getVehicle,
+	type ConceptView,
+	STARTER_AUTO_VIEWS,
 } from "#/lib/food-truck/constants";
-import { runStarterConcepts } from "#/lib/food-truck/images";
+import { runRound, viewsOnScreen } from "#/lib/food-truck/round";
 import {
-	adoptMasterFromImages,
-	commitDesignVersion,
-	conceptsByView,
 	creditsLeft,
-	currentDesign,
 	getOrCreateSession,
 	listConcepts,
-	persistSession,
-	putConcepts,
 	restoreSession,
 } from "#/lib/food-truck/session";
-import { layoutFor } from "#/lib/food-truck/tools";
 
 const LABELS = CONCEPT_VIEWS;
 
+/**
+ * Canvas-driven renders (JSON, not SSE).
+ *
+ * POST { sessionId, views?, mode } where mode is:
+ *  - "more"       extra angles of the current version — free;
+ *  - "retry"      views that failed — free;
+ *  - "regenerate" a fresh take on what is on screen — spends a round.
+ *
+ * Everything the round is briefed with comes from the design record via
+ * renderArgsFor; the client sends no brand, colors or vehicle of its own,
+ * so the canvas can never render something the chat did not agree.
+ */
 export const Route = createFileRoute("/api/agent/images")({
 	server: {
 		handlers: {
-			// ── Manual flow: POST generates the full 9-view concept set ──
 			POST: async ({ request }) => {
 				try {
 					const body = (await request.json().catch(() => ({}))) as {
 						sessionId?: string;
-						brand?: string;
-						vehicleId?: string;
-						colors?: string;
-						vibe?: string;
-						brainNote?: string;
-						/** Retry just these views, inheriting the round's references. */
-						only?: string[];
-						/**
-						 * Charge a credit even though a view list was passed — the
-						 * auto first round and the 3-starter button both send one.
-						 * Default: a view list is a free retry of failed views.
-						 */
-						charge?: boolean;
+						views?: string[];
+						mode?: "more" | "retry" | "regenerate";
 					};
+					if (!body.sessionId) {
+						return Response.json(
+							{ error: "sessionId is required" },
+							{ status: 400 },
+						);
+					}
+					await restoreSession(body.sessionId);
 					const session = getOrCreateSession(body.sessionId);
-					await restoreSession(session.sessionId);
-					// Retrying failed views is free, so it works with no credits left.
-					const isRetry =
-						Array.isArray(body.only) && body.only.length > 0 && !body.charge;
-					if (creditsLeft(session) <= 0 && isRetry) {
+					const mode = body.mode ?? "regenerate";
+					const asked = Array.isArray(body.views)
+						? CONCEPT_VIEWS.filter((v) => body.views?.includes(v))
+						: [];
+					if (Array.isArray(body.views) && asked.length === 0) {
 						return Response.json(
 							{
-								error: "Visual credits exhausted",
+								error: `Unknown view(s): ${body.views.join(", ")}`,
+								labels: [...CONCEPT_VIEWS],
+							},
+							{ status: 400 },
+						);
+					}
+					const onScreen = viewsOnScreen(session);
+					const views: ConceptView[] = asked.length
+						? asked
+						: onScreen.length
+							? onScreen
+							: [...STARTER_AUTO_VIEWS];
+					// The first round ever is charged whatever it is called.
+					const charge = mode === "regenerate" || session.visualRounds === 0;
+					if (charge && creditsLeft(session) <= 0) {
+						return Response.json(
+							{
+								error:
+									"You've used your free design rounds. Request a quote and our team will keep refining it with you.",
 								creditsLeft: 0,
 								topUpRequired: true,
 							},
 							{ status: 402 },
 						);
 					}
-					const brain = session.brain;
-					// No name means no lettering. A placeholder here used to be
-					// painted down the side of the customer's trailer.
-					const brand = (body.brand || brain?.brandName || "").trim();
-					const vehicle = getVehicle(body.vehicleId ?? brain?.vehicleId ?? "");
-					const vehicleLabel = vehicle?.label ?? "Square Trailer 4m";
-					const business = getBusiness(brain?.businessType ?? "");
-					const colors =
-						body.colors ||
-						brain?.colors.slice(0, 3).join(", ") ||
-						"brand colors";
-					const vibe =
-						body.vibe ||
-						brain?.vibeWords.slice(0, 2).join(", ") ||
-						brain?.businessType ||
-						"bold street-food";
-					const serveMode =
-						brain?.walkIn === null
-							? "hatch-serve"
-							: brain?.walkIn
-								? "walk-in"
-								: "hatch-serve";
-
-					// A targeted retry reuses the round's existing renders as
-					// references instead of starting a fresh visual world.
-					const only = Array.isArray(body.only)
-						? CONCEPT_VIEWS.filter((v) => body.only?.includes(v))
-						: undefined;
-					// An `only` list that names nothing real must not quietly fall
-					// through to a full round — that spends a credit the caller
-					// never asked for.
-					if (Array.isArray(body.only) && only?.length === 0) {
-						return Response.json(
-							{
-								error: `Unknown view(s): ${body.only.join(", ")}`,
-								labels: [...CONCEPT_VIEWS],
-							},
-							{ status: 400 },
-						);
-					}
-
-					const run = await runStarterConcepts(session.creditsUsed, {
-						vehicleId: vehicle?.id ?? null,
-						inspirationImage: session.inspirationImage,
-						masterReference: session.masterImageUrl,
-						only: only?.length ? only : undefined,
-						completed: conceptsByView(session),
-						brand,
-						vehicleLabel,
-						vehicleBody: vehicle?.body ?? "square",
-						lengthM: vehicle?.lengthM ?? 4,
-						widthM: vehicle?.widthM ?? 2.1,
-						heightM: vehicle?.heightM ?? 2.6,
-						colors,
-						vibe,
-						businessType: brain?.businessType ?? "combined",
-						menuKeywords: brain?.menuKeywords ?? [],
-						equipment: layoutFor(
-							business?.id ?? "combined",
-							vehicle?.id ?? "square-4m",
-							brain?.walkIn === true,
-							brain?.menuKeywords ?? [],
-						).equipment,
-						serveMode,
-						brief: session.brief,
-						openings: currentDesign(session)?.spec.openings ?? null,
-						brainNote:
-							body.brainNote ||
-							(session.brief?.notes
-								? `buyer must-haves: ${session.brief.notes}`
-								: undefined),
-						charge: !isRetry,
-					});
-					session.creditsUsed = run.creditsUsed;
-					session.visualRounds += 1;
-					adoptMasterFromImages(session, run.images);
-					putConcepts(session, run.images);
-					// First visuals commit the design record — later revisions
-					// patch it instead of re-parsing prose.
-					if (!currentDesign(session) && brain) {
-						try {
-							const { specFromIntake } = await import(
-								"#/lib/food-truck/design-record"
-							);
-							commitDesignVersion(
-								session,
-								specFromIntake({
-									brandName: brand || undefined,
-									businessType: brain.businessType ?? undefined,
-									menu: brain.menuKeywords.join(", ") || undefined,
-									colors: brain.colors.join(", ") || undefined,
-									vibe: brain.vibeWords.join(", ") || undefined,
-									vehicleId: vehicle?.id,
-									service: brain.walkIn ? "walk-in" : "hatch",
-								}),
-								{
-									changeSummary: "First visuals — design record v1.",
-									state: "concept",
-								},
-							);
-						} catch {
-							/* record is best-effort */
-						}
-					}
-					persistSession(session);
+					const events: Array<Record<string, unknown>> = [];
+					const result = await runRound(session, { views, charge }, (e) =>
+						events.push(e),
+					);
+					const done = events.find((e) => e.type === "images_done") ?? {};
 					return Response.json({
 						images: listConcepts(session),
+						views: result.ready,
+						failed: result.failed,
+						version: result.version,
+						stamp: done.stamp ?? null,
 						creditsLeft: creditsLeft(session),
 						creditsUsed: session.creditsUsed,
 					});
 				} catch (error) {
 					console.error("[food-truck] images POST error:", error);
 					return Response.json(
-						{ error: "Image generation failed" },
+						{ error: "The render did not finish. Please try again." },
 						{ status: 500 },
 					);
 				}
 			},
-			/*
-			 * ── Reconcile: the authoritative list of this session's renders ──
-			 *
-			 * The panel calls this once a run settles. SSE is the fast path, but
-			 * a dropped or truncated frame used to lose a render permanently
-			 * because nothing else ever held it; now the client can always ask
-			 * what the server actually produced.
-			 */
+			/** Reconcile: the authoritative list of this session's renders. */
 			GET: async ({ request }) => {
 				const url = new URL(request.url);
 				const sessionId = url.searchParams.get("sessionId");
 				if (!sessionId) {
-					return Response.json({
-						images: [],
-						engine: "langgraph",
-						labels: [...LABELS],
-						notice: "Pass ?sessionId= to read this session's renders.",
-					});
+					return Response.json({ images: [], labels: [...LABELS] });
 				}
+				await restoreSession(sessionId);
 				const session = getOrCreateSession(sessionId);
 				return Response.json({
 					images: listConcepts(session),

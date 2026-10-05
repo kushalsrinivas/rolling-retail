@@ -11,6 +11,8 @@ export type TrackEvent =
 	| "quiz_completed"
 	| "quiz_resumed"
 	| "quiz_photo_added"
+	| "revision_applied"
+	| "quote_requested"
 	| "design_approved";
 
 export function track(event: TrackEvent, props?: Record<string, unknown>) {

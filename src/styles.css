@@ -578,52 +578,66 @@ html {
  * ══════════════════════════════════════════════════════════════════════════ */
 
 .ftf {
+  /*
+   * Street-food system, shared with the marketing site: cream paper, hard
+   * ink, loud orange, sun yellow. The token names keep their old roles
+   * ("blue" = structure, "orange" = the action) so every component picks the
+   * new palette up without being rewritten.
+   */
+  --sf-paper: #fff6e9;
+  --sf-ink: #17130f;
+  --sf-orange: #ff5a1f;
+  --sf-yellow: #ffc83d;
+  --sf-teal: #0f8b8d;
+  --sf-pink: #ff7ab6;
+  --rr-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
   /* ── Brand ── */
-  --ftf-blue-900: #071f5c;
-  --ftf-blue-800: #0a3dad;
-  --ftf-blue-700: #183f97;
-  --ftf-blue-600: #2071ba;
-  --ftf-blue-200: #bed4f4;
-  --ftf-blue-100: #e2ecfb;
-  --ftf-blue-50: #f2f6fd;
+  --ftf-blue-900: #17130f;
+  --ftf-blue-800: #17130f;
+  --ftf-blue-700: #2b241c;
+  --ftf-blue-600: #ff5a1f;
+  --ftf-blue-200: #ffd27a;
+  --ftf-blue-100: #ffe7b8;
+  --ftf-blue-50: #fff1d6;
 
-  --ftf-orange-600: #d97c00;
-  --ftf-orange-500: #ff9900;
-  --ftf-orange-100: #fff1dc;
+  --ftf-orange-600: #e64a12;
+  --ftf-orange-500: #ff5a1f;
+  --ftf-orange-100: #ffe3d5;
 
-  --ftf-teal-600: #3d8a83;
-  --ftf-teal-500: #4e9e97;
-  --ftf-teal-100: #e4f2f0;
+  --ftf-teal-600: #0b6f71;
+  --ftf-teal-500: #0f8b8d;
+  --ftf-teal-100: #d5f0ee;
 
-  --ftf-amber-600: #a86a00;
-  --ftf-amber-500: #f1b32e;
-  --ftf-amber-100: #fdf3dd;
+  --ftf-amber-600: #8a5a00;
+  --ftf-amber-500: #ffc83d;
+  --ftf-amber-100: #fff1cc;
 
-  --ftf-red-600: #b00009;
-  --ftf-red-500: #d7000f;
-  --ftf-red-100: #ffece8;
+  --ftf-red-600: #b3261e;
+  --ftf-red-500: #d93025;
+  --ftf-red-100: #ffe5e0;
 
   /* ── Paper ── */
   --ftf-paper: #ffffff;
-  --ftf-paper-2: #f4f6fa;
-  --ftf-paper-3: #e9edf4;
-  --ftf-line: #dbe2ec;
-  --ftf-line-strong: #c2cddd;
+  --ftf-paper-2: #fff6e9;
+  --ftf-paper-3: #f6e8d2;
+  --ftf-line: #ecdcc2;
+  --ftf-line-strong: #17130f;
 
   /* ── Wells (renders, video, 3D) ── */
-  --ftf-well: #0c1424;
-  --ftf-well-2: #121c30;
-  --ftf-well-line: rgba(255, 255, 255, 0.1);
+  --ftf-well: #17130f;
+  --ftf-well-2: #231d17;
+  --ftf-well-line: rgba(255, 255, 255, 0.12);
 
   /* ── Ink ── */
-  --ftf-ink: #14203a;
-  --ftf-ink-2: #4a5878;
-  --ftf-ink-3: #7b89a3;
-  --ftf-ink-4: #9aa6bc;
+  --ftf-ink: #17130f;
+  --ftf-ink-2: #4a4136;
+  --ftf-ink-3: #7a6e5f;
+  --ftf-ink-4: #a6998a;
 
-  /* ── Elevation: one shadow, used sparingly. No coloured glows. ── */
-  --ftf-shadow: 0 1px 2px rgba(20, 32, 58, 0.06), 0 1px 1px rgba(20, 32, 58, 0.04);
-  --ftf-shadow-lg: 0 8px 24px rgba(20, 32, 58, 0.12), 0 2px 6px rgba(20, 32, 58, 0.06);
+  /* ── Elevation: hard offset shadows, like a sticker on a truck. ── */
+  --ftf-shadow: 3px 3px 0 #17130f;
+  --ftf-shadow-lg: 6px 6px 0 #17130f;
 
   --ftf-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -651,8 +665,8 @@ html {
   --destructive-foreground: #ffffff;
   --border: var(--ftf-line);
   --input: var(--ftf-line);
-  --ring: rgba(10, 61, 173, 0.35);
-  --radius: 0.375rem;
+  --ring: rgba(255, 90, 31, 0.45);
+  --radius: 0.75rem;
 
   color: var(--ftf-ink);
   background: var(--ftf-paper-2);
@@ -661,14 +675,16 @@ html {
 
 /* Labels, headings and numbers are Montserrat; prose stays Inter. */
 .ftf-display {
-  font-family: "Montserrat", var(--font-sans);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: "Anton", "Impact", var(--font-sans);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
 
 .ftf-label {
-  font-family: "Montserrat", var(--font-sans);
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-weight: 800;
   font-size: 10px;
   line-height: 1.2;
   letter-spacing: 0.12em;
@@ -677,8 +693,8 @@ html {
 }
 
 .ftf ::selection {
-  background: var(--ftf-blue-100);
-  color: var(--ftf-blue-900);
+  background: var(--ftf-amber-500);
+  color: var(--ftf-ink);
 }
 
 /* A dark plate for anything a render lives on. */
@@ -693,18 +709,29 @@ html {
  */
 .ftf-cta {
   background: var(--ftf-orange-500);
-  color: #241200;
-  font-family: "Montserrat", var(--font-sans);
-  font-weight: 700;
-  transition: background-color 0.15s var(--ftf-ease);
+  color: var(--ftf-ink);
+  font-family: var(--font-sans);
+  font-weight: 800;
+  border: 2px solid var(--ftf-ink);
+  border-radius: 999px !important;
+  box-shadow: 3px 3px 0 var(--ftf-ink);
+  transition:
+    transform 0.15s var(--ftf-ease),
+    box-shadow 0.15s var(--ftf-ease);
 }
 .ftf-cta:hover:not(:disabled) {
-  background: var(--ftf-orange-600);
-  color: #fff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ftf-ink);
+}
+.ftf-cta:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ftf-ink);
 }
 .ftf-cta:disabled {
   background: var(--ftf-paper-3);
   color: var(--ftf-ink-4);
+  border-color: var(--ftf-ink-4);
+  box-shadow: none;
   cursor: not-allowed;
 }
 

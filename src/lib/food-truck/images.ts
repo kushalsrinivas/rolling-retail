@@ -1033,6 +1033,11 @@ export interface StarterConceptArgs {
 	openings?: readonly Opening[] | null;
 	/** Version stamp of the design record this round renders. */
 	versionStamp?: string | null;
+	/**
+	 * A targeted revision: the fields the buyer asked to change. Named in
+	 * every view's continuity lock; everything else stays frozen.
+	 */
+	allowedChanges?: readonly string[] | null;
 	/** Resolves the factory catalog photo; falls back to the body folder. */
 	vehicleId?: string | null;
 	/** A photo the buyer uploaded, used for styling direction only. */
@@ -1202,6 +1207,7 @@ export async function runStarterConcepts(
 						prompt,
 						references,
 						geometry,
+						allowedChanges: args.allowedChanges ?? null,
 					});
 					const failed = r.model.startsWith("placeholder");
 					return {

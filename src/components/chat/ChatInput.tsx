@@ -13,7 +13,7 @@ interface ChatInputProps {
 export default function ChatInput({
 	onSend,
 	disabled,
-	placeholder = "Ask about your 3D model...",
+	placeholder = "Message the designer…",
 }: ChatInputProps) {
 	const [value, setValue] = useState("");
 	const [isFocused, setIsFocused] = useState(false);
@@ -64,13 +64,13 @@ export default function ChatInput({
 	const canSend = (value.trim().length > 0 || attached) && !disabled;
 
 	return (
-		<div className="px-5 pb-4 pt-3">
+		<div className="px-4 pb-4 pt-3 sm:px-5">
 			<div
 				className={cn(
-					"relative overflow-hidden rounded border bg-white transition-colors",
+					"relative overflow-hidden rounded-2xl border-2 border-[var(--ftf-ink)] bg-white transition-shadow",
 					isFocused
-						? "border-[var(--ftf-blue-600)]"
-						: "border-[var(--ftf-line-strong)]",
+						? "shadow-[3px_3px_0_var(--ftf-orange-500)]"
+						: "shadow-none",
 					disabled && "pointer-events-none opacity-50",
 				)}
 			>
@@ -108,7 +108,7 @@ export default function ChatInput({
 					placeholder={placeholder}
 					rows={1}
 					disabled={disabled}
-					className="block w-full resize-none bg-transparent px-3.5 py-3 text-[13px] text-[var(--ftf-ink)] placeholder:text-[var(--ftf-ink-4)] focus:outline-none"
+					className="block w-full resize-none bg-transparent px-4 py-3 text-[14px] text-[var(--ftf-ink)] placeholder:text-[var(--ftf-ink-4)] focus:outline-none"
 					style={{ minHeight: "44px", maxHeight: "160px" }}
 				/>
 
@@ -127,10 +127,10 @@ export default function ChatInput({
 							disabled={disabled}
 							title="Attach a reference image"
 							onClick={() => fileRef.current?.click()}
-							className="flex h-8 items-center gap-1.5 rounded px-2 text-[11px] font-medium text-[var(--ftf-ink-2)] transition-colors hover:bg-[var(--ftf-paper-2)] hover:text-[var(--ftf-blue-800)]"
+							className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-bold text-[var(--ftf-ink-2)] transition-colors hover:bg-[var(--ftf-paper-2)] hover:text-[var(--ftf-ink)]"
 						>
 							<Paperclip className="h-3.5 w-3.5" />
-							<span className="hidden sm:inline">Reference image</span>
+							<span className="hidden sm:inline">Add a photo</span>
 						</button>
 						{attachError && (
 							<span className="truncate text-[11px] text-[var(--ftf-red-600)]">
@@ -145,26 +145,16 @@ export default function ChatInput({
 						disabled={!canSend}
 						aria-label="Send message"
 						className={cn(
-							"flex h-8 w-8 shrink-0 items-center justify-center rounded transition-colors",
+							"flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
 							canSend
 								? "ftf-cta"
-								: "bg-[var(--ftf-paper-3)] text-[var(--ftf-ink-4)]",
+								: "border-2 border-[var(--ftf-line)] bg-[var(--ftf-paper-2)] text-[var(--ftf-ink-4)]",
 						)}
 					>
 						<ArrowUp className="h-4 w-4" />
 					</button>
 				</div>
 			</div>
-			<p className="mt-2 text-center text-[10px] text-[var(--ftf-ink-4)]">
-				<kbd className="rounded-sm border border-[var(--ftf-line)] bg-white px-1 py-px font-sans">
-					Enter
-				</kbd>{" "}
-				to send ·{" "}
-				<kbd className="rounded-sm border border-[var(--ftf-line)] bg-white px-1 py-px font-sans">
-					Shift + Enter
-				</kbd>{" "}
-				for a new line
-			</p>
 		</div>
 	);
 }

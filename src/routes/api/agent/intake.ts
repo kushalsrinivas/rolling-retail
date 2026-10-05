@@ -54,7 +54,7 @@ export const Route = createFileRoute("/api/agent/intake")({
 				if (body.quiz) logQuizStep(s, "final", body.quiz);
 				const spec = specFromIntake(body.answers ?? {});
 				const rec = commitDesignVersion(s, spec, {
-					changeSummary: "Structured intake — customer answers, confirmed.",
+					changeSummary: "Your brief — design v1.",
 					state: "concept",
 				});
 				s.brief = parseBrief({

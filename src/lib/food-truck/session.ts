@@ -1,5 +1,6 @@
 import type { ProjectBrain } from "./brain";
 import type { DesignBrief } from "./brief";
+import type { SpecPatch } from "./design-record";
 import { FREE_VISUAL_CREDITS, RENDER_VIEWS } from "./constants";
 import type {
 	DesignSpec,
@@ -29,7 +30,28 @@ export interface VideoJob {
 
 export interface ChatTurn {
 	role: "user" | "assistant";
+	/** What the model sees — may carry bracketed context digests. */
 	content: string;
+	/** What the buyer sees. Omitted when it equals `content`. */
+	display?: string;
+	/** Structured card this turn renders as in the chat. */
+	kind?: "brief" | "renders" | "proposal";
+	/** Card payload (views + version for renders, patch for proposals). */
+	data?: Record<string, unknown>;
+}
+
+/**
+ * Strip the bracketed context blocks a user turn carries for the model.
+ * Fallback for turns saved before `display` existed.
+ */
+export function displayText(turn: ChatTurn): string {
+	if (turn.display !== undefined) return turn.display;
+	if (turn.role !== "user") return turn.content;
+	return turn.content
+		.split(/\n{2,}/)
+		.filter((p) => !/^\[[\s\S]*\]$/.test(p.trim()))
+		.join("\n\n")
+		.trim();
 }
 
 export interface DesignApproval {
@@ -107,6 +129,23 @@ export interface TruckSession {
 	 * wrap finish and the exterior features. Renders and video read it.
 	 */
 	brief: DesignBrief | null;
+	/**
+	 * Change requests the agent proposed, keyed by id. The buyer applies one
+	 * by id, so the patch that renders is the one they were shown — never a
+	 * client-supplied body.
+	 */
+	proposals: Record<string, Proposal>;
+}
+
+export interface Proposal {
+	id: string;
+	patch: SpecPatch;
+	removeColors: string[];
+	changeSummary: string;
+	status: "pending" | "applied" | "dismissed";
+	createdAt: number;
+	/** Design version this proposal produced, once applied. */
+	version?: number;
 }
 
 const sessions = new Map<string, TruckSession>();
@@ -137,6 +176,7 @@ export function getOrCreateSession(sessionId?: string): TruckSession {
 			approvals: [],
 			quizSteps: [],
 			brief: null,
+			proposals: {},
 		};
 		sessions.set(id, s);
 		// Best-effort restore from disk — a restart must not lose the design.
@@ -200,6 +240,7 @@ function normalizeSnapshot(snap: TruckSession): TruckSession {
 	snap.quizSteps = Array.isArray(snap.quizSteps) ? snap.quizSteps : [];
 	snap.images = snap.images ?? {};
 	snap.brief = snap.brief ?? null;
+	snap.proposals = snap.proposals ?? {};
 	snap.videos = snap.videos ?? [];
 	restored.add(snap);
 	return snap;

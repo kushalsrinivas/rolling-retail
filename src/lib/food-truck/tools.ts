@@ -689,6 +689,10 @@ export function createFoodTruckTools() {
 				.string()
 				.optional()
 				.describe(`New body, one of: ${VEHICLES.map((v) => v.id).join(", ")}`),
+			serveMode: z
+				.enum(["hatch-serve", "walk-in"])
+				.optional()
+				.describe("Change how customers order, if the buyer asked"),
 			changeSummary: z
 				.string()
 				.describe(
@@ -705,6 +709,7 @@ export function createFoodTruckTools() {
 			if (args.menuItems) patch.menu = args.menuItems;
 			if (args.vibe) patch.vibe = args.vibe;
 			if (args.vehicleId) patch.vehicleId = args.vehicleId;
+			if (args.serveMode) patch.serveMode = args.serveMode;
 			return JSON.stringify({
 				patch,
 				removeColors: args.removeColors ?? [],

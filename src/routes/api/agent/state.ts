@@ -5,28 +5,18 @@ import {
 	currentDesign,
 	getOrCreateSession,
 	listConcepts,
+	displayText,
 	restoreSession,
 } from "#/lib/food-truck/session";
 
 /**
  * Session rehydrate API — what the buyer's browser needs after a reload.
  *
- * The designer keeps everything (messages, brain, design record, renders,
- * clips) server-side, but the browser only held the session id in memory, so
- * any reload — a refresh, a backgrounded tab the phone reclaimed — landed
- * the customer back on the empty intake with the same work invisible.
- * This route is the reader side: restore ?sessionId= and hand back exactly
- * the state the UI hydrates from.
- *
- * History is displayed-stripped: the bracketed designer-context digests the
- * panel never sent the buyer's way are dropped from user turns.
+ * History comes back as the buyer saw it: display text (never the
+ * bracketed context the model reads) plus the brief, render and proposal
+ * cards, each proposal carrying its current status so an applied change
+ * does not offer "Apply" again.
  */
-function displayContent(content: string): string {
-	return content
-		.replace(/^\[(?:Designer context|Brain|SYSTEM)[^\]]*\]\s*/g, "")
-		.trim();
-}
-
 export const Route = createFileRoute("/api/agent/state")({
 	server: {
 		handlers: {
@@ -53,11 +43,26 @@ export const Route = createFileRoute("/api/agent/state")({
 							used: s.creditsUsed,
 							left: creditsLeft(s),
 						},
-						history: s.history.map((h) => ({
-							role: h.role,
-							content:
-								h.role === "user" ? displayContent(h.content) : h.content,
-						})),
+						history: s.history
+							.map((h) => {
+								const data =
+									h.kind === "proposal" && h.data?.id
+										? {
+												...h.data,
+												status:
+													s.proposals[String(h.data.id)]?.status ??
+													h.data.status,
+												version: s.proposals[String(h.data.id)]?.version,
+											}
+										: h.data;
+								return {
+									role: h.role,
+									content: displayText(h),
+									kind: h.kind,
+									data,
+								};
+							})
+							.filter((h) => h.kind || h.content.trim().length > 0),
 						brain: s.brain,
 						images: listConcepts(s),
 						videos: s.videos,

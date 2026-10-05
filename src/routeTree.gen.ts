@@ -41,6 +41,7 @@ import { Route as ApiAgentMenuRouteImport } from './routes/api/agent/menu'
 import { Route as ApiAgentPackageRouteImport } from './routes/api/agent/package'
 import { Route as ApiAgentPlanRouteImport } from './routes/api/agent/plan'
 import { Route as ApiAgentQuizStepRouteImport } from './routes/api/agent/quiz-step'
+import { Route as ApiAgentReviseRouteImport } from './routes/api/agent/revise'
 import { Route as ApiAgentSessionRouteImport } from './routes/api/agent/session'
 import { Route as ApiAgentStateRouteImport } from './routes/api/agent/state'
 import { Route as ApiAgentSubmissionsRouteImport } from './routes/api/agent/submissions'
@@ -213,6 +214,11 @@ const ApiAgentQuizStepRoute = ApiAgentQuizStepRouteImport.update({
   path: '/api/agent/quiz-step',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentReviseRoute = ApiAgentReviseRouteImport.update({
+  id: '/api/agent/revise',
+  path: '/api/agent/revise',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentSessionRoute = ApiAgentSessionRouteImport.update({
   id: '/api/agent/session',
   path: '/api/agent/session',
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
+  '/api/agent/revise': typeof ApiAgentReviseRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
+  '/api/agent/revise': typeof ApiAgentReviseRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/api/agent/package': typeof ApiAgentPackageRoute
   '/api/agent/plan': typeof ApiAgentPlanRoute
   '/api/agent/quiz-step': typeof ApiAgentQuizStepRoute
+  '/api/agent/revise': typeof ApiAgentReviseRoute
   '/api/agent/session': typeof ApiAgentSessionRoute
   '/api/agent/state': typeof ApiAgentStateRoute
   '/api/agent/submissions': typeof ApiAgentSubmissionsRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/quiz-step'
+    | '/api/agent/revise'
     | '/api/agent/session'
     | '/api/agent/state'
     | '/api/agent/submissions'
@@ -485,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/quiz-step'
+    | '/api/agent/revise'
     | '/api/agent/session'
     | '/api/agent/state'
     | '/api/agent/submissions'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/api/agent/package'
     | '/api/agent/plan'
     | '/api/agent/quiz-step'
+    | '/api/agent/revise'
     | '/api/agent/session'
     | '/api/agent/state'
     | '/api/agent/submissions'
@@ -576,6 +588,7 @@ export interface RootRouteChildren {
   ApiAgentPackageRoute: typeof ApiAgentPackageRoute
   ApiAgentPlanRoute: typeof ApiAgentPlanRoute
   ApiAgentQuizStepRoute: typeof ApiAgentQuizStepRoute
+  ApiAgentReviseRoute: typeof ApiAgentReviseRoute
   ApiAgentSessionRoute: typeof ApiAgentSessionRoute
   ApiAgentStateRoute: typeof ApiAgentStateRoute
   ApiAgentSubmissionsRoute: typeof ApiAgentSubmissionsRoute
@@ -815,6 +828,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentQuizStepRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/revise': {
+      id: '/api/agent/revise'
+      path: '/api/agent/revise'
+      fullPath: '/api/agent/revise'
+      preLoaderRoute: typeof ApiAgentReviseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/session': {
       id: '/api/agent/session'
       path: '/api/agent/session'
@@ -928,6 +948,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentPackageRoute: ApiAgentPackageRoute,
   ApiAgentPlanRoute: ApiAgentPlanRoute,
   ApiAgentQuizStepRoute: ApiAgentQuizStepRoute,
+  ApiAgentReviseRoute: ApiAgentReviseRoute,
   ApiAgentSessionRoute: ApiAgentSessionRoute,
   ApiAgentStateRoute: ApiAgentStateRoute,
   ApiAgentSubmissionsRoute: ApiAgentSubmissionsRoute,
