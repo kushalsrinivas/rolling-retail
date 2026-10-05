@@ -212,9 +212,9 @@ describe("concept round", () => {
 	it("reports progress that advances to the full count", async () => {
 		stubModel();
 		const seen: Array<{ completed: number; total: number }> = [];
-		await runStarterConcepts(0, ARGS, (_batch, p) =>
-			seen.push({ completed: p.completed, total: p.total }),
-		);
+		await runStarterConcepts(0, ARGS, (_batch, p) => {
+			seen.push({ completed: p.completed, total: p.total });
+		});
 		expect(seen.length).toBeGreaterThan(0);
 		expect(seen.every((p) => p.total === CONCEPT_VIEWS.length)).toBe(true);
 		expect(seen.at(-1)?.completed).toBe(CONCEPT_VIEWS.length);

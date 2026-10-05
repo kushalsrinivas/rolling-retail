@@ -574,11 +574,18 @@ export function useChat() {
 						by: brandName.trim() || undefined,
 					}),
 				});
-				const data = (await res.json().catch(() => ({}))) as { error?: string };
-				if (!res.ok)
+				const data = (await res.json().catch(() => ({}))) as {
+					error?: string;
+					code?: string;
+				};
+				if (!res.ok) {
+					// The server's view of the design differs from the page's —
+					// re-sync so the next click approves what actually exists.
+					if (data.code) await refreshDesign();
 					throw new Error(
 						data.error || "We couldn't save your approval. Please try again.",
 					);
+				}
 				track("design_approved", { version });
 				await refreshDesign();
 				pushMessage({

@@ -129,7 +129,9 @@ describe("operating brief reaches the renders", () => {
 		expect(hero).toMatch(/matte cast vinyl/);
 		expect(hero).toMatch(/fabric awning/);
 		expect(hero).toMatch(/LED strip/);
-		expect(hero).toMatch(/Color, (primary|secondary): orange, target #/);
+		expect(hero).toMatch(/Belt band: .*0.35 m tall/);
+		expect(hero).toMatch(/orange #[0-9A-F]{6}/);
+		expect(hero).toMatch(/Wordmark, curbside:/);
 	});
 
 	it("keeps the roof sign for a session with no brief", () => {

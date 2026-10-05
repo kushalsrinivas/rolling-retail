@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getVehicle } from "#/lib/food-truck/constants";
 import { runMenuBoard } from "#/lib/food-truck/images";
+import {
+	hydrateReferences,
+	persistRender,
+	toDataUrl,
+} from "#/lib/food-truck/store";
 import { sanitizeMenu } from "#/lib/food-truck/menu";
 import {
 	conceptsByView,
@@ -83,13 +88,13 @@ export const Route = createFileRoute("/api/agent/menu")({
 						vehicleBody: vehicle?.body ?? "square",
 						menu,
 						artwork,
-						completed: conceptsByView(session),
-						masterReference: session.masterImageUrl,
+						completed: await hydrateReferences(conceptsByView(session)),
+						masterReference: await toDataUrl(session.masterImageUrl),
 					});
-					// A board that could not be anchored never reached the model,
-					// so it costs nothing.
-					if (!image.model.startsWith("placeholder (no")) {
+					// Only a board that actually rendered costs a round.
+					if (image.status === "ready") {
 						session.creditsUsed += 1;
+						image.url = await persistRender(image.url, "menu_board");
 					}
 					putConcepts(session, [image]);
 					return Response.json({

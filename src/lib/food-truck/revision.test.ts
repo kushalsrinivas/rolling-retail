@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import os from "node:os";
+import path from "node:path";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
 	commitDesignVersion,
 	displayText,
@@ -12,6 +14,11 @@ import { describePatch, runRound, viewsOnScreen } from "./round";
 function freshSession(): TruckSession {
 	return getOrCreateSession(`test_${Math.random().toString(36).slice(2)}`);
 }
+
+beforeAll(() => {
+	// Sessions persist to disk; keep test runs out of the real data folder.
+	process.env.DATA_DIR = path.join(os.tmpdir(), "rr-test-data");
+});
 
 beforeEach(() => {
 	// No key: the image model returns placeholders without touching the network.

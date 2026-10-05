@@ -362,8 +362,9 @@ export function adoptMasterFromImages(
 		(i) =>
 			i.label === "exterior_hero" &&
 			!i.model.startsWith("placeholder") &&
-			i.url.startsWith("data:image/") &&
-			!i.url.startsWith("data:image/svg"),
+			((i.url.startsWith("data:image/") &&
+				!i.url.startsWith("data:image/svg")) ||
+				i.url.startsWith("/api/assets/")),
 	);
 	if (hero) s.masterImageUrl = hero.url;
 }
@@ -375,8 +376,8 @@ export function adoptMasterFromImages(
 export function replaceMasterImage(s: TruckSession, url: string | null) {
 	if (
 		typeof url === "string" &&
-		url.startsWith("data:image/") &&
-		!url.startsWith("data:image/svg")
+		((url.startsWith("data:image/") && !url.startsWith("data:image/svg")) ||
+			url.startsWith("/api/assets/"))
 	) {
 		s.masterImageUrl = url;
 	}

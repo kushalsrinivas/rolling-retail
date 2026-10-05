@@ -48,9 +48,23 @@ export const Route = createFileRoute("/api/agent/approve")({
 				const s = getOrCreateSession(body.sessionId);
 				const approval = approveDesignVersion(s, body.version, body.by ?? null);
 				if (!approval) {
+					// The server no longer holds the version the page shows — most
+					// often a restart that lost the session store, or a page left
+					// open across a redeploy. Say so, and hand back what we do hold
+					// so the page can re-sync instead of failing silently.
+					const current = currentDesign(s);
+					console.warn(
+						`[food-truck] approve: v${body.version} not found for ${s.sessionId} (have ${s.designVersions.map((v) => v.version).join(",") || "none"})`,
+					);
 					return Response.json(
-						{ error: "Version not found." },
-						{ status: 404 },
+						{
+							error: current
+								? `Your design moved on to v${current.version}. We've refreshed it — please approve again.`
+								: "We couldn't find this design on our side. Refresh the page; if it's still missing, ask the designer to re-render it.",
+							code: current ? "version_moved" : "design_missing",
+							current,
+						},
+						{ status: 409 },
 					);
 				}
 				return Response.json({ approval, approvals: approvalsFor(s) });

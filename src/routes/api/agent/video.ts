@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getBusiness, getVehicle } from "#/lib/food-truck/constants";
+import { getBusiness } from "#/lib/food-truck/constants";
 import { videoReferenceViews } from "#/lib/food-truck/continuity";
-import { equipmentPhrase } from "#/lib/food-truck/images";
+import { emblemFor, equipmentPhrase } from "#/lib/food-truck/images";
 import {
 	buildSalesVideoPrompt,
 	SALES_VIDEO_PRESETS,
@@ -17,15 +17,11 @@ import {
 	restoreSession,
 	type VideoJob,
 } from "#/lib/food-truck/session";
-import { layoutFor } from "#/lib/food-truck/tools";
+import { renderArgsFor } from "#/lib/food-truck/render-inputs";
+import { hydrateReferences } from "#/lib/food-truck/store";
 import { pollSalesVideo, startSalesVideo } from "#/lib/food-truck/video";
 
 const KINDS = new Set(SALES_VIDEO_PRESETS.map((p) => p.kind));
-
-/** Trim a client-supplied string, or fall back. */
-function str(v: unknown, fallback: string): string {
-	return typeof v === "string" && v.trim() ? v.trim() : fallback;
-}
 
 function newId() {
 	return `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -76,69 +72,36 @@ export const Route = createFileRoute("/api/agent/video")({
 				}
 				const session = getOrCreateSession(body.sessionId);
 				await restoreSession(session.sessionId).catch(() => {});
-				const brain = session.brain; /*
-				 * The stills are briefed on body, dimensions, menu, equipment and
-				 * service model; the video used to get four loose strings, so it
-				 * filmed a generic trailer. Same brain, same vehicle table, same
-				 * equipment phrasing — the clip now describes this build.
+				/*
+				 * The clip is briefed from the same design record as the stills
+				 * — never from client strings or the regex brain. The old route
+				 * read the brain, so after a confirmed revision the film was
+				 * briefed on the previous colors while filming the new renders.
 				 */
-				const vehicle =
-					getVehicle(body.vehicleId ?? brain?.vehicleId) ??
-					getVehicle("airstream-m");
-				const business = getBusiness(body.businessType ?? brain?.businessType);
-				// The layout's equipment, never the loose words the chat picked up
-				// ("fryer" said in passing used to put a fryer in a boba clip).
-				const equipmentIds =
-					body.equipment?.filter((e) => typeof e === "string") ??
-					(business && vehicle
-						? layoutFor(
-								business.id,
-								vehicle.id,
-								brain?.walkIn === true,
-								brain?.menuKeywords ?? [],
-							).equipment
-						: []);
-				const brand = str(body.brand, brain?.brandName ?? "");
-				const serveMode: SalesVideoContext["serveMode"] =
-					body.serveMode === "walk-in" ||
-					body.serveMode === "hybrid" ||
-					body.serveMode === "hatch-serve"
-						? body.serveMode
-						: brain?.walkIn
-							? "walk-in"
-							: "hatch-serve";
-
-				// Openings come from the design record when one exists — the
-				// exact distances the clip is accountable to — else the body
-				// defaults, so a clip never films blind.
-				const recordOpenings = currentDesign(session)?.spec.openings;
+				const r = renderArgsFor(session);
 				const ctx: SalesVideoContext = {
-					brand: brand || "the business",
-					hasBrand: Boolean(brand),
-					vehicleLabel: str(
-						body.vehicleLabel,
-						vehicle?.label ?? "food trailer",
-					),
-					vehicleBody: vehicle?.body ?? null,
-					lengthM: vehicle?.lengthM ?? null,
-					widthM: vehicle?.widthM ?? null,
+					brand: r.brand || "the business",
+					hasBrand: Boolean(r.brand),
+					vehicleLabel: r.vehicleLabel,
+					vehicleBody: r.vehicleBody ?? null,
+					lengthM: r.lengthM ?? null,
+					widthM: r.widthM ?? null,
+					heightM: r.heightM ?? null,
 					openings:
-						recordOpenings ??
-						(vehicle ? defaultOpenings(vehicle.body, vehicle.lengthM) : null),
-					businessLabel: business?.label ?? null,
-					businessType: business?.id ?? null,
-					menu: brain?.menuKeywords.slice(0, 5).join(", ") || null,
-					equipment: equipmentIds.length ? equipmentPhrase(equipmentIds) : null,
-					serveMode,
-					colors: str(
-						body.colors,
-						brain?.colors.slice(0, 3).join(", ") || "brand colors",
-					),
-					vibe: str(
-						body.vibe,
-						brain?.vibeWords.slice(0, 2).join(", ") || "bold street-food",
-					),
+						currentDesign(session)?.spec.openings ??
+						(r.vehicleBody && r.lengthM
+							? defaultOpenings(r.vehicleBody, r.lengthM)
+							: null),
+					businessLabel:
+						getBusiness(r.businessType)?.label ?? r.businessType ?? null,
+					businessType: r.businessType ?? null,
+					menu: r.menuKeywords?.slice(0, 5).join(", ") || null,
+					equipment: r.equipment?.length ? equipmentPhrase(r.equipment) : null,
+					serveMode: r.serveMode ?? "hatch-serve",
+					colors: r.colors ?? "brand colors",
+					vibe: r.vibe ?? "bold street-food",
 					brief: session.brief,
+					emblem: emblemFor(r.businessType ?? "combined", r.menuKeywords ?? []),
 				};
 				/*
 				 * Reference selection: the still that actually shows the space
@@ -151,7 +114,8 @@ export const Route = createFileRoute("/api/agent/video")({
 				 * clip cannot disagree with the deck, and only falls back to the
 				 * bytes the client sent when this session has nothing stored.
 				 */
-				const stored = conceptsByView(session);
+				// Stored renders are files; the video model needs their bytes.
+				const stored = await hydrateReferences(conceptsByView(session));
 				const refViews: string[] = [];
 				const planned: string[] = [];
 				for (const view of videoReferenceViews(kind)) {

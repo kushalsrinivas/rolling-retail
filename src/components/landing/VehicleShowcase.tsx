@@ -120,7 +120,9 @@ export default function VehicleShowcase() {
 							key={preset.id}
 							dims={dims}
 							equipmentIds={preset.equipmentIds}
-							cutaway
+							// Whole trailer by default; open it up only to show a picked unit.
+							cutaway={Boolean(hotspot)}
+							showLabels
 							selectedEquipment={hotspot}
 							onSelectEquipment={(id) => {
 								setPaused(true);

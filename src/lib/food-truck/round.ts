@@ -21,6 +21,7 @@ import {
 } from "./constants";
 import { specFromIntake, versionStamp } from "./design-record";
 import { runStarterConcepts } from "./images";
+import { hydrateReferences, persistRender, toDataUrl } from "./store";
 import { renderArgsFor } from "./render-inputs";
 import {
 	type Proposal,
@@ -100,18 +101,31 @@ export async function runRound(
 	});
 
 	const base = renderArgsFor(session);
+	// Stored renders are files; the model needs their bytes as references.
+	const [master, completed] = opts.fresh
+		? [null, {}]
+		: await Promise.all([
+				toDataUrl(base.masterReference),
+				hydrateReferences(conceptsByView(session)),
+			]);
 	const run = await runStarterConcepts(
 		session.creditsUsed,
 		{
 			...base,
-			masterReference: opts.fresh ? null : base.masterReference,
-			completed: opts.fresh ? {} : conceptsByView(session),
+			masterReference: master,
+			inspirationImage: await toDataUrl(base.inspirationImage),
+			completed,
 			only: views,
 			charge: opts.charge,
 			allowedChanges: opts.allowedChanges ?? null,
 		},
-		(batch, progress) => {
-			// Persist before announcing: a dropped frame is still recoverable.
+		async (batch, progress) => {
+			// Write each render to disk first, so the frame carries a short URL
+			// instead of a megabyte of base64 — and a dropped frame is still
+			// recoverable from the session.
+			for (const r of batch) {
+				if (r.status === "ready") r.url = await persistRender(r.url, r.label);
+			}
 			if (batch.length > 0) putConcepts(session, batch);
 			send({ type: "images", images: batch, progress });
 		},

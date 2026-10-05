@@ -7,6 +7,14 @@
  */
 import { CONCEPT_VIEWS } from "./constants";
 import { type LineProfile, lineProfileFor } from "./line-profile";
+import {
+	type ArtArgs,
+	environmentSection,
+	materialsSection,
+	sceneSentences,
+	stationRows,
+	wrapArtworkSection,
+} from "./art-direction";
 import { type DesignBrief, finishPhraseFor, sceneFor } from "./brief";
 import { defaultOpenings, type Opening, openingsSteLines } from "./openings";
 import {
@@ -20,8 +28,8 @@ import {
 export function isRealPhoto(url: string | null | undefined): url is string {
 	return (
 		typeof url === "string" &&
-		url.startsWith("data:image/") &&
-		!url.startsWith("data:image/svg")
+		((url.startsWith("data:image/") && !url.startsWith("data:image/svg")) ||
+			url.startsWith("/api/assets/"))
 	);
 }
 
@@ -125,6 +133,7 @@ export interface SalesVideoContext {
 	vehicleBody?: "airstream" | "square" | null;
 	lengthM?: number | null;
 	widthM?: number | null;
+	heightM?: number | null;
 	/** Human business label, e.g. "Grill, Burgers & Barbecue". */
 	businessLabel?: string | null;
 	/** Business type id, e.g. "cold-drinks". Picks the serve line. */
@@ -143,6 +152,8 @@ export interface SalesVideoContext {
 	openings?: Opening[] | null;
 	/** Operating brief — the orbit's setting and the wrap's film finish. */
 	brief?: DesignBrief | null;
+	/** The emblem description the stills used, so the clip shows the same mark. */
+	emblem?: string | null;
 }
 
 function bodyName(body: SalesVideoContext["vehicleBody"]): string {
@@ -371,6 +382,34 @@ export function buildSalesVideoPrompt(
 	]);
 	const subject = subjectSection(ctx, line);
 	const geometry = geometrySection(ctx);
+	const named =
+		ctx.hasBrand !== false &&
+		Boolean(ctx.brand) &&
+		ctx.brand !== "the business";
+	const art: ArtArgs | null =
+		ctx.vehicleBody && ctx.lengthM
+			? {
+					brand: ctx.brand,
+					hasBrand: named,
+					vehicleBody: ctx.vehicleBody,
+					lengthM: ctx.lengthM,
+					heightM: ctx.heightM ?? 2.6,
+					colors: ctx.colors,
+					vibe: ctx.vibe,
+					businessLabel: ctx.businessLabel ?? "food",
+					emblem: ctx.emblem ?? "the brand emblem from the references",
+					line,
+					brief: ctx.brief,
+				}
+			: null;
+	const describe = (view: "interior" | "hero" | "night"): SteSection | null =>
+		art
+			? { title: "Scene description", lines: sceneSentences(art, view) }
+			: null;
+	const wrapArt = art ? wrapArtworkSection(art) : null;
+	const materials = ctx.vehicleBody
+		? materialsSection({ vehicleBody: ctx.vehicleBody, brief: ctx.brief })
+		: null;
 	const warnings: SteSection = { title: "Warnings", lines: [...WARNINGS] };
 	const doc = (title: string, sections: (SteSection | null)[]) =>
 		steDocument({
@@ -390,13 +429,19 @@ export function buildSalesVideoPrompt(
 					"The interior is complete: a full commercial line, exactly as the interior reference shows it.",
 				],
 			},
+			describe("interior"),
 			terms,
 			subject,
 			{
 				title: "Line on camera",
 				lines: [
 					row("Line, in camera order", line.videoLine),
+					...stationRows(line),
 					"Show the line in this order. Do not add, skip or swap a unit.",
+					row(
+						"Interior finishes",
+						"brushed stainless counters with upstands; white easy-clean wall panels; tiled splashback; dark non-slip floor",
+					),
 				],
 			},
 			{
@@ -405,6 +450,8 @@ export function buildSalesVideoPrompt(
 					"Step 1, 0.0–3.0 s: Start inside at the rear end of the aisle, eye level, looking forward.",
 					"Step 1 frame: the full line ahead, bright; the open service hatch glows at the far end.",
 					"Step 2, 3.0–7.0 s: Dolly slowly forward down the center of the aisle at chest height.",
+					row("Dolly speed", "0.3 m per second; constant; no shake"),
+					"Step 2 frame: each station passes the lens on the left, in the stated order, sharp and well lit.",
 					"Step 3, 7.0–10.0 s: Pull back smoothly and tilt up a little. End on one wide frame of the full galley.",
 				],
 			},
@@ -441,8 +488,12 @@ export function buildSalesVideoPrompt(
 					"Make one 10-second photoreal cinematic film of the trailer at night.",
 				],
 			},
+			describe("night"),
 			terms,
 			subject,
+			wrapArt,
+			materials,
+			ctx.brief ? environmentSection(ctx.brief, "night") : null,
 			{
 				title: "Shot list",
 				lines: [
@@ -488,16 +539,24 @@ export function buildSalesVideoPrompt(
 				"This is the exterior slide of the sales deck.",
 			],
 		},
+		describe("hero"),
 		terms,
 		subject,
+		wrapArt,
+		materials,
 		{
 			title: "Shot list",
 			lines: [
 				"Orbit at a constant rate on a level circle, camera at chest height.",
+				row(
+					"Orbit",
+					"radius 7 m around the center of the trailer; 36° per second; camera height 1.4 m",
+				),
 				"Hold the trailer dead center and at the same size for the full clip.",
 				"Step 1, 0.0–3.5 s: Start at the three-quarter front view of the curbside, nose toward the camera.",
 				"Step 2, 3.5–7.0 s: Pass the full curbside. The wrap and the roof sign are square to the camera at the midpoint.",
 				"Step 3, 7.0–10.0 s: Continue past the rear and along the roadside, back to the opening angle.",
+				"Step 3 frame: the roadside wall shows the wrap and wordmark, and no openings.",
 				"Decelerate and stop exactly at the opening angle. The circle is complete.",
 			],
 		},

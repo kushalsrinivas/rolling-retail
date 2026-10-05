@@ -46,7 +46,14 @@ services:
       SITE_PASSWORD: ${SITE_PASSWORD:-}
       FACTORY_DASHBOARD_TOKEN: ${FACTORY_DASHBOARD_TOKEN:-}
       SEED_DB: ${SEED_DB:-false}
+      DATA_DIR: /app/data
+    # Sessions, design versions and renders live here. Without a volume every
+    # restart or redeploy wiped them, and an open page could no longer
+    # approve the design it was showing.
+    volumes:
+      - appdata:/app/data
     restart: unless-stopped
 
 volumes:
   pgdata:
+  appdata:

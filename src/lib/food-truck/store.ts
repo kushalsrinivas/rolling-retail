@@ -131,3 +131,56 @@ export async function listStoredSessions(): Promise<string[]> {
 		return [];
 	}
 }
+
+/**
+ * Renders live on disk and travel as URLs.
+ *
+ * A finished render is ~1 MB of base64. Sent inline, every stream frame,
+ * every reconcile and every snapshot carried every image again — and a
+ * reverse proxy that buffers or caps frames silently dropped renders the
+ * model had actually produced. Rasters are now always written to
+ * data/assets and only the short /api/assets/… URL moves around.
+ */
+export async function persistRender(
+	url: string,
+	prefix = "render",
+): Promise<string> {
+	const m = url.match(DATA_URL_RE);
+	if (!m?.[3] || m[2] === "svg+xml") return url;
+	try {
+		await ensureDirs();
+		const id = `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+		const file = `${id}.${extFor(`${m[1]}/${m[2]}`)}`;
+		await writeFile(path.join(assetsDir(), file), Buffer.from(m[3], "base64"));
+		return `/api/assets/${file}`;
+	} catch (err) {
+		console.warn("[food-truck] render store failed, keeping inline:", err);
+		return url;
+	}
+}
+
+/** The bytes behind a stored render, as a data URL — for model references. */
+export async function toDataUrl(
+	url: string | null | undefined,
+): Promise<string | null> {
+	if (!url) return null;
+	if (url.startsWith("data:")) return url;
+	if (!url.startsWith("/api/assets/")) return null;
+	const file = await readAssetFile(url.slice("/api/assets/".length));
+	if (!file || !file.mime.startsWith("image/")) return null;
+	return `data:${file.mime};base64,${file.bytes.toString("base64")}`;
+}
+
+/** A view → URL map with every stored render resolved to bytes. */
+export async function hydrateReferences(
+	byView: Record<string, string>,
+): Promise<Record<string, string>> {
+	const out: Record<string, string> = {};
+	await Promise.all(
+		Object.entries(byView).map(async ([view, url]) => {
+			const data = await toDataUrl(url);
+			if (data) out[view] = data;
+		}),
+	);
+	return out;
+}

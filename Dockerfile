@@ -37,6 +37,11 @@ RUN npx prisma generate && npm run build
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0
+# Sessions, design versions and renders. Mount a persistent volume here
+# (Dokploy: Volumes → /app/data) or every redeploy wipes open designs.
+ENV DATA_DIR=/app/data
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*

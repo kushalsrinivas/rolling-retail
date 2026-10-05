@@ -1,10 +1,4 @@
-import {
-	type DesignBrief,
-	featurePhrases,
-	finishPhraseFor,
-	hasFeature,
-	sceneFor,
-} from "./brief";
+import { type DesignBrief, featurePhrases, hasFeature } from "./brief";
 import {
 	CONCEPT_VIEWS,
 	type ConceptView,
@@ -21,6 +15,14 @@ import {
 	menuBoardReferences,
 	type RenderReference,
 } from "./continuity";
+import {
+	type ArtArgs,
+	environmentSection,
+	materialsSection,
+	sceneSentences,
+	stationRows,
+	wrapArtworkSection,
+} from "./art-direction";
 import { lineProfileFor } from "./line-profile";
 import { liverySteLines } from "./livery";
 import { type MenuDesign, menuBoardPrompt } from "./menu";
@@ -90,11 +92,13 @@ export interface TruckImageArgs {
 	geometry?: string | null;
 	/** Fields the customer asked to change — named in the lock, rest frozen. */
 	allowedChanges?: readonly string[] | null;
+	/** Output frame. Views are 16:9; the brand mark is square. */
+	aspectRatio?: "16:9" | "1:1" | "4:3";
 }
 
 export async function generateTruckImage(
 	args: TruckImageArgs,
-): Promise<{ url: string; model: string }> {
+): Promise<{ url: string; model: string; error?: string }> {
 	const key = geminiKey();
 	const model = process.env.IMAGE_MODEL || "gemini-3.1-flash-image";
 	if (!key) {
@@ -125,43 +129,74 @@ export async function generateTruckImage(
 
 	const lock = continuityLock(attached, args.geometry, args.allowedChanges);
 	const text = lock ? `${args.prompt}\n\n${lock}` : args.prompt;
-	try {
-		const res = await fetch(
-			`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					contents: [{ parts: [{ text }, ...refParts] }],
-					generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-				}),
-			},
-		);
-		if (!res.ok) throw new Error(`image model ${res.status}`);
-		const data = (await res.json()) as {
-			candidates?: Array<{
-				content?: {
-					parts?: Array<{
-						inlineData?: { mimeType?: string; data?: string };
-						text?: string;
-					}>;
-				};
-			}>;
-		};
-		const parts = data.candidates?.[0]?.content?.parts ?? [];
-		const img = parts.find((p) => p.inlineData?.data);
-		if (img?.inlineData?.data) {
-			const mime = img.inlineData.mimeType || "image/png";
-			return { url: `data:${mime};base64,${img.inlineData.data}`, model };
+	const fallback = process.env.IMAGE_FALLBACK_MODEL || "gemini-3-pro-image";
+	// Rate limits and transient 5xx are normal under a parallel stage; a
+	// request that comes back with text and no image is usually a one-off.
+	// Two retries with backoff, the last on the fallback model.
+	const attempts = [model, model, fallback];
+	let lastError = "no attempt";
+	for (const [i, m] of attempts.entries()) {
+		if (i > 0 && !process.env.VITEST)
+			await new Promise((r) => setTimeout(r, i === 1 ? 2500 : 6000));
+		try {
+			const res = await fetch(
+				`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						contents: [{ parts: [{ text }, ...refParts] }],
+						generationConfig: {
+							responseModalities: ["TEXT", "IMAGE"],
+							imageConfig: { aspectRatio: args.aspectRatio ?? "16:9" },
+						},
+					}),
+				},
+			);
+			if (!res.ok) {
+				const body = await res.text().catch(() => "");
+				lastError = `image model ${m} ${res.status}: ${body.slice(0, 240)}`;
+				// A 4xx other than rate limiting will not get better on retry.
+				if (
+					res.status >= 400 &&
+					res.status < 500 &&
+					res.status !== 429 &&
+					res.status !== 408
+				) {
+					if (i < attempts.length - 1 && m !== fallback) continue;
+					break;
+				}
+				continue;
+			}
+			const data = (await res.json()) as {
+				candidates?: Array<{
+					finishReason?: string;
+					content?: {
+						parts?: Array<{
+							inlineData?: { mimeType?: string; data?: string };
+							text?: string;
+						}>;
+					};
+				}>;
+				promptFeedback?: { blockReason?: string };
+			};
+			const cand = data.candidates?.[0];
+			const img = (cand?.content?.parts ?? []).find((p) => p.inlineData?.data);
+			if (img?.inlineData?.data) {
+				const mime = img.inlineData.mimeType || "image/png";
+				return { url: `data:${mime};base64,${img.inlineData.data}`, model: m };
+			}
+			lastError = `image model ${m} returned no image (finish ${cand?.finishReason ?? "?"}${data.promptFeedback?.blockReason ? `, blocked ${data.promptFeedback.blockReason}` : ""})`;
+		} catch (err) {
+			lastError = `image model ${m} request failed: ${err instanceof Error ? err.message : String(err)}`;
 		}
-		throw new Error("no image part");
-	} catch (err) {
-		console.warn("[food-truck] image fallback:", err);
-		return {
-			url: placeholderImage(args.label, args.brand || args.vehicleLabel),
-			model: "placeholder (fallback)",
-		};
 	}
+	console.warn(`[food-truck] ${args.label} image fallback:`, lastError);
+	return {
+		url: placeholderImage(args.label, args.brand || args.vehicleLabel),
+		model: "placeholder (fallback)",
+		error: lastError,
+	};
 }
 
 export type VehicleBody = "airstream" | "square";
@@ -413,8 +448,30 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	const businessLabel = getBusiness(businessType)?.label ?? businessType;
 	const roofSign = hasFeature(brief, "roof-sign");
 	const features = featurePhrases(brief);
-	const scene = sceneFor(brief);
 	const doorCount = openings.filter((o) => o.type === "door").length;
+	const art: ArtArgs = {
+		brand,
+		hasBrand,
+		vehicleBody,
+		lengthM,
+		heightM,
+		colors,
+		vibe,
+		businessLabel,
+		emblem,
+		line,
+		brief,
+	};
+	const wrapArt = wrapArtworkSection(art);
+	const materials = materialsSection({ vehicleBody, brief });
+	const envDay = environmentSection(brief, "day");
+	const envNight = environmentSection(brief, "night");
+	const describe = (
+		view: Parameters<typeof sceneSentences>[1],
+	): SteSection => ({
+		title: "Scene description",
+		lines: sceneSentences(art, view),
+	});
 
 	// ── Shared sections: identical on every view ──
 
@@ -459,18 +516,14 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	};
 
 	const livery: SteSection = {
-		title: "Wrap and livery",
+		title: "Livery rules",
 		lines: [
-			...paletteRows(colors),
-			row("Film finish", finishPhraseFor(brief)),
-			...liverySteLines(vehicleBody),
-			row("Emblem", emblem),
+			...liverySteLines(vehicleBody).filter(
+				(l) => !l.startsWith("Zone,") && !l.startsWith("Livery template"),
+			),
 			"Cut the emblem from flat spot-color vinyl with sharp edges.",
 			"Do not use gradients, brush texture, airbrush shading or photoreal rendering in the emblem.",
 			"Keep the shapes bold and few. A commercial wash must not show wear on them.",
-			hasBrand
-				? `Put the "${brand}" wordmark on the logo panel zone, next to the emblem.`
-				: "Leave the logo panel zone clean and unlettered.",
 		],
 	};
 
@@ -532,7 +585,8 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	const interior: SteSection = {
 		title: "Interior line",
 		lines: [
-			row("Line, left to right along the curbside wall", line.galley),
+			"The line runs along the curbside wall, from the front of the trailer to the rear.",
+			...stationRows(line),
 			line.hot
 				? "Put only the named cooking equipment under the stainless extraction canopy."
 				: "There is no extraction canopy, hood or cooking equipment in this interior.",
@@ -595,10 +649,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						`Through the open hatch, show ${line.heroGlimpse}.`,
 					],
 				},
+				describe("hero"),
 				terms,
 				subject,
 				geometry,
+				wrapArt,
 				livery,
+				materials,
 				exteriorFeatures,
 				{
 					title: "Camera",
@@ -617,13 +674,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 					],
 				},
 				{ title: "Light", lines: lightFor("golden") },
-				{
-					title: "Scene",
-					lines: [
-						row("Setting", scene),
-						"Keep the counter and the forecourt clean and empty.",
-					],
-				},
+				envDay,
 				text,
 				photoMedium,
 				{ title: "Warnings", lines: [peopleWarning] },
@@ -648,10 +699,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						"Deploy the stabilizer jacks.",
 					],
 				},
+				describe("rear"),
 				terms,
 				subject,
 				geometry,
+				wrapArt,
 				livery,
+				materials,
 				exteriorFeatures,
 				{
 					title: "Camera",
@@ -666,10 +720,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 					],
 				},
 				{ title: "Light", lines: lightFor("afternoon") },
-				{
-					title: "Scene",
-					lines: [row("Setting", scene), "Keep the ground clean and empty."],
-				},
+				envDay,
 				text,
 				photoMedium,
 				{ title: "Warnings", lines: [peopleWarning] },
@@ -691,10 +742,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						"Show the wheels and the stabilizer jacks at the bottom.",
 					],
 				},
+				describe("side"),
 				terms,
 				subject,
 				geometry,
+				wrapArt,
 				livery,
+				materials,
 				exteriorFeatures,
 				{
 					title: "Medium",
@@ -728,6 +782,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						"The interior is empty of people and ready to trade, with product prepped.",
 					],
 				},
+				describe("interior"),
 				terms,
 				subject,
 				interior,
@@ -784,6 +839,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 							: "Mount an illuminated blank badge panel on the counter front.",
 					],
 				},
+				describe("front"),
 				terms,
 				subject,
 				{
@@ -827,6 +883,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						"The line looks as if the team stepped away a moment ago.",
 					],
 				},
+				describe("counter"),
 				terms,
 				subject,
 				{
@@ -882,10 +939,13 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 						"Keep the forecourt empty.",
 					],
 				},
+				describe("night"),
 				terms,
 				subject,
 				geometry,
+				wrapArt,
 				livery,
+				materials,
 				exteriorFeatures,
 				{
 					title: "Camera",
@@ -900,16 +960,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 					],
 				},
 				{ title: "Light", lines: lightFor("night") },
-				{
-					title: "Scene",
-					lines: [
-						row(
-							"Setting",
-							`${scene}; at night, the ground is wet and reflects the lights`,
-						),
-						row("Background", "distant streetlights as soft bokeh"),
-					],
-				},
+				envNight,
 				text,
 				photoMedium,
 				{ title: "Warnings", lines: [peopleWarning] },
@@ -1089,7 +1140,10 @@ export async function runStarterConcepts(
 	args: StarterConceptArgs,
 	// Per-stage callback so the server can stream results over SSE as they
 	// land — one giant 9-image frame risks truncation/timeout.
-	onBatch?: (batch: StarterConcept[], progress: StageProgress) => void,
+	onBatch?: (
+		batch: StarterConcept[],
+		progress: StageProgress,
+	) => void | Promise<void>,
 ): Promise<{
 	images: StarterConcept[];
 	creditsUsed: number;
@@ -1170,7 +1224,7 @@ export async function runStarterConcepts(
 		const todo = stage.filter((v) => wanted.has(v));
 		if (todo.length === 0) continue;
 
-		onBatch?.([], {
+		await onBatch?.([], {
 			stage: i + 1,
 			stageCount: stages.length,
 			completed: done,
@@ -1208,6 +1262,7 @@ export async function runStarterConcepts(
 						references,
 						geometry,
 						allowedChanges: args.allowedChanges ?? null,
+						aspectRatio: view === "brand_mark" ? "1:1" : "16:9",
 					});
 					const failed = r.model.startsWith("placeholder");
 					return {
@@ -1217,7 +1272,7 @@ export async function runStarterConcepts(
 						filename: `${view}.png`,
 						status: failed ? ("failed" as const) : ("ready" as const),
 						error: failed
-							? "The image model did not return a render."
+							? "This view didn't come back from the renderer. Retry is free."
 							: undefined,
 						references: references.map((r2) => r2.from),
 					};
@@ -1245,7 +1300,7 @@ export async function runStarterConcepts(
 		}
 		images.push(...results);
 		done += results.length;
-		onBatch?.(results, {
+		await onBatch?.(results, {
 			stage: i + 1,
 			stageCount: stages.length,
 			completed: done,
