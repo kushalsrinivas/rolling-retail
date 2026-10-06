@@ -7,7 +7,7 @@
  * geometry rules as the render prompts — one hatch, one curbside door, a
  * rear door only on square bodies.
  */
-import { getVehicle } from "#/lib/food-truck/constants";
+import { axleCount, getVehicle } from "#/lib/food-truck/constants";
 
 export interface TrailerArtProps {
 	vehicleId: string;
@@ -18,7 +18,13 @@ export interface TrailerArtProps {
 	className?: string;
 	/** Accessible description; decorative when omitted. */
 	title?: string;
+	/** A 1.75 m person beside the trailer, so cards drawn at one height still show size. */
+	person?: boolean;
 }
+
+/** Deck height and wheel radius, the same numbers the 3D model is built from. */
+const DECK_M = 0.62;
+const WHEEL_M = 0.34;
 
 export function TrailerArt({
 	vehicleId,
@@ -26,17 +32,21 @@ export function TrailerArt({
 	accent = "#17130f",
 	className,
 	title,
+	person = false,
 }: TrailerArtProps) {
 	const v = getVehicle(vehicleId);
 	const length = v?.lengthM ?? 4;
 	const height = v?.heightM ?? 2.6;
 	const airstream = v?.body === "airstream";
-	// 100 px per metre, scaled into a fixed viewBox height.
+	// 100 px per metre throughout, so the deck, the wheel and the person are
+	// all at the trailer's own scale: the body sits on a 0.62 m deck and the
+	// wheel is a 27 in (0.68 m) trailer tyre, as in the 3D model.
 	const W = length * 100;
 	const H = height * 100;
-	const groundY = H + 46;
 	const bodyTop = 30;
-	const bodyBottom = H + 10;
+	const bodyBottom = bodyTop + H;
+	const groundY = bodyBottom + DECK_M * 100;
+	const wheelR = WHEEL_M * 100;
 	const bodyLeft = 70;
 	const bodyRight = bodyLeft + W;
 	const hatchX = bodyLeft + W * (airstream ? 0.32 : 0.28);
@@ -46,8 +56,14 @@ export function TrailerArt({
 	const doorX = bodyLeft + W * (airstream ? 0.74 : 0.76);
 	const axleX = bodyLeft + W * 0.58;
 	const r = airstream ? (bodyBottom - bodyTop) * 0.48 : 10;
-	const viewW = bodyRight + 40;
+	const viewW = bodyRight + (person ? 110 : 40);
 	const viewH = groundY + 16;
+	const wheelY = groundY - wheelR;
+	// One axle, or a tandem pair 0.9 m apart under one long arch (bodies 23 ft and over).
+	const axles = axleCount(length) === 2 ? [axleX - 45, axleX + 45] : [axleX];
+	const half = (axles[axles.length - 1] - axles[0]) / 2;
+	// Stabilizer jacks sit near both ends (the far pair hides behind these).
+	const jacks = [bodyLeft + W * 0.07, bodyRight - W * 0.07];
 
 	return (
 		<svg
@@ -75,7 +91,7 @@ export function TrailerArt({
 				strokeLinecap="round"
 			/>
 			<circle cx={bodyLeft - 60} cy={bodyBottom + 7} r={6} fill={accent} />
-			{/* jack */}
+			{/* tongue jack */}
 			<rect
 				x={bodyLeft - 30}
 				y={bodyBottom - 4}
@@ -83,6 +99,27 @@ export function TrailerArt({
 				height={groundY - bodyBottom}
 				fill={accent}
 				opacity={0.7}
+			/>
+			{/* stabilizer jacks */}
+			{jacks.map((x) => (
+				<g key={`jack-${x}`} fill={accent} opacity={0.7}>
+					<rect
+						x={x - 2.5}
+						y={bodyBottom}
+						width={5}
+						height={groundY - bodyBottom - 4}
+					/>
+					<rect x={x - 9} y={groundY - 5} width={18} height={5} rx={1} />
+				</g>
+			))}
+			{/* chassis rail */}
+			<rect
+				x={bodyLeft + W * 0.04}
+				y={bodyBottom}
+				width={W * 0.92}
+				height={10}
+				fill={accent}
+				opacity={0.85}
 			/>
 			{/* body */}
 			<rect
@@ -205,9 +242,57 @@ export function TrailerArt({
 				stroke={accent}
 				strokeOpacity={0.3}
 			/>
-			{/* wheel */}
-			<circle cx={axleX} cy={groundY - 18} r={20} fill="#1c1c1e" />
-			<circle cx={axleX} cy={groundY - 18} r={8} fill="#9aa1a8" />
+			{/* wheel, under a rounded arch (Airstream) or a square fender (box) */}
+			{airstream ? (
+				<path
+					d={`M${axleX - half - wheelR - 9} ${bodyBottom} A${half + wheelR + 9} ${wheelR + 9} 0 0 1 ${axleX + half + wheelR + 9} ${bodyBottom}`}
+					fill="#1c1c1e"
+					stroke="#9aa1a8"
+					strokeWidth={4}
+				/>
+			) : (
+				<path
+					d={`M${axleX - half - wheelR - 12} ${wheelY + 6} V${wheelY - wheelR - 6} H${axleX + half + wheelR + 12} V${wheelY + 6}`}
+					fill="none"
+					stroke={accent}
+					strokeWidth={5}
+					strokeLinejoin="round"
+				/>
+			)}
+			{axles.map((x) => (
+				<g key={`wheel-${x}`}>
+					<circle cx={x} cy={wheelY} r={wheelR} fill="#1c1c1e" />
+					<circle cx={x} cy={wheelY} r={wheelR * 0.45} fill="#9aa1a8" />
+					<circle cx={x} cy={wheelY} r={wheelR * 0.12} fill="#1c1c1e" />
+				</g>
+			))}
+			{person && (
+				// 1.75 m, standing at the door end.
+				<g fill="currentColor" opacity={0.32}>
+					<circle cx={bodyRight + 60} cy={groundY - 175 + 12} r={12} />
+					<rect
+						x={bodyRight + 46}
+						y={groundY - 175 + 27}
+						width={28}
+						height={78}
+						rx={12}
+					/>
+					<rect
+						x={bodyRight + 48}
+						y={groundY - 75}
+						width={11}
+						height={75}
+						rx={5}
+					/>
+					<rect
+						x={bodyRight + 61}
+						y={groundY - 75}
+						width={11}
+						height={75}
+						rx={5}
+					/>
+				</g>
+			)}
 			<line
 				x1={0}
 				x2={viewW}

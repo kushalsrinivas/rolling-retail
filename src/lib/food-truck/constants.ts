@@ -321,12 +321,36 @@ export const VEHICLE_GEOMETRY: Record<"airstream" | "square", string> = {
 	square: VEHICLE_GEOMETRY_ITEMS.square.join("; "),
 };
 
-export function geometryFor(body: "airstream" | "square") {
-	return VEHICLE_GEOMETRY[body];
+/**
+ * Axles under a body of this length. Airstream's own line splits at 23 ft:
+ * every model 22 ft or shorter is single axle, every model from 23 ft has
+ * two (airstream.com, "Comparing single-axle and dual-axle Airstream travel
+ * trailers", checked 2026-10-05). Only the Large (26.2 ft) crosses it.
+ */
+export function axleCount(lengthM: number): 1 | 2 {
+	return lengthM * 3.28084 >= 23 ? 2 : 1;
 }
 
-export function geometryItemsFor(body: "airstream" | "square") {
-	return VEHICLE_GEOMETRY_ITEMS[body];
+const TANDEM: Record<"airstream" | "square", string> = {
+	airstream:
+		"tandem axle (two axles) under one long rounded wheel arch each side",
+	square: "tandem axle (two axles) under one long square fender each side",
+};
+
+/** The body's fixed geometry, with the axle line matched to its length when one is given. */
+export function geometryItemsFor(
+	body: "airstream" | "square",
+	lengthM?: number,
+) {
+	const items = VEHICLE_GEOMETRY_ITEMS[body];
+	if (lengthM === undefined || axleCount(lengthM) === 1) return items;
+	return items.map((g) => (g.startsWith("single axle") ? TANDEM[body] : g));
+}
+
+export function geometryFor(body: "airstream" | "square", lengthM?: number) {
+	return lengthM === undefined
+		? VEHICLE_GEOMETRY[body]
+		: geometryItemsFor(body, lengthM).join("; ");
 }
 
 export function getVehicle(id: string | null | undefined) {

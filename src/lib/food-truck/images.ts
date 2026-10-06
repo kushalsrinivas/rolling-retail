@@ -1,3 +1,11 @@
+import {
+	type ArtArgs,
+	environmentSection,
+	materialsSection,
+	sceneSentences,
+	stationRows,
+	wrapArtworkSection,
+} from "./art-direction";
 import { type DesignBrief, featurePhrases, hasFeature } from "./brief";
 import {
 	CONCEPT_VIEWS,
@@ -15,14 +23,6 @@ import {
 	menuBoardReferences,
 	type RenderReference,
 } from "./continuity";
-import {
-	type ArtArgs,
-	environmentSection,
-	materialsSection,
-	sceneSentences,
-	stationRows,
-	wrapArtworkSection,
-} from "./art-direction";
 import { lineProfileFor } from "./line-profile";
 import { liverySteLines } from "./livery";
 import { type MenuDesign, menuBoardPrompt } from "./menu";
@@ -509,7 +509,7 @@ export function conceptPrompts(args: ConceptPromptArgs): Array<{
 	const geometry: SteSection = {
 		title: "Shell geometry",
 		lines: [
-			...geometryItemsFor(vehicleBody).map((g) => `Shell: ${g}`),
+			...geometryItemsFor(vehicleBody, lengthM).map((g) => `Shell: ${g}`),
 			...openingsSteLines(openings, vehicleBody),
 			"Keep the shell geometry identical in each view. Change only the surface finish and the wrap.",
 		],
@@ -1196,7 +1196,7 @@ export async function runStarterConcepts(
 			`[food-truck] no factory reference photo for ${args.vehicleId ?? vehicleBody} — add one under references/${vehicleBody}/ or set REFERENCES_DIR`,
 		);
 	}
-	const geometry = geometryFor(vehicleBody);
+	const geometry = geometryFor(vehicleBody, lengthM);
 
 	const photoOrNull = (u: string | null | undefined): string | null =>
 		typeof u === "string" &&
