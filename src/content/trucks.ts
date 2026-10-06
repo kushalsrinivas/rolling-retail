@@ -123,7 +123,7 @@ export const TRUCKS: TruckModel[] = [
 		slug: "airstream-mid",
 		vehicleId: "airstream-m",
 		name: "Airstream Mid",
-		headline: "Our best-seller: a real kitchen in an icon.",
+		headline: "A real kitchen in an icon.",
 		summary:
 			"Long enough for one hot station with cold support, or a full bar. The Mid is the body most of our hatch-serve Airstream builds start from.",
 		bestFor: [

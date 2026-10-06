@@ -99,7 +99,7 @@ export const SHOWCASE_PRESETS: ShowcasePreset[] = [
 				label: "See the extraction",
 				equipmentId: "extraction-hood",
 				detail:
-					"Stainless canopy with Ansul suppression in the base build — the first thing a health inspector asks about.",
+					"Stainless canopy with Ansul suppression designed in. It is the first thing a health inspector asks about.",
 			},
 			{
 				label: "See the drinks end-cap",

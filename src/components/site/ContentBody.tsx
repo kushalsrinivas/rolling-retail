@@ -260,7 +260,7 @@ export function FaqList({
 						<H className="text-[16.5px] font-medium text-stone-900">{f.q}</H>
 						<span
 							aria-hidden
-							className="mt-1 text-[18px] leading-none text-stone-400 transition-transform duration-300 group-open:rotate-45"
+							className="mt-1 text-[18px] leading-none text-stone-600 transition-transform duration-300 group-open:rotate-45"
 						>
 							+
 						</span>
