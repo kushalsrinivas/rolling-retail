@@ -37,13 +37,19 @@ function makeMaterials() {
 		black: std({ color: "#101013", roughness: 0.8 }),
 		rubber: std({ color: "#26262b", roughness: 0.9 }),
 		seam: std({ color: "#5a5e64", roughness: 0.6 }),
+		// Transparent with a clear coat rather than `transmission`: transmission
+		// makes three.js render the whole scene a second time every frame to
+		// see through the glass, which nearly doubled a galley's draw calls.
 		glass: new THREE.MeshPhysicalMaterial({
 			color: "#e6f4ff",
-			transmission: 0.75,
 			roughness: 0.05,
-			thickness: 0.02,
+			metalness: 0,
+			clearcoat: 1,
+			clearcoatRoughness: 0.04,
 			transparent: true,
-			opacity: 0.45,
+			opacity: 0.32,
+			envMapIntensity: 1.4,
+			depthWrite: false,
 		}),
 		darkGlass: std({
 			color: "#1d2733",

@@ -5,8 +5,9 @@
  * (a trailer you can turn around), what one brief gets you, the six bodies,
  * why us, proof, guides, answers, and one clear way to start.
  *
- * Every claim on this page is one the product or the factory backs: the
- * deliverables are the designer's real outputs, the trucks are the six
+ * Every claim on this page is one the software backs. Rolling Retail designs
+ * trailers and a builder quotes and builds them, so nothing here says we build:
+ * the deliverables are the designer's real outputs, the trucks are the six
  * bodies in the catalog, the numbers are labelled planning ranges, and the
  * stories are labelled illustrative until real ones replace them.
  */
@@ -35,10 +36,9 @@ export const Route = createFileRoute("/")({
 	component: Home,
 	head: () =>
 		pageHead({
-			title:
-				"Rolling Retail — Custom food trailers, designed online and built in the USA",
+			title: "Rolling Retail — Design your custom food trailer online",
 			description:
-				"Design a custom food trailer online in minutes — Airstream or square concession trailer — and see photoreal renders, an equipment layout, a wrap plan and a planning estimate. Then we build it.",
+				"Design a custom Airstream or square concession trailer online in minutes. See photoreal renders, an equipment layout, a wrap plan and a planning estimate, then take the spec sheet to your builder for a quote.",
 			path: "/",
 			jsonLd: [
 				organizationLd(),
@@ -67,8 +67,8 @@ const TICKER = [
 const PROOF = [
 	"★ 5 free render rounds",
 	"No account needed",
-	"6–10 week builds",
-	"Delivered nationwide",
+	"Spec sheet included",
+	"Six real trailer bodies",
 ];
 
 const STEPS = [
@@ -80,19 +80,19 @@ const STEPS = [
 	{
 		n: "02",
 		t: "See your trailer, inside and out",
-		d: "Photoreal concepts of your build — exterior, curbside, interior line — on a body our factory actually makes. Change anything in plain English.",
+		d: "Photoreal concepts of your build (exterior, curbside and interior line) on one of six real trailer bodies. Change anything in plain English.",
 	},
 	{
 		n: "03",
-		t: "Get a spec, a quote and a build date",
-		d: "A specification sheet with layout, equipment, wrap and power. Our team turns it into a quote, and the factory builds it.",
+		t: "Take a spec to your builder",
+		d: "A specification sheet with layout, equipment, wrap and power, ready for a builder to quote and build.",
 	},
 ];
 
 const DIFFERENTIATORS = [
 	{
-		t: "You can only design what we can build",
-		d: "Six bodies with fixed, factory-proven geometry. No render you fall for will be walked back by a salesperson later.",
+		t: "You can only design what can be built",
+		d: "Six bodies with fixed, real-world geometry. No render you fall for gets walked back by a builder later.",
 	},
 	{
 		t: "Compliance is designed in, not bolted on",
@@ -100,11 +100,11 @@ const DIFFERENTIATORS = [
 	},
 	{
 		t: "Builder doctrine, applied to your brief",
-		d: "One hot station per compact body. Cooking on propane. Power that closes on paper before anyone renders. We'll tell you when smaller is better.",
+		d: "One hot station per compact body. Cooking on propane. Power that closes on paper before anyone renders. The designer tells you when smaller is better.",
 	},
 	{
 		t: "Honest numbers",
-		d: "Planning ranges you can budget against from the first session — always labelled as ranges until our team quotes your final spec.",
+		d: "Planning ranges you can budget against from the first session. They stay labelled as ranges until a builder quotes your final spec.",
 	},
 ];
 
@@ -119,7 +119,7 @@ const DOCTRINE = [
 	],
 	[
 		"Power closes first",
-		"If the electrics exceed a 50A feed, we drop equipment. We never add power to fix a layout.",
+		"If the electrics exceed a 50A feed, the designer drops equipment. It never adds power to fix a layout.",
 	],
 	[
 		"Drinks are margin",
@@ -133,7 +133,7 @@ const DOCTRINE = [
  */
 function Headline() {
 	return (
-		<h1 className="sf-display max-w-5xl text-[60px] text-[var(--sf-ink)] sm:text-[104px] lg:text-[132px]">
+		<h1 className="sf-display max-w-5xl text-[56px] text-[var(--sf-ink)] sm:text-[84px] lg:text-[96px]">
 			Build the truck your city <span className="sf-mark">lines up</span> for.
 		</h1>
 	);
@@ -148,7 +148,7 @@ function DeliverablesPreview() {
 					<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">
 						Concept · exterior hero
 					</p>
-					<p className="font-mono text-[10.5px] text-stone-400">
+					<p className="font-mono text-[10.5px] text-stone-500">
 						v1 · not for construction
 					</p>
 				</div>
@@ -186,7 +186,7 @@ function DeliverablesPreview() {
 							"Drinks station with ice",
 						].map((x, i) => (
 							<li key={x} className="flex gap-2.5">
-								<span className="font-mono text-[11px] text-stone-400">
+								<span className="font-mono text-[11px] text-stone-500">
 									{String(i + 1).padStart(2, "0")}
 								</span>
 								{x}
@@ -223,7 +223,7 @@ function DeliverablesPreview() {
 							$60k–$95k
 						</p>
 						<p className="mt-1 text-[11.5px] leading-snug text-stone-500">
-							Range, not a quote · 6–10 weeks after sign-off
+							Range, not a quote
 						</p>
 					</div>
 				</div>
@@ -240,19 +240,19 @@ function Home() {
 		<SiteShell>
 			{/* ── Hero ── */}
 			<section className="relative overflow-hidden">
-				<div className="mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 sm:pb-20 sm:pt-16">
-					<Eyebrow>Custom food trailers · Built in the USA</Eyebrow>
-					<div className="mt-6">
+				<div className="mx-auto max-w-6xl px-4 pb-10 pt-8 sm:px-6 sm:pb-12 sm:pt-12">
+					<Eyebrow>Custom food trailers · Designed online</Eyebrow>
+					<div className="mt-5">
 						<Headline />
 					</div>
-					<div className="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+					<div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
 						<div>
 							<p className="max-w-xl text-[18px] font-medium leading-relaxed text-stone-700 sm:text-[20px]">
 								Design your food trailer online in three minutes. See it inside
-								and out, with the layout, wrap and a planning estimate. Then our
-								factory builds exactly that.
+								and out, with the layout, wrap and a planning estimate. Then
+								take a spec sheet your builder can quote.
 							</p>
-							<div className="mt-8 flex flex-wrap items-center gap-4">
+							<div className="mt-6 flex flex-wrap items-center gap-4">
 								<Link to="/chat" className="group sf-btn px-7 py-4 text-[16px]">
 									Design your trailer — free
 									<ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
@@ -265,7 +265,7 @@ function Home() {
 								</Link>
 							</div>
 						</div>
-						<ul className="flex flex-wrap gap-2.5 lg:justify-end">
+						<ul className="hidden flex-wrap gap-2.5 sm:flex lg:justify-end">
 							{PROOF.map((p) => (
 								<li key={p} className="sf-sticker">
 									{p}
@@ -312,6 +312,13 @@ function Home() {
 						<HeroShowcase />
 					</Suspense>
 				</div>
+				<ul className="mx-auto mt-6 flex max-w-6xl flex-wrap gap-2.5 sm:hidden">
+					{PROOF.map((p) => (
+						<li key={p} className="sf-sticker">
+							{p}
+						</li>
+					))}
+				</ul>
 			</section>
 
 			{/* ── How it works ── */}
@@ -344,7 +351,7 @@ function Home() {
 						to="/how-it-works"
 						className="rr-underline mt-10 inline-block text-[14px] text-stone-700"
 					>
-						The full process, from brief to delivery →
+						The full process, step by step →
 					</Link>
 				</Reveal>
 			</section>
@@ -359,8 +366,8 @@ function Home() {
 								Not a mood board. A trailer you can quote.
 							</h2>
 							<p className="mt-5 text-[16px] leading-relaxed text-stone-600">
-								Every session produces the same set of deliverables our build
-								team works from — so the conversation with sales starts at the
+								Every session produces the deliverables a build team works from,
+								so the conversation with your builder starts at the
 								specification, not at &ldquo;so, what were you thinking?&rdquo;
 							</p>
 							<ul className="mt-6 space-y-2.5 text-[15px] text-stone-700">
@@ -383,7 +390,7 @@ function Home() {
 						</Reveal>
 						<Reveal delay={150}>
 							<DeliverablesPreview />
-							<p className="mt-3 text-[12px] text-stone-500">
+							<p className="mt-3 text-[12px] text-stone-700">
 								Example output for a 13 ft taco trailer. Drawings on this site
 								are illustrations; the designer renders photoreal concepts.
 							</p>
@@ -398,7 +405,7 @@ function Home() {
 					<Reveal>
 						<Eyebrow>The lineup</Eyebrow>
 						<h2 className="mt-3 max-w-xl text-[37px] sf-display sm:text-[49px]">
-							Six bodies. Every one built in our factory.
+							Six bodies. Every one a real, buildable trailer.
 						</h2>
 					</Reveal>
 					<Link
@@ -425,6 +432,7 @@ function Home() {
 											vehicleId={t.vehicleId}
 											primary={["#ff5a1f", "#0f8b8d", "#ff7ab6"][i % 3]}
 											className="max-h-28 w-full text-stone-900"
+											person
 										/>
 									</div>
 									<h3 className="mt-5 text-[17px] font-semibold tracking-tight">
@@ -478,7 +486,7 @@ function Home() {
 								className={`sf-card group p-5 ${["!bg-[var(--sf-yellow)]", "!bg-white", "!bg-[#ffd9c7]", "!bg-[#bfe8e6]"][i % 4]}`}
 							>
 								<p className="sf-display text-[26px]">{u.name}</p>
-								<p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-stone-500">
+								<p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-stone-700">
 									{u.zones[1] ?? u.intro}
 								</p>
 								<span className="mt-3 inline-block text-[12.5px] text-stone-700 transition-transform group-hover:translate-x-0.5">
@@ -494,9 +502,9 @@ function Home() {
 			<section className="bg-[var(--sf-ink)] text-stone-100">
 				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
 					<Reveal>
-						<Eyebrow className="text-stone-500">Why Rolling Retail</Eyebrow>
+						<Eyebrow>Why Rolling Retail</Eyebrow>
 						<h2 className="mt-3 max-w-2xl text-[37px] sf-display text-stone-50 sm:text-[52px]">
-							A designer that thinks like a builder — because a builder made it.
+							A designer that thinks like a builder.
 						</h2>
 					</Reveal>
 					<div className="mt-14 grid gap-x-12 gap-y-10 md:grid-cols-2">
@@ -515,8 +523,8 @@ function Home() {
 					</div>
 					<Reveal delay={120}>
 						<div className="mt-16 rounded-[18px] border-2 border-[var(--sf-yellow)] p-6 sm:p-8">
-							<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone-500">
-								Our builder doctrine
+							<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone-400">
+								Builder doctrine
 							</p>
 							<dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 								{DOCTRINE.map(([t, d]) => (
@@ -543,7 +551,7 @@ function Home() {
 						<h2 className="mt-3 max-w-xl text-[35px] sf-display sm:text-[44px]">
 							How operators use the designer.
 						</h2>
-						<p className="mt-3 max-w-xl text-[14px] text-stone-500">
+						<p className="mt-3 max-w-xl text-[14px] text-stone-600">
 							Illustrative examples based on typical builds — not real
 							customers.
 						</p>
@@ -563,7 +571,7 @@ function Home() {
 								params={{ slug: s.slug }}
 								className="group flex h-full flex-col sf-card p-6 transition-colors"
 							>
-								<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-400">
+								<p className="font-mono text-[10.5px] uppercase tracking-wider text-stone-500">
 									Illustrative · {s.location.replace(" (example)", "")}
 								</p>
 								<blockquote className="mt-4 text-[18px] font-bold leading-snug text-[var(--sf-ink)]">
@@ -587,7 +595,7 @@ function Home() {
 				<div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
 					<div className="flex flex-wrap items-end justify-between gap-6">
 						<Reveal>
-							<Eyebrow>Guides from the build team</Eyebrow>
+							<Eyebrow>Guides for first-time buyers</Eyebrow>
 							<h2 className="mt-3 max-w-xl text-[35px] sf-display sm:text-[44px]">
 								Know what you&rsquo;re buying before you buy it.
 							</h2>

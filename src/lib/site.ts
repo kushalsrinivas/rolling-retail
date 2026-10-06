@@ -22,9 +22,9 @@ export const SITE = {
 		"https://rollingretail.co"
 	).replace(/\/$/, ""),
 	email: "team@latechspace.com",
-	tagline: "Custom food trailers, designed online and built in our factory.",
+	tagline: "Custom food trailers, designed online and quoted by your builder.",
 	description:
-		"Rolling Retail designs and builds custom food trailers — Airstream and square concession trailers for coffee, tacos, burgers, boba, ice cream, bars and retail. Design yours online in minutes, get a buildable spec and a planning estimate, then we build it.",
+		"Rolling Retail is design software for custom food trailers: Airstream and square concession trailers for coffee, tacos, burgers, boba, ice cream, bars and retail. Design yours online in minutes, get a buildable spec and a planning estimate, then take it to your builder for a quote.",
 	locale: "en_US",
 	areaServed: "United States",
 	ogImage: "/og/default.png",
@@ -134,7 +134,7 @@ export function organizationLd(): Record<string, unknown> {
 		description: SITE.description,
 		areaServed: { "@type": "Country", name: SITE.areaServed },
 		knowsAbout: [
-			"food trailer manufacturing",
+			"food trailer design",
 			"concession trailers",
 			"Airstream food trailer conversions",
 			"commercial kitchen layout",

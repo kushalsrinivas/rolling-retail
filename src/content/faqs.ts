@@ -19,7 +19,7 @@ export const FAQ_GROUPS: Array<{ title: string; faqs: Faq[] }> = [
 			},
 			{
 				q: "Are the renders what I will actually get?",
-				a: "They are concept visualizations of a build we can make: the body, openings, equipment line and wrap all come from our own catalog. Dimensions, openings, equipment and the final wrap artwork are confirmed by our factory team in your specification before anything is built.",
+				a: "They are concept visualizations of a buildable trailer. The body, openings, equipment line and wrap all come from the designer's catalog: six real trailer bodies, real equipment and real vinyl wrap films. Your builder confirms dimensions, openings, equipment and the final wrap artwork against your specification before anything is built.",
 			},
 			{
 				q: "Can I upload a photo of a truck I like?",
@@ -36,7 +36,7 @@ export const FAQ_GROUPS: Array<{ title: string; faqs: Faq[] }> = [
 			},
 			{
 				q: "How long does a build take?",
-				a: "Our planning lead time is 6–10 weeks after you sign off the design, depending on equipment availability and the wrap schedule. Your quote gives a confirmed date.",
+				a: "Your builder sets the lead time in their quote. It depends on equipment availability and the wrap schedule. The designer gives you the specification they need to quote it.",
 			},
 			{
 				q: "Can I put a hot kitchen in an Airstream?",
@@ -53,7 +53,7 @@ export const FAQ_GROUPS: Array<{ title: string; faqs: Faq[] }> = [
 		faqs: [
 			{
 				q: "How much does a custom food trailer cost?",
-				a: "Most of our builds fall between about $45,000 and $200,000 depending on the body, the equipment line and the wrap. A 10 ft coffee trailer sits at the low end; an Airstream with a full hot line sits at the high end. See our [cost breakdown](/resources/how-much-does-a-food-trailer-cost).",
+				a: "The designer's planning ranges run from about $45,000 to $200,000, depending on the body, the equipment line and the wrap. A 10 ft coffee trailer sits at the low end; an Airstream with a full hot line sits at the high end. See the [cost breakdown](/resources/how-much-does-a-food-trailer-cost).",
 			},
 			{
 				q: "Are your estimates quotes?",
@@ -61,7 +61,7 @@ export const FAQ_GROUPS: Array<{ title: string; faqs: Faq[] }> = [
 			},
 			{
 				q: "Will my trailer pass the health inspection?",
-				a: "We design to the requirements most US counties apply — hand sink placement, NSF-listed equipment, water capacity, hood and fire suppression for hot lines — and supply the documents plan review asks for. Your county makes the final decision, so we review its checklist with you before the build. Read our [plan review guide](/resources/food-truck-health-permit-plan-review).",
+				a: "The designer works to the requirements most US counties apply: hand sink placement, NSF-listed equipment, water capacity, and a hood and fire suppression on hot lines. Your spec sheet records each one for plan review. Your county makes the final decision, so go through its checklist with your builder before the build. Read the [plan review guide](/resources/food-truck-health-permit-plan-review).",
 			},
 			{
 				q: "Do you offer financing?",

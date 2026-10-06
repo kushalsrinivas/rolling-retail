@@ -200,11 +200,11 @@ export function SiteFooter() {
 				<div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
 					<div>
 						<p className="text-[15px] font-bold text-stone-50">
-							Built in the USA. Rolling everywhere.
+							Design it before you buy it.
 						</p>
 						<p className="mt-3 max-w-xs text-[13.5px] leading-relaxed text-stone-400">
-							Custom Airstream and square food trailers, designed online and
-							built in our own factory for operators across the United States.
+							Design software for custom Airstream and square food trailers.
+							Buyers design online and take a spec sheet to their builder.
 						</p>
 						<a
 							href={`mailto:${SITE.email}?subject=Food%20trailer%20quote`}
@@ -246,12 +246,12 @@ export function SiteFooter() {
 						{ to: "/chat", label: "Open the designer" },
 					])}
 				</div>
-				<div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-[12.5px] text-stone-500 sm:flex-row sm:items-center sm:justify-between">
+				<div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-[12.5px] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
 					<p>
 						© {year} {SITE.legalName}. Renders are concept visualizations;
-						builds are confirmed by specification.
+						builds are quoted and confirmed by your builder.
 					</p>
-					<p>Built in the USA · Serving operators nationwide</p>
+					<p>Food trailer design software</p>
 				</div>
 			</div>
 		</footer>
@@ -378,7 +378,7 @@ export function CtaBand({
 						href={`mailto:${SITE.email}?subject=Food%20trailer%20quote`}
 						className="rr-underline text-[15px] font-semibold text-[var(--sf-ink)]"
 					>
-						Talk to the build team
+						Talk to us
 					</a>
 				</div>
 			</div>
